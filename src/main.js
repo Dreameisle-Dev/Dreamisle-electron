@@ -3,8 +3,10 @@ import path from 'path';
 import { fileURLToPath, pathToFileURL } from 'url';
 import { parseFile } from 'music-metadata';
 import fs from 'fs/promises';
+import Store from 'electron-store';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const store = new Store();
 
 function createWindow() {
   Menu.setApplicationMenu(null)
@@ -55,15 +57,9 @@ async function scanDirectory(dirPath) {
   return results;
 }
 
-// IPC处理：导入音乐
-ipcMain.handle('dialog:openFolder', async () => {
-  const { canceled, filePaths } = await dialog.showOpenDialog({
-    properties: ['openDirectory']
-  });
-
-  if (canceled) return [];
-
-  const audioFiles = await scanDirectory(filePaths[0]);
+// 扫描并解析元数据
+async function scanAndParse(folderPath) {
+  const audioFiles = await scanDirectory(folderPath);
   const playlist = [];
 
   for (const filePath of audioFiles) {
@@ -71,7 +67,6 @@ ipcMain.handle('dialog:openFolder', async () => {
       const metadata = await parseFile(filePath);
       let cover = null;
       
-      // 处理封面 Buffer 转 Base64
       if (metadata.common.picture && metadata.common.picture.length > 0) {
         const pic = metadata.common.picture[0];
         const base64String = Buffer.from(pic.data).toString('base64');
@@ -86,7 +81,6 @@ ipcMain.handle('dialog:openFolder', async () => {
         cover: cover
       });
     } catch (e) {
-      // 解析失败只保留基础信息
       playlist.push({
         path: filePath,
         url: pathToFileURL(filePath).href,
@@ -97,4 +91,31 @@ ipcMain.handle('dialog:openFolder', async () => {
     }
   }
   return playlist;
+}
+
+// IPC: 手动导入并保存路径
+ipcMain.handle('dialog:openFolder', async () => {
+  const { canceled, filePaths } = await dialog.showOpenDialog({
+    properties: ['openDirectory']
+  });
+
+  if (canceled) return [];
+  
+  const folderPath = filePaths[0];
+  store.set('musicFolder', folderPath);
+
+  return await scanAndParse(folderPath);
+});
+
+// IPC: 自动加载保存的路径
+ipcMain.handle('app:loadSavedMusic', async () => {
+  const savedPath = store.get('musicFolder');
+  if (!savedPath) return [];
+
+  try {
+    await fs.access(savedPath);
+    return await scanAndParse(savedPath);
+  } catch (e) {
+    return [];
+  }
 });
