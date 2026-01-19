@@ -1,18 +1,26 @@
 {
   "name": "dreamisle",
   "version": "1.0.0",
-  "description": "",
+  "description": "An offline music player",
   "license": "MIT",
   "author": "HuanMeng",
   "type": "module",
   "main": "src/main.js",
   "scripts": {
     "start": "electron .",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "build:win": "electron-builder --win"
+  },
+  "build": {
+    "win": {
+      "icon": "src/assets/app_icon.ico"
+    }
   },
   "dependencies": {
-    "electron": "^40.0.0",
     "electron-store": "^11.0.2",
     "music-metadata": "^11.10.6"
+  },
+  "devDependencies": {
+    "electron": "^40.0.0",
+    "electron-builder": "^26.4.0"
   }
 }
