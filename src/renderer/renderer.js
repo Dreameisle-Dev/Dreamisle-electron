@@ -12,6 +12,8 @@ const progressBar = document.getElementById('progressBar');
 const currentTimeEl = document.getElementById('currentTime');
 const totalTimeEl = document.getElementById('totalTime');
 const canvas = document.getElementById('colorCanvas');
+const coverContainer = document.getElementById('coverContainer');
+const volumeHud = document.getElementById('volumeHud');
 
 // 按钮引用
 const btnPlay = document.getElementById('btnPlay');
@@ -26,6 +28,10 @@ let songs = [];
 let currentIndex = -1;
 let isDragging = false;
 let playMode = 0;
+let volumeTimeout;
+
+// 初始音量
+audio.volume = 0.5;
 
 // 初始化：尝试加载保存的目录
 window.addEventListener('DOMContentLoaded', async () => {
@@ -232,6 +238,25 @@ btnPlay.addEventListener('click', () => {
   } else {
     audio.pause(); updatePlayButton(false);
   }
+});
+
+coverContainer.addEventListener('wheel', (e) => {
+  e.preventDefault();
+  let newVolume = audio.volume - (e.deltaY > 0 ? 0.05 : -0.05);
+  
+  if (newVolume > 1) newVolume = 1;
+  if (newVolume < 0) newVolume = 0;
+  
+  audio.volume = newVolume;
+
+  // 显示 HUD
+  volumeHud.innerText = `VOL ${Math.round(newVolume * 100)}%`;
+  volumeHud.classList.add('visible');
+
+  clearTimeout(volumeTimeout);
+  volumeTimeout = setTimeout(() => {
+    volumeHud.classList.remove('visible');
+  }, 1000);
 });
 
 document.getElementById('btnNext').addEventListener('click', () => playNext(false));
