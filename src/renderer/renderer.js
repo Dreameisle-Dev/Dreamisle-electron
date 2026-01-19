@@ -83,8 +83,15 @@ function playSong(index) {
   audio.src = song.url;
   audio.play();
 
-  titleEl.innerText = song.title;
-  artistEl.innerText = song.artist;
+  const infoContainer = document.querySelector('.song-info');
+  infoContainer.classList.add('changing');
+
+  setTimeout(() => {
+    titleEl.innerText = song.title;
+    artistEl.innerText = song.artist;
+    infoContainer.classList.remove('changing');
+  }, 300);
+
   updatePlayButton(true);
   renderPlaylist(searchInput.value.trim());
 
