@@ -78,6 +78,9 @@ window.addEventListener('DOMContentLoaded', async () => {
       if (songs.length === 0) triggerImport();
     }, 500);
   }
+
+  // 设置IPC监听器
+  setupIpcListeners();
 });
 
 // 手动触发导入
@@ -374,3 +377,36 @@ function saveStateOnChange() {
 audio.addEventListener('play', saveStateOnChange);
 audio.addEventListener('pause', saveStateOnChange);
 audio.addEventListener('volumechange', saveStateOnChange);
+
+// 设置IPC监听器
+function setupIpcListeners() {
+  // 窗口可见性变化
+  window.dreamApi.onWindowVisibilityChanged((isVisible) => {
+  });
+
+  // 托盘播放/暂停控制
+  window.dreamApi.onTrayPlayPause(() => {
+    if (audio.paused) {
+      if (currentIndex === -1 && songs.length) playSong(0);
+      else audio.play();
+      updatePlayButton(true);
+    } else {
+      audio.pause();
+      updatePlayButton(false);
+    }
+    saveStateOnChange();
+  });
+
+  // 托盘下一首控制
+  window.dreamApi.onTrayNext(() => {
+    playNext(false);
+  });
+
+  // 托盘上一首控制
+  window.dreamApi.onTrayPrev(() => {
+    let prev = currentIndex - 1;
+    if (playMode === 2) prev = Math.floor(Math.random() * songs.length);
+    else if (prev < 0) prev = songs.length - 1;
+    playSong(prev);
+  });
+}
