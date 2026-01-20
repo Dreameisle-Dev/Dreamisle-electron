@@ -31,8 +31,14 @@ Dreamisle 旨在提供最纯粹的听觉与视觉体验，特色功能包括：
 
 ### 1. 克隆项目
 ```bash
-git clone https://github.com/your-username/dreamisle.git
+git clone https://github.com/Dreameisle-Dev/Dreamisle-electron.git
 cd dreamisle
+```
+
+or using ssh
+
+```bash
+git clone git@github.com:Dreameisle-Dev/Dreamisle-electron.git
 ```
 
 ### 2. 安装依赖
