@@ -33,7 +33,7 @@ let volumeTimeout;
 // 初始音量
 audio.volume = 0.5;
 
-// 初始化：尝试加载保存的目录
+// 初始化：尝试加载保存的目录和播放状态
 window.addEventListener('DOMContentLoaded', async () => {
   const savedSongs = await window.dreamApi.loadSavedMusic();
 
@@ -41,8 +41,37 @@ window.addEventListener('DOMContentLoaded', async () => {
     songs = savedSongs;
     searchInput.value = '';
     renderPlaylist();
-    // 恢复界面但不自动播放
-    if (songs.length > 0) initSongInfo(0);
+
+    // 尝试恢复播放状态
+    const savedState = await window.dreamApi.loadPlaybackState();
+    if (savedState && savedState.currentIndex >= 0 && savedState.currentIndex < songs.length) {
+      // 恢复播放状态
+      currentIndex = savedState.currentIndex;
+      playMode = savedState.playMode || 0;
+      audio.volume = savedState.volume || 0.5;
+
+      // 更新播放模式图标
+      iconLoop.style.display = playMode === 0 ? 'block' : 'none';
+      iconOne.style.display = playMode === 1 ? 'block' : 'none';
+      iconShuffle.style.display = playMode === 2 ? 'block' : 'none';
+
+      // 初始化歌曲信息但不自动播放
+      initSongInfo(currentIndex);
+
+      // 恢复播放进度
+      if (savedState.currentTime > 0) {
+        audio.currentTime = savedState.currentTime;
+      }
+
+      // 恢复播放/暂停状态
+      if (savedState.isPlaying) {
+        audio.play();
+        updatePlayButton(true);
+      }
+    } else {
+      // 没有保存的状态，初始化第一首歌但不播放
+      if (songs.length > 0) initSongInfo(0);
+    }
   } else {
     // 无存档则延迟弹出导入框
     setTimeout(() => {
@@ -102,6 +131,9 @@ function playSong(index) {
   renderPlaylist(searchInput.value.trim());
 
   updateCoverAndColor(song);
+
+  // 保存状态
+  saveStateOnChange();
 }
 
 // 切歌逻辑
@@ -194,6 +226,7 @@ btnMode.addEventListener('click', () => {
   iconLoop.style.display = playMode === 0 ? 'block' : 'none';
   iconOne.style.display = playMode === 1 ? 'block' : 'none';
   iconShuffle.style.display = playMode === 2 ? 'block' : 'none';
+  saveStateOnChange();
 });
 
 // 列表抽屉控制
@@ -243,10 +276,10 @@ btnPlay.addEventListener('click', () => {
 coverContainer.addEventListener('wheel', (e) => {
   e.preventDefault();
   let newVolume = audio.volume - (e.deltaY > 0 ? 0.05 : -0.05);
-  
+
   if (newVolume > 1) newVolume = 1;
   if (newVolume < 0) newVolume = 0;
-  
+
   audio.volume = newVolume;
 
   // 显示 HUD
@@ -257,6 +290,9 @@ coverContainer.addEventListener('wheel', (e) => {
   volumeTimeout = setTimeout(() => {
     volumeHud.classList.remove('visible');
   }, 1000);
+
+  // 保存状态
+  saveStateOnChange();
 });
 
 document.getElementById('btnNext').addEventListener('click', () => playNext(false));
@@ -281,3 +317,60 @@ function formatTime(s) {
   const m = Math.floor(s / 60), sec = Math.floor(s % 60);
   return `${m}:${sec.toString().padStart(2, '0')}`;
 }
+
+// 保存播放状态
+async function savePlaybackState() {
+  if (songs.length === 0) return;
+
+  const state = {
+    currentIndex: currentIndex,
+    currentTime: audio.currentTime || 0,
+    volume: audio.volume,
+    playMode: playMode,
+    isPlaying: !audio.paused
+  };
+
+  try {
+    await window.dreamApi.savePlaybackState(state);
+  } catch (error) {
+    console.error('保存播放状态失败:', error);
+  }
+}
+
+// 定期保存播放状态（每60秒）
+setInterval(() => {
+  if (songs.length > 0) {
+    savePlaybackState();
+  }
+}, 60000);
+
+// 在窗口关闭前保存状态
+window.addEventListener('beforeunload', () => {
+  if (songs.length > 0) {
+    // 使用同步方式保存，因为异步可能来不及完成
+    const state = {
+      currentIndex: currentIndex,
+      currentTime: audio.currentTime || 0,
+      volume: audio.volume,
+      playMode: playMode,
+      isPlaying: !audio.paused
+    };
+
+    // 使用同步IPC调用
+    window.dreamApi.savePlaybackState(state).catch(() => {
+      // 忽略错误，因为窗口正在关闭
+    });
+  }
+});
+
+// 在重要状态变化时立即保存
+function saveStateOnChange() {
+  if (songs.length > 0) {
+    savePlaybackState();
+  }
+}
+
+// 监听重要状态变化
+audio.addEventListener('play', saveStateOnChange);
+audio.addEventListener('pause', saveStateOnChange);
+audio.addEventListener('volumechange', saveStateOnChange);

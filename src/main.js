@@ -120,3 +120,14 @@ ipcMain.handle('app:loadSavedMusic', async () => {
     return [];
   }
 });
+
+// IPC: 保存播放状态
+ipcMain.handle('app:savePlaybackState', async (event, state) => {
+  store.set('playbackState', state);
+  return true;
+});
+
+// IPC: 加载播放状态
+ipcMain.handle('app:loadPlaybackState', async () => {
+  return store.get('playbackState') || null;
+});
