@@ -14,56 +14,64 @@ body {
   user-select: none;
 }
 
-/* === 背景动画 === */
-.ambient-bg {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  z-index: 0;
-  overflow: hidden;
-  background: #000;
-  transition: background-color 1.2s ease;
+.ambient-bg{
+  position:absolute;
+  inset:0;
+  z-index:0;
+  overflow:hidden;
+  background:#000;
 }
 
-.blob {
-  position: absolute;
-  filter: blur(80px);
-  opacity: 0.6;
-  border-radius: 50%;
-  animation: float 20s infinite ease-in-out alternate;
-  transition: background-color 1.2s ease;
+@property --x1 { syntax: '<percentage>'; inherits: false; initial-value: 30%; }
+@property --y1 { syntax: '<percentage>'; inherits: false; initial-value: 35%; }
+@property --x2 { syntax: '<percentage>'; inherits: false; initial-value: 70%; }
+@property --y2 { syntax: '<percentage>'; inherits: false; initial-value: 65%; }
+@property --a  { syntax: '<angle>';      inherits: false; initial-value: 0deg; }
+
+.light-field{
+  position:absolute;
+  inset:-40%;
+  pointer-events:none;
+
+  opacity:0.85;
+  mix-blend-mode: screen;
+  filter: blur(110px) saturate(160%) brightness(115%);
+  will-change: transform;
+
+  background:
+    radial-gradient(circle at var(--x1) var(--y1),
+      color-mix(in srgb, var(--bg-color-1) 70%, transparent),
+      transparent 62%),
+    radial-gradient(circle at var(--x2) var(--y2),
+      color-mix(in srgb, var(--bg-color-2) 65%, transparent),
+      transparent 66%),
+    conic-gradient(from var(--a) at 50% 50%,
+      transparent 0deg,
+      color-mix(in srgb, var(--bg-color-1) 12%, transparent) 120deg,
+      transparent 240deg,
+      color-mix(in srgb, var(--bg-color-2) 10%, transparent) 360deg);
+
+  animation: slowGlow 60s ease-in-out infinite alternate;
 }
 
-.blob-1 {
-  top: -20%;
-  left: -20%;
-  width: 80vw;
-  height: 80vw;
-  background: var(--bg-color-1);
-}
-
-.blob-2 {
-  bottom: -20%;
-  right: -20%;
-  width: 80vw;
-  height: 80vw;
-  background: var(--bg-color-2);
-  animation-delay: -5s;
-}
-
-@keyframes float {
-  0% {
-    transform: translate(0, 0) scale(1);
+@keyframes slowGlow{
+  0%{
+    --x1: 28%; --y1: 38%
+    --x2: 72%; --y2: 62%;
+    --a: -10deg;
+    transform: translate3d(-1.2%, -0.8%, 0) scale(1.03);
   }
-
-  50% {
-    transform: translate(30px, 50px) scale(1.1);
+  50%{
+    --x1: 45%; --y1: 30%;
+    --x2: 60%; --y2: 72%;
+    --a: 25deg;
+    transform: translate3d( 1.0%,  0.6%, 0) scale(1.06);
   }
-
-  100% {
-    transform: translate(-20px, -30px) scale(0.95);
+  100%{
+    --x1: 35%; --y1: 55%;
+    --x2: 78%; --y2: 48%;
+    --a: 55deg;
+    transform: translate3d(-0.6%,  1.1%, 0) scale(1.04);
   }
 }
 
