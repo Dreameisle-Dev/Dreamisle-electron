@@ -6,6 +6,8 @@ contextBridge.exposeInMainWorld('dreamApi', {
   savePlaybackState: (state) => ipcRenderer.invoke('app:savePlaybackState', state),
   loadPlaybackState: () => ipcRenderer.invoke('app:loadPlaybackState'),
 
+  getLyrics: (path) => ipcRenderer.invoke('app:getLyrics', path),
+
   // 窗口控制
   onWindowVisibilityChanged: (callback) => ipcRenderer.on('window-visibility-changed', (event, isVisible) => callback(isVisible)),
 

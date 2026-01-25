@@ -34,10 +34,8 @@ function createWindow() {
 
   mainWindow.loadFile(path.join(__dirname, 'renderer/index.html'));
 
-  // 创建系统托盘
   createTray();
 
-  // 监听窗口关闭事件，隐藏而不是关闭
   mainWindow.on('close', (event) => {
     if (!app.isQuitting) {
       event.preventDefault();
@@ -47,50 +45,38 @@ function createWindow() {
     return true;
   });
 
-  // 监听窗口显示事件
   mainWindow.on('show', () => {
-    // 通知渲染进程窗口已显示
     mainWindow.webContents.send('window-visibility-changed', true);
   });
 
-  // 监听窗口隐藏事件
   mainWindow.on('hide', () => {
-    // 通知渲染进程窗口已隐藏
     mainWindow.webContents.send('window-visibility-changed', false);
   });
 }
 
 function createTray() {
-  // 创建托盘图标
   const iconPath = path.join(__dirname, 'assets/app_icon.ico');
   const trayIcon = nativeImage.createFromPath(iconPath);
 
   tray = new Tray(trayIcon.resize({ width: 16, height: 16 }));
 
-  // 托盘菜单
   const contextMenu = Menu.buildFromTemplate([
     {
       label: '播放/暂停',
       click: () => {
-        if (mainWindow) {
-          mainWindow.webContents.send('tray-play-pause');
-        }
+        if (mainWindow) mainWindow.webContents.send('tray-play-pause');
       }
     },
     {
       label: '下一首',
       click: () => {
-        if (mainWindow) {
-          mainWindow.webContents.send('tray-next');
-        }
+        if (mainWindow) mainWindow.webContents.send('tray-next');
       }
     },
     {
       label: '上一首',
       click: () => {
-        if (mainWindow) {
-          mainWindow.webContents.send('tray-prev');
-        }
+        if (mainWindow) mainWindow.webContents.send('tray-prev');
       }
     },
     { type: 'separator' },
@@ -116,7 +102,6 @@ function createTray() {
   tray.setToolTip('Dreamisle 音乐播放器');
   tray.setContextMenu(contextMenu);
 
-  // 双击托盘图标显示窗口
   tray.on('double-click', () => {
     if (mainWindow) {
       if (mainWindow.isVisible()) {
@@ -132,8 +117,8 @@ function createTray() {
 app.whenReady().then(createWindow);
 
 app.on('window-all-closed', () => {
-  // 在macOS上，当所有窗口都关闭时，应用通常保持活动状态
   if (process.platform !== 'darwin') {
+    // 保持运行
   }
 });
 
@@ -178,9 +163,10 @@ async function scanAndParse(folderPath) {
 
   for (const filePath of audioFiles) {
     try {
-      const metadata = await parseFile(filePath);
+      // 在扫描列表时我们不读取歌词，因为太慢了，歌词在播放时单独读取
+      const metadata = await parseFile(filePath, { skipCovers: false, skipPostHeaders: true });
       let cover = null;
-      
+
       if (metadata.common.picture && metadata.common.picture.length > 0) {
         const pic = metadata.common.picture[0];
         const base64String = Buffer.from(pic.data).toString('base64');
@@ -214,7 +200,7 @@ ipcMain.handle('dialog:openFolder', async () => {
   });
 
   if (canceled) return [];
-  
+
   const folderPath = filePaths[0];
   store.set('musicFolder', folderPath);
 
@@ -243,4 +229,37 @@ ipcMain.handle('app:savePlaybackState', async (event, state) => {
 // IPC: 加载播放状态
 ipcMain.handle('app:loadPlaybackState', async () => {
   return store.get('playbackState') || null;
+});
+
+// IPC: 读取歌词 (支持外部 .lrc 和 内嵌歌词)
+ipcMain.handle('app:getLyrics', async (event, audioPath) => {
+  console.log(`[Main] 正在获取歌词: ${audioPath}`);
+
+  // 尝试读取外部 .lrc 文件
+  try {
+    const lrcPath = audioPath.substring(0, audioPath.lastIndexOf('.')) + '.lrc';
+    await fs.access(lrcPath);
+    const lrcContent = await fs.readFile(lrcPath, 'utf-8');
+    console.log('[Main] 找到外部 .lrc 文件');
+    return lrcContent;
+  } catch (e) {
+    // 外部文件不存在，忽略错误，继续尝试内嵌
+  }
+
+  // 尝试读取内嵌歌词 (ID3, Vorbis Comments 等)
+  try {
+    // 重新解析文件，这次不跳过 header，专门读取 lyrics
+    const metadata = await parseFile(audioPath);
+
+    // music-metadata 通常把歌词放在 common.lyrics (数组)
+    if (metadata.common && metadata.common.lyrics && metadata.common.lyrics.length > 0) {
+      console.log('[Main] 找到内嵌歌词');
+      return metadata.common.lyrics[0];
+    }
+  } catch (err) {
+    console.error('[Main] 解析内嵌歌词失败:', err);
+  }
+
+  console.log('[Main] 未找到任何歌词');
+  return null;
 });

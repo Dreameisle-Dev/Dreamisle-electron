@@ -14,26 +14,50 @@ body {
   user-select: none;
 }
 
-.ambient-bg{
-  position:absolute;
-  inset:0;
-  z-index:0;
-  overflow:hidden;
-  background:#000;
+.ambient-bg {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  background: #000;
 }
 
-@property --x1 { syntax: '<percentage>'; inherits: false; initial-value: 30%; }
-@property --y1 { syntax: '<percentage>'; inherits: false; initial-value: 35%; }
-@property --x2 { syntax: '<percentage>'; inherits: false; initial-value: 70%; }
-@property --y2 { syntax: '<percentage>'; inherits: false; initial-value: 65%; }
-@property --a  { syntax: '<angle>';      inherits: false; initial-value: 0deg; }
+@property --x1 {
+  syntax: '<percentage>';
+  inherits: false;
+  initial-value: 30%;
+}
 
-.light-field{
-  position:absolute;
-  inset:-40%;
-  pointer-events:none;
+@property --y1 {
+  syntax: '<percentage>';
+  inherits: false;
+  initial-value: 35%;
+}
 
-  opacity:0.85;
+@property --x2 {
+  syntax: '<percentage>';
+  inherits: false;
+  initial-value: 70%;
+}
+
+@property --y2 {
+  syntax: '<percentage>';
+  inherits: false;
+  initial-value: 65%;
+}
+
+@property --a {
+  syntax: '<angle>';
+  inherits: false;
+  initial-value: 0deg;
+}
+
+.light-field {
+  position: absolute;
+  inset: -40%;
+  pointer-events: none;
+
+  opacity: 0.85;
   mix-blend-mode: screen;
   filter: blur(110px) saturate(160%) brightness(115%);
   will-change: transform;
@@ -54,24 +78,31 @@ body {
   animation: slowGlow 60s ease-in-out infinite alternate;
 }
 
-@keyframes slowGlow{
-  0%{
-    --x1: 28%; --y1: 38%
-    --x2: 72%; --y2: 62%;
+@keyframes slowGlow {
+  0% {
+    --x1: 28%;
+    --y1: 38% --x2: 72%;
+    --y2: 62%;
     --a: -10deg;
     transform: translate3d(-1.2%, -0.8%, 0) scale(1.03);
   }
-  50%{
-    --x1: 45%; --y1: 30%;
-    --x2: 60%; --y2: 72%;
+
+  50% {
+    --x1: 45%;
+    --y1: 30%;
+    --x2: 60%;
+    --y2: 72%;
     --a: 25deg;
-    transform: translate3d( 1.0%,  0.6%, 0) scale(1.06);
+    transform: translate3d(1.0%, 0.6%, 0) scale(1.06);
   }
-  100%{
-    --x1: 35%; --y1: 55%;
-    --x2: 78%; --y2: 48%;
+
+  100% {
+    --x1: 35%;
+    --y1: 55%;
+    --x2: 78%;
+    --y2: 48%;
     --a: 55deg;
-    transform: translate3d(-0.6%,  1.1%, 0) scale(1.04);
+    transform: translate3d(-0.6%, 1.1%, 0) scale(1.04);
   }
 }
 
@@ -84,7 +115,6 @@ body {
   z-index: 1;
 }
 
-/* === 主容器 === */
 .app-container {
   position: relative;
   z-index: 2;
@@ -96,7 +126,6 @@ body {
   -webkit-app-region: drag;
 }
 
-/* === 封面 === */
 .album-art-container {
   position: relative;
   width: 340px;
@@ -137,12 +166,83 @@ body {
   border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
-/* === 信息 === */
+.lyrics-container {
+  width: 100%;
+  max-width: 500px;
+  height: 340px;
+  margin-bottom: 20px;
+  position: relative;
+  mask-image: linear-gradient(to bottom,
+      transparent 0%,
+      rgba(0, 0, 0, 0.8) 15%,
+      black 30%,
+      black 70%,
+      rgba(0, 0, 0, 0.8) 85%,
+      transparent 100%);
+  -webkit-mask-image: linear-gradient(to bottom,
+      transparent 0%,
+      rgba(0, 0, 0, 0.8) 15%,
+      black 30%,
+      black 70%,
+      rgba(0, 0, 0, 0.8) 85%,
+      transparent 100%);
+  -webkit-app-region: no-drag;
+}
+
+.lyrics-scroll {
+  height: 100%;
+  overflow-y: auto;
+  padding: 50% 0;
+  box-sizing: border-box;
+  text-align: center;
+  scrollbar-width: none;
+  scroll-behavior: smooth;
+}
+
+.lyrics-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+.lyric-line {
+  color: rgba(255, 255, 255, 0.55);
+  font-size: 16px;
+  line-height: 1.6;
+  margin: 10px 0;
+  font-weight: 400;
+  cursor: pointer;
+  transition: all 0.4s ease-out;
+  transform: scale(1);
+  filter: none;
+}
+
+.lyric-line:hover {
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.lyric-line.active {
+  color: #fff;
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1.4;
+  margin: 18px 0;
+  transform: scale(1.02);
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+}
+
+.lyric-line.placeholder {
+  font-size: 15px;
+  color: rgba(255, 255, 255, 0.3);
+  margin-top: 30%;
+}
+
 .song-info {
   text-align: center;
-  margin-bottom: 30px;
+  margin-top: 10px;
+  margin-bottom: 25px;
   width: 80%;
   text-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+  position: relative;
+  z-index: 5;
 }
 
 .song-info div {
@@ -193,7 +293,6 @@ body {
   opacity: 1;
 }
 
-/* === 进度条 (极简无球版) === */
 .progress-container {
   width: 80%;
   max-width: 550px;
@@ -218,7 +317,6 @@ body {
   -webkit-appearance: none;
   width: 0;
   height: 0;
-  /* 隐藏滑块 */
   background: transparent;
   border: none;
 }
@@ -237,7 +335,6 @@ body {
   font-family: monospace;
 }
 
-/* === 按钮组 (强制对齐) === */
 .buttons {
   display: flex;
   justify-content: center;
@@ -266,7 +363,6 @@ body {
   transform: scale(0.92);
 }
 
-/* 主播放按钮 64px */
 #btnPlay {
   width: 64px;
   height: 64px;
@@ -290,7 +386,6 @@ body {
   margin-left: 0;
 }
 
-/* 切歌按钮 48px */
 #btnPrev,
 #btnNext {
   width: 48px;
@@ -311,7 +406,6 @@ body {
   fill: currentColor;
 }
 
-/* 模式/列表按钮 40px */
 #btnMode,
 #btnPlaylist {
   width: 40px;
@@ -334,7 +428,6 @@ body {
   fill: none;
 }
 
-/* === 侧边列表抽屉 === */
 .playlist-drawer {
   position: absolute;
   top: 0;
@@ -397,7 +490,6 @@ body {
   padding-top: 10px;
 }
 
-/* 滚动条 */
 .playlist-list::-webkit-scrollbar {
   width: 6px;
 }
