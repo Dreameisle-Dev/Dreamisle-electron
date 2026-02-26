@@ -33,7 +33,6 @@ let playMode = 0;
 let volumeTimeout;
 
 let currentLyrics = [];
-let isLyricsVisible = false;
 let currentLineIndex = -1;
 
 // 初始化音量
@@ -108,20 +107,15 @@ function initMouseFollow() {
     targetMouseY = (e.clientY / window.innerHeight) * 100;
   });
 
-  // 使用 requestAnimationFrame 实现平滑跟随
   function animateMouseFollow() {
-    // 平滑插值
     mouseX += (targetMouseX - mouseX) * 0.05;
     mouseY += (targetMouseY - mouseY) * 0.05;
 
-    // 更新 CSS 变量，影响光效位置
     document.documentElement.style.setProperty('--mouse-x', `${mouseX}%`);
     document.documentElement.style.setProperty('--mouse-y', `${mouseY}%`);
     
-    // 动态调整光效中心点
     const lightField = document.querySelector('.light-field');
     if (lightField) {
-      // 根据鼠标位置微调光效，创造视差效果
       const offsetX = (mouseX - 50) * 0.2;
       const offsetY = (mouseY - 50) * 0.2;
       lightField.style.transform = `translate3d(${offsetX}%, ${offsetY}%, 0) scale(var(--scale, 1))`;
@@ -133,8 +127,9 @@ function initMouseFollow() {
   animateMouseFollow();
 }
 
+// 封面点击 - 直接导入音乐
 document.getElementById('coverContainer').addEventListener('click', () => {
-  if (!isLyricsVisible) triggerImport();
+  triggerImport();
 });
 
 async function triggerImport() {
@@ -328,7 +323,7 @@ function renderLyricsToDom() {
 }
 
 function syncLyrics(currentTime) {
-  if (!currentLyrics.length || !isLyricsVisible) return;
+  if (!currentLyrics.length) return;
   if (currentLyrics[0].isStatic) return;
 
   let activeIndex = -1;
@@ -364,27 +359,6 @@ function syncLyrics(currentTime) {
   }
 }
 
-function toggleLyricsView() {
-  isLyricsVisible = !isLyricsVisible;
-
-  if (isLyricsVisible) {
-    if (coverContainer) coverContainer.style.display = 'none';
-    if (lyricsContainer) lyricsContainer.style.display = 'block';
-
-    syncLyrics(audio.currentTime);
-  } else {
-    if (coverContainer) coverContainer.style.display = 'block';
-    if (lyricsContainer) lyricsContainer.style.display = 'none';
-  }
-}
-
-document.addEventListener('keydown', (e) => {
-  if (document.activeElement === searchInput) return;
-  if (e.key.toLowerCase() === 'i') {
-    toggleLyricsView();
-  }
-});
-
 function updateThemeColor(src) {
   if (!src) {
     document.documentElement.style.setProperty('--bg-color-1', '#222');
@@ -412,7 +386,6 @@ function updateThemeColor(src) {
       document.documentElement.style.setProperty('--bg-color-1', `rgb(${r},${g},${b})`);
       document.documentElement.style.setProperty('--bg-color-2', `rgb(${r * 0.6},${g * 0.6},${b * 0.6})`);
       
-      // 根据封面颜色调整光效色彩
       document.documentElement.style.setProperty('--glow-primary', `rgba(${r}, ${g + 20}, ${b + 40}, 0.15)`);
       document.documentElement.style.setProperty('--glow-secondary', `rgba(${r + 40}, ${g}, ${b + 20}, 0.12)`);
     }

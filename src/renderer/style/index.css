@@ -67,11 +67,12 @@ body {
 }
 
 .ambient-bg {
-  position: absolute;
+  position: fixed;
   inset: 0;
   z-index: 0;
   overflow: hidden;
   background: #000;
+  pointer-events: none;
 }
 
 .light-field {
@@ -83,21 +84,16 @@ body {
   filter: blur(120px) saturate(140%) brightness(110%);
   will-change: transform, opacity;
   
-  /* 多层径向渐变叠加 */
   background:
-    /* 第一层：主色调 */
     radial-gradient(circle at var(--x1) var(--y1),
       color-mix(in srgb, var(--bg-color-1) 60%, transparent),
       transparent 50%),
-    /* 第二层：辅助色 */
     radial-gradient(circle at var(--x2) var(--y2),
       color-mix(in srgb, var(--bg-color-2) 50%, transparent),
       transparent 55%),
-    /* 第三层：动态高光 */
     radial-gradient(circle at var(--x3) var(--y3),
       var(--glow-tertiary),
       transparent 40%),
-    /* 底部环境光 */
     conic-gradient(from var(--rotation) at 50% 50%,
       transparent 0deg,
       color-mix(in srgb, var(--bg-color-1) 8%, transparent) 90deg,
@@ -105,7 +101,6 @@ body {
       color-mix(in srgb, var(--bg-color-2) 6%, transparent) 270deg,
       transparent 360deg);
   
-  /* 贝塞尔曲线 */
   animation: 
     slowGlow 25s cubic-bezier(0.4, 0, 0.2, 1) infinite alternate,
     breathe 15s ease-in-out infinite alternate;
@@ -144,7 +139,6 @@ body {
   mix-blend-mode: overlay;
 }
 
-/* 主光效动画 */
 @keyframes slowGlow {
   0% {
     --x1: 25%;
@@ -191,7 +185,6 @@ body {
   }
 }
 
-/* 呼吸效果 */
 @keyframes breathe {
   0%, 100% {
     --scale: 1;
@@ -203,13 +196,11 @@ body {
   }
 }
 
-/* 旋转动画 */
 @keyframes rotate {
   from { --rotation: 0deg; }
   to { --rotation: 360deg; }
 }
 
-/* 噪点叠加层 */
 .noise-overlay {
   position: absolute;
   width: 100%;
@@ -221,7 +212,6 @@ body {
   mix-blend-mode: overlay;
 }
 
-/* 暗角效果 */
 .vignette {
   position: absolute;
   inset: 0;
@@ -235,17 +225,54 @@ body {
   z-index: 2;
   height: 100%;
   display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
+  flex-direction: row;
   -webkit-app-region: drag;
 }
 
-/* 专辑封面容器 */
+.left-panel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+  min-width: 400px;
+  position: relative;
+}
+
+.right-panel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+  min-width: 400px;
+  position: relative;
+  border-left: 1px solid rgba(255, 255, 255, 0.03);
+}
+
+.left-panel::after,
+.right-panel::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: -1;
+}
+
+.left-panel::after {
+  background: radial-gradient(circle at 100% 50%, rgba(255,255,255,0.02) 0%, transparent 50%);
+}
+
+.right-panel::after {
+  background: radial-gradient(circle at 0% 50%, rgba(255,255,255,0.02) 0%, transparent 50%);
+}
+
 .album-art-container {
   position: relative;
-  width: 340px;
-  height: 340px;
+  width: 320px;
+  height: 320px;
   margin-bottom: 30px;
   perspective: 1000px;
   cursor: pointer;
@@ -264,7 +291,6 @@ body {
   box-shadow: 
     0 10px 40px rgba(0, 0, 0, 0.5),
     0 0 100px var(--bg-color-1),
-    /* 添加环境光反射 */
     0 0 200px rgba(255, 255, 255, 0.05);
   transition: all 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
   -webkit-app-region: no-drag;
@@ -279,7 +305,6 @@ body {
   animation: albumGlow 4s ease-in-out infinite alternate;
 }
 
-/* 光晕呼吸 */
 @keyframes albumGlow {
   from {
     box-shadow: 
@@ -298,37 +323,36 @@ body {
 .default-cover {
   width: 100%;
   height: 100%;
-  background: #222;
+  background: linear-gradient(135deg, rgba(34,34,34,0.8) 0%, rgba(17,17,17,0.8) 100%);
   border-radius: 16px;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 60px;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
-  background: linear-gradient(135deg, #222 0%, #111 100%);
   border: 1px solid rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(10px);
 }
 
-/* 歌词容器 */
 .lyrics-container {
   width: 100%;
-  max-width: 500px;
-  height: 340px;
-  margin-bottom: 20px;
+  max-width: 480px;
+  height: 70vh;
+  max-height: 600px;
   position: relative;
   mask-image: linear-gradient(to bottom,
       transparent 0%,
-      rgba(0, 0, 0, 0.9) 12%,
-      black 25%,
-      black 75%,
-      rgba(0, 0, 0, 0.9) 88%,
+      rgba(0, 0, 0, 0.9) 8%,
+      black 20%,
+      black 80%,
+      rgba(0, 0, 0, 0.9) 92%,
       transparent 100%);
   -webkit-mask-image: linear-gradient(to bottom,
       transparent 0%,
-      rgba(0, 0, 0, 0.9) 12%,
-      black 25%,
-      black 75%,
-      rgba(0, 0, 0, 0.9) 88%,
+      rgba(0, 0, 0, 0.9) 8%,
+      black 20%,
+      black 80%,
+      rgba(0, 0, 0, 0.9) 92%,
       transparent 100%);
   -webkit-app-region: no-drag;
 }
@@ -350,13 +374,14 @@ body {
 .lyric-line {
   color: rgba(255, 255, 255, 0.5);
   font-size: 16px;
-  line-height: 1.8;
-  margin: 12px 0;
+  line-height: 2;
+  margin: 16px 0;
   font-weight: 400;
   cursor: pointer;
   transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
   transform: scale(1);
   filter: blur(0.3px);
+  padding: 0 20px;
 }
 
 .lyric-line:hover {
@@ -366,30 +391,30 @@ body {
 
 .lyric-line.active {
   color: #fff;
-  font-size: 22px;
+  font-size: 24px;
   font-weight: 600;
-  line-height: 1.5;
-  margin: 20px 0;
-  transform: scale(1.05);
+  line-height: 1.6;
+  margin: 24px 0;
+  transform: scale(1.08);
   filter: blur(0);
   text-shadow: 
     0 2px 20px rgba(0, 0, 0, 0.3),
-    0 0 40px rgba(255, 255, 255, 0.1);
+    0 0 40px rgba(255, 255, 255, 0.15);
 }
 
 .lyric-line.placeholder {
-  font-size: 15px;
+  font-size: 16px;
   color: rgba(255, 255, 255, 0.3);
-  margin-top: 30%;
+  margin-top: 40%;
   filter: blur(0);
 }
 
-/* 歌曲信息 */
 .song-info {
   text-align: center;
   margin-top: 10px;
   margin-bottom: 25px;
-  width: 80%;
+  width: 100%;
+  max-width: 400px;
   text-shadow: 0 2px 20px rgba(0, 0, 0, 0.3);
   position: relative;
   z-index: 5;
@@ -407,7 +432,7 @@ body {
 }
 
 .song-title {
-  font-size: 26px;
+  font-size: 24px;
   font-weight: 700;
   margin-bottom: 8px;
   white-space: nowrap;
@@ -417,12 +442,11 @@ body {
 }
 
 .artist-name {
-  font-size: 17px;
+  font-size: 16px;
   opacity: 0.7;
   font-weight: 400;
 }
 
-/* 音量提示 */
 .volume-hud {
   position: absolute;
   top: 50%;
@@ -450,10 +474,9 @@ body {
   transform: translate(-50%, -50%) scale(1.05);
 }
 
-/* 进度条优化 */
 .progress-container {
-  width: 80%;
-  max-width: 550px;
+  width: 100%;
+  max-width: 400px;
   display: flex;
   flex-direction: column;
   margin-bottom: 25px;
@@ -484,7 +507,6 @@ body {
   height: 7px;
 }
 
-/* 进度条填充渐变 */
 .progress-bar::-webkit-slider-runnable-track {
   background: linear-gradient(to right, 
     rgba(255,255,255,0.9) 0%, 
@@ -504,15 +526,14 @@ body {
   letter-spacing: 0.5px;
 }
 
-/* 按钮区域优化 */
 .buttons {
   display: flex;
   justify-content: center;
   align-items: center;
-  gap: 24px;
+  gap: 20px;
   width: 100%;
-  max-width: 500px;
-  margin-top: 15px;
+  max-width: 400px;
+  margin-top: 10px;
   -webkit-app-region: no-drag;
 }
 
@@ -549,10 +570,9 @@ body {
   transform: scale(0.92);
 }
 
-/* 播放按钮特殊样式 */
 #btnPlay {
-  width: 68px;
-  height: 68px;
+  width: 64px;
+  height: 64px;
   background: rgba(255, 255, 255, 0.12);
   backdrop-filter: blur(10px);
   border: 1px solid rgba(255, 255, 255, 0.1);
@@ -570,8 +590,8 @@ body {
 }
 
 #btnPlay svg {
-  width: 26px;
-  height: 26px;
+  width: 24px;
+  height: 24px;
   fill: currentColor;
   margin-left: 2px;
   filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));
@@ -581,11 +601,10 @@ body {
   margin-left: 0;
 }
 
-/* 上一首/下一首按钮 */
 #btnPrev,
 #btnNext {
-  width: 52px;
-  height: 52px;
+  width: 48px;
+  height: 48px;
   opacity: 0.85;
 }
 
@@ -598,17 +617,16 @@ body {
 
 #btnPrev svg,
 #btnNext svg {
-  width: 24px;
-  height: 24px;
+  width: 22px;
+  height: 22px;
   fill: currentColor;
   filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));
 }
 
-/* 模式切换和播放列表按钮 */
 #btnMode,
 #btnPlaylist {
-  width: 44px;
-  height: 44px;
+  width: 40px;
+  height: 40px;
   opacity: 0.6;
   color: rgba(255, 255, 255, 0.9);
 }
@@ -622,20 +640,19 @@ body {
 
 #btnMode svg,
 #btnPlaylist svg {
-  width: 22px;
-  height: 22px;
+  width: 20px;
+  height: 20px;
   stroke: currentColor;
   fill: none;
   stroke-width: 1.8;
 }
 
-/* 播放列表抽屉 */
 .playlist-drawer {
   position: absolute;
   top: 0;
   right: 0;
   bottom: 0;
-  width: 340px;
+  width: 320px;
   background: rgba(20, 20, 20, 0.4);
   backdrop-filter: blur(30px) saturate(180%);
   -webkit-backdrop-filter: blur(30px) saturate(180%);
@@ -775,11 +792,54 @@ body {
   font-weight: 400;
 }
 
-/* 响应 */
-@media (max-width: 768px) {
+@media (max-width: 900px) {
+  .app-container {
+    flex-direction: column;
+  }
+  
+  .left-panel,
+  .right-panel {
+    flex: none;
+    width: 100%;
+    min-width: auto;
+    padding: 20px;
+  }
+  
+  .right-panel {
+    border-left: none;
+    border-top: 1px solid rgba(255, 255, 255, 0.03);
+    flex: 1;
+  }
+  
+  .left-panel::after,
+  .right-panel::after {
+    display: none;
+  }
+  
   .album-art-container {
-    width: 280px;
-    height: 280px;
+    width: 240px;
+    height: 240px;
+    margin-bottom: 20px;
+  }
+  
+  .lyrics-container {
+    height: 50vh;
+    max-height: 400px;
+  }
+  
+  .song-title {
+    font-size: 20px;
+  }
+  
+  .lyric-line.active {
+    font-size: 20px;
+  }
+}
+
+@media (max-width: 600px) {
+  .album-art-container {
+    width: 200px;
+    height: 200px;
   }
   
   .playlist-drawer {
@@ -791,7 +851,6 @@ body {
   }
 }
 
-/* 减少动画偏好支持 */
 @media (prefers-reduced-motion: reduce) {
   .light-field,
   .light-field::before,
