@@ -36,9 +36,19 @@ let currentLyrics = [];
 let isLyricsVisible = false;
 let currentLineIndex = -1;
 
+// 初始化音量
 audio.volume = 0.5;
 
+// 鼠标跟随光效变量
+let mouseX = 50;
+let mouseY = 50;
+let targetMouseX = 50;
+let targetMouseY = 50;
+
 window.addEventListener('DOMContentLoaded', async () => {
+  // 初始化鼠标跟随
+  initMouseFollow();
+  
   const savedSongs = await window.dreamApi.loadSavedMusic();
 
   if (savedSongs && savedSongs.length > 0) {
@@ -73,7 +83,55 @@ window.addEventListener('DOMContentLoaded', async () => {
   }
 
   setupIpcListeners();
+  initProgressBarStyle();
 });
+
+// 初始化进度条样式
+function initProgressBarStyle() {
+  updateProgressStyle(0);
+}
+
+// 更新进度条样式
+function updateProgressStyle(value) {
+  progressBar.style.setProperty('--progress', `${value}%`);
+  progressBar.style.background = `linear-gradient(to right, 
+    rgba(255,255,255,0.9) 0%, 
+    rgba(255,255,255,0.6) ${value}%, 
+    rgba(255,255,255,0.1) ${value}%
+  )`;
+}
+
+// 鼠标跟随光效初始化
+function initMouseFollow() {
+  document.addEventListener('mousemove', (e) => {
+    targetMouseX = (e.clientX / window.innerWidth) * 100;
+    targetMouseY = (e.clientY / window.innerHeight) * 100;
+  });
+
+  // 使用 requestAnimationFrame 实现平滑跟随
+  function animateMouseFollow() {
+    // 平滑插值
+    mouseX += (targetMouseX - mouseX) * 0.05;
+    mouseY += (targetMouseY - mouseY) * 0.05;
+
+    // 更新 CSS 变量，影响光效位置
+    document.documentElement.style.setProperty('--mouse-x', `${mouseX}%`);
+    document.documentElement.style.setProperty('--mouse-y', `${mouseY}%`);
+    
+    // 动态调整光效中心点
+    const lightField = document.querySelector('.light-field');
+    if (lightField) {
+      // 根据鼠标位置微调光效，创造视差效果
+      const offsetX = (mouseX - 50) * 0.2;
+      const offsetY = (mouseY - 50) * 0.2;
+      lightField.style.transform = `translate3d(${offsetX}%, ${offsetY}%, 0) scale(var(--scale, 1))`;
+    }
+
+    requestAnimationFrame(animateMouseFollow);
+  }
+  
+  animateMouseFollow();
+}
 
 document.getElementById('coverContainer').addEventListener('click', () => {
   if (!isLyricsVisible) triggerImport();
@@ -331,6 +389,8 @@ function updateThemeColor(src) {
   if (!src) {
     document.documentElement.style.setProperty('--bg-color-1', '#222');
     document.documentElement.style.setProperty('--bg-color-2', '#111');
+    document.documentElement.style.setProperty('--glow-primary', 'rgba(120, 140, 255, 0.15)');
+    document.documentElement.style.setProperty('--glow-secondary', 'rgba(255, 120, 180, 0.12)');
     return;
   }
   const img = new Image();
@@ -351,6 +411,10 @@ function updateThemeColor(src) {
       r = Math.floor(r / c); g = Math.floor(g / c); b = Math.floor(b / c);
       document.documentElement.style.setProperty('--bg-color-1', `rgb(${r},${g},${b})`);
       document.documentElement.style.setProperty('--bg-color-2', `rgb(${r * 0.6},${g * 0.6},${b * 0.6})`);
+      
+      // 根据封面颜色调整光效色彩
+      document.documentElement.style.setProperty('--glow-primary', `rgba(${r}, ${g + 20}, ${b + 40}, 0.15)`);
+      document.documentElement.style.setProperty('--glow-secondary', `rgba(${r + 40}, ${g}, ${b + 20}, 0.12)`);
     }
   };
 }
@@ -376,7 +440,7 @@ function renderPlaylist(filterText = '') {
 }
 
 function updateProgress(val) {
-  progressBar.style.background = `linear-gradient(to right, #fff ${val}%, rgba(255,255,255,0.15) ${val}%)`;
+  updateProgressStyle(val);
 }
 
 btnMode.addEventListener('click', () => {

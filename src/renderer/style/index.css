@@ -2,24 +2,10 @@
   --bg-color-1: #222;
   --bg-color-2: #111;
   --text-main: #fff;
-}
-
-body {
-  margin: 0;
-  height: 100vh;
-  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif;
-  overflow: hidden;
-  background: #000;
-  color: var(--text-main);
-  user-select: none;
-}
-
-.ambient-bg {
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-  overflow: hidden;
-  background: #000;
+  
+  --glow-primary: rgba(120, 140, 255, 0.15);
+  --glow-secondary: rgba(255, 120, 180, 0.12);
+  --glow-tertiary: rgba(100, 220, 255, 0.08);
 }
 
 @property --x1 {
@@ -46,71 +32,200 @@ body {
   initial-value: 65%;
 }
 
-@property --a {
+@property --x3 {
+  syntax: '<percentage>';
+  inherits: false;
+  initial-value: 50%;
+}
+
+@property --y3 {
+  syntax: '<percentage>';
+  inherits: false;
+  initial-value: 50%;
+}
+
+@property --scale {
+  syntax: '<number>';
+  inherits: false;
+  initial-value: 1;
+}
+
+@property --rotation {
   syntax: '<angle>';
   inherits: false;
   initial-value: 0deg;
 }
 
+body {
+  margin: 0;
+  height: 100vh;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif;
+  overflow: hidden;
+  background: #000;
+  color: var(--text-main);
+  user-select: none;
+}
+
+.ambient-bg {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  background: #000;
+}
+
 .light-field {
   position: absolute;
-  inset: -40%;
+  inset: -50%;
   pointer-events: none;
-
-  opacity: 0.85;
+  opacity: 0.9;
   mix-blend-mode: screen;
-  filter: blur(110px) saturate(160%) brightness(115%);
-  will-change: transform;
-
+  filter: blur(120px) saturate(140%) brightness(110%);
+  will-change: transform, opacity;
+  
+  /* 多层径向渐变叠加 */
   background:
+    /* 第一层：主色调 */
     radial-gradient(circle at var(--x1) var(--y1),
-      color-mix(in srgb, var(--bg-color-1) 70%, transparent),
-      transparent 62%),
+      color-mix(in srgb, var(--bg-color-1) 60%, transparent),
+      transparent 50%),
+    /* 第二层：辅助色 */
     radial-gradient(circle at var(--x2) var(--y2),
-      color-mix(in srgb, var(--bg-color-2) 65%, transparent),
-      transparent 66%),
-    conic-gradient(from var(--a) at 50% 50%,
+      color-mix(in srgb, var(--bg-color-2) 50%, transparent),
+      transparent 55%),
+    /* 第三层：动态高光 */
+    radial-gradient(circle at var(--x3) var(--y3),
+      var(--glow-tertiary),
+      transparent 40%),
+    /* 底部环境光 */
+    conic-gradient(from var(--rotation) at 50% 50%,
       transparent 0deg,
-      color-mix(in srgb, var(--bg-color-1) 12%, transparent) 120deg,
-      transparent 240deg,
-      color-mix(in srgb, var(--bg-color-2) 10%, transparent) 360deg);
-
-  animation: slowGlow 60s ease-in-out infinite alternate;
+      color-mix(in srgb, var(--bg-color-1) 8%, transparent) 90deg,
+      transparent 180deg,
+      color-mix(in srgb, var(--bg-color-2) 6%, transparent) 270deg,
+      transparent 360deg);
+  
+  /* 贝塞尔曲线 */
+  animation: 
+    slowGlow 25s cubic-bezier(0.4, 0, 0.2, 1) infinite alternate,
+    breathe 15s ease-in-out infinite alternate;
+  transform: scale(var(--scale));
 }
 
+.light-field::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at calc(100% - var(--x1)) calc(100% - var(--y1)),
+      var(--glow-primary),
+      transparent 45%),
+    radial-gradient(circle at calc(100% - var(--x2)) calc(100% - var(--y2)),
+      var(--glow-secondary),
+      transparent 50%);
+  opacity: 0.6;
+  animation: slowGlow 30s cubic-bezier(0.4, 0, 0.2, 1) infinite alternate-reverse;
+  filter: blur(80px);
+}
+
+.light-field::after {
+  content: '';
+  position: absolute;
+  inset: -20%;
+  background: 
+    repeating-conic-gradient(
+      from var(--rotation) at 50% 50%,
+      transparent 0deg,
+      rgba(255, 255, 255, 0.02) 5deg,
+      transparent 10deg
+    );
+  opacity: 0.4;
+  animation: rotate 60s linear infinite;
+  mix-blend-mode: overlay;
+}
+
+/* 主光效动画 */
 @keyframes slowGlow {
   0% {
-    --x1: 28%;
-    --y1: 38% --x2: 72%;
-    --y2: 62%;
-    --a: -10deg;
-    transform: translate3d(-1.2%, -0.8%, 0) scale(1.03);
-  }
-
-  50% {
-    --x1: 45%;
+    --x1: 25%;
     --y1: 30%;
-    --x2: 60%;
-    --y2: 72%;
-    --a: 25deg;
-    transform: translate3d(1.0%, 0.6%, 0) scale(1.06);
+    --x2: 75%;
+    --y2: 70%;
+    --x3: 40%;
+    --y3: 45%;
+    --rotation: 0deg;
+    transform: translate3d(-2%, -1%, 0) scale(1.05);
   }
-
-  100% {
+  
+  33% {
+    --x1: 45%;
+    --y1: 25%;
+    --x2: 55%;
+    --y2: 75%;
+    --x3: 60%;
+    --y3: 40%;
+    --rotation: 15deg;
+    transform: translate3d(1%, 0.5%, 0) scale(1.08);
+  }
+  
+  66% {
     --x1: 35%;
-    --y1: 55%;
-    --x2: 78%;
-    --y2: 48%;
-    --a: 55deg;
-    transform: translate3d(-0.6%, 1.1%, 0) scale(1.04);
+    --y1: 60%;
+    --x2: 80%;
+    --y2: 45%;
+    --x3: 30%;
+    --y3: 65%;
+    --rotation: 30deg;
+    transform: translate3d(-0.5%, 1.5%, 0) scale(1.06);
+  }
+  
+  100% {
+    --x1: 30%;
+    --y1: 45%;
+    --x2: 70%;
+    --y2: 55%;
+    --x3: 50%;
+    --y3: 50%;
+    --rotation: 45deg;
+    transform: translate3d(0.5%, -0.5%, 0) scale(1.07);
   }
 }
 
+/* 呼吸效果 */
+@keyframes breathe {
+  0%, 100% {
+    --scale: 1;
+    opacity: 0.85;
+  }
+  50% {
+    --scale: 1.02;
+    opacity: 0.95;
+  }
+}
+
+/* 旋转动画 */
+@keyframes rotate {
+  from { --rotation: 0deg; }
+  to { --rotation: 360deg; }
+}
+
+/* 噪点叠加层 */
 .noise-overlay {
   position: absolute;
   width: 100%;
   height: 100%;
-  background: url('data:image/svg+xml;utf8,%3Csvg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg"%3E%3Cfilter id="noiseFilter"%3E%3CfeTurbulence type="fractalNoise" baseFrequency="0.8" numOctaves="3" stitchTiles="stitch"/%3E%3C/filter%3E%3Crect width="100%25" height="100%25" filter="url(%23noiseFilter)" opacity="0.04"/%3E%3C/svg%3E');
+  background: url('data:image/svg+xml;utf8,%3Csvg viewBox="0 0 400 400" xmlns="http://www.w3.org/2000/svg"%3E%3Cfilter id="noiseFilter"%3E%3CfeTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="4" stitchTiles="stitch"/%3E%3C/filter%3E%3Crect width="100%25" height="100%25" filter="url(%23noiseFilter)" opacity="0.03"/%3E%3C/svg%3E');
+  pointer-events: none;
+  z-index: 1;
+  opacity: 0.6;
+  mix-blend-mode: overlay;
+}
+
+/* 暗角效果 */
+.vignette {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at center, transparent 40%, rgba(0,0,0,0.4) 100%);
   pointer-events: none;
   z-index: 1;
 }
@@ -126,6 +241,7 @@ body {
   -webkit-app-region: drag;
 }
 
+/* 专辑封面容器 */
 .album-art-container {
   position: relative;
   width: 340px;
@@ -133,6 +249,11 @@ body {
   margin-bottom: 30px;
   perspective: 1000px;
   cursor: pointer;
+  transition: transform 0.3s ease;
+}
+
+.album-art-container:hover {
+  transform: translateY(-2px);
 }
 
 .cover-img {
@@ -140,16 +261,38 @@ body {
   height: 100%;
   object-fit: cover;
   border-radius: 16px;
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5),
-    0 0 100px var(--bg-color-1);
-  transition: transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+  box-shadow: 
+    0 10px 40px rgba(0, 0, 0, 0.5),
+    0 0 100px var(--bg-color-1),
+    /* 添加环境光反射 */
+    0 0 200px rgba(255, 255, 255, 0.05);
+  transition: all 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
   -webkit-app-region: no-drag;
 }
 
 .album-art-container.playing .cover-img {
   transform: scale(1.03) translateY(-5px);
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6),
-    0 0 120px var(--bg-color-1);
+  box-shadow: 
+    0 20px 50px rgba(0, 0, 0, 0.6),
+    0 0 120px var(--bg-color-1),
+    0 0 300px rgba(255, 255, 255, 0.08);
+  animation: albumGlow 4s ease-in-out infinite alternate;
+}
+
+/* 光晕呼吸 */
+@keyframes albumGlow {
+  from {
+    box-shadow: 
+      0 20px 50px rgba(0, 0, 0, 0.6),
+      0 0 120px var(--bg-color-1),
+      0 0 300px rgba(255, 255, 255, 0.05);
+  }
+  to {
+    box-shadow: 
+      0 25px 60px rgba(0, 0, 0, 0.7),
+      0 0 140px var(--bg-color-1),
+      0 0 400px rgba(255, 255, 255, 0.1);
+  }
 }
 
 .default-cover {
@@ -166,6 +309,7 @@ body {
   border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
+/* 歌词容器 */
 .lyrics-container {
   width: 100%;
   max-width: 500px;
@@ -174,17 +318,17 @@ body {
   position: relative;
   mask-image: linear-gradient(to bottom,
       transparent 0%,
-      rgba(0, 0, 0, 0.8) 15%,
-      black 30%,
-      black 70%,
-      rgba(0, 0, 0, 0.8) 85%,
+      rgba(0, 0, 0, 0.9) 12%,
+      black 25%,
+      black 75%,
+      rgba(0, 0, 0, 0.9) 88%,
       transparent 100%);
   -webkit-mask-image: linear-gradient(to bottom,
       transparent 0%,
-      rgba(0, 0, 0, 0.8) 15%,
-      black 30%,
-      black 70%,
-      rgba(0, 0, 0, 0.8) 85%,
+      rgba(0, 0, 0, 0.9) 12%,
+      black 25%,
+      black 75%,
+      rgba(0, 0, 0, 0.9) 88%,
       transparent 100%);
   -webkit-app-region: no-drag;
 }
@@ -204,43 +348,49 @@ body {
 }
 
 .lyric-line {
-  color: rgba(255, 255, 255, 0.55);
+  color: rgba(255, 255, 255, 0.5);
   font-size: 16px;
-  line-height: 1.6;
-  margin: 10px 0;
+  line-height: 1.8;
+  margin: 12px 0;
   font-weight: 400;
   cursor: pointer;
-  transition: all 0.4s ease-out;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
   transform: scale(1);
-  filter: none;
+  filter: blur(0.3px);
 }
 
 .lyric-line:hover {
   color: rgba(255, 255, 255, 0.8);
+  filter: blur(0);
 }
 
 .lyric-line.active {
   color: #fff;
   font-size: 22px;
-  font-weight: 700;
-  line-height: 1.4;
-  margin: 18px 0;
-  transform: scale(1.02);
-  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+  font-weight: 600;
+  line-height: 1.5;
+  margin: 20px 0;
+  transform: scale(1.05);
+  filter: blur(0);
+  text-shadow: 
+    0 2px 20px rgba(0, 0, 0, 0.3),
+    0 0 40px rgba(255, 255, 255, 0.1);
 }
 
 .lyric-line.placeholder {
   font-size: 15px;
   color: rgba(255, 255, 255, 0.3);
   margin-top: 30%;
+  filter: blur(0);
 }
 
+/* 歌曲信息 */
 .song-info {
   text-align: center;
   margin-top: 10px;
   margin-bottom: 25px;
   width: 80%;
-  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+  text-shadow: 0 2px 20px rgba(0, 0, 0, 0.3);
   position: relative;
   z-index: 5;
 }
@@ -263,36 +413,44 @@ body {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  letter-spacing: -0.5px;
 }
 
 .artist-name {
   font-size: 17px;
   opacity: 0.7;
+  font-weight: 400;
 }
 
+/* 音量提示 */
 .volume-hud {
   position: absolute;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
   background: rgba(0, 0, 0, 0.6);
-  backdrop-filter: blur(10px);
-  padding: 10px 20px;
-  border-radius: 20px;
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  padding: 12px 24px;
+  border-radius: 24px;
   color: #fff;
-  font-weight: bold;
-  font-size: 18px;
+  font-weight: 600;
+  font-size: 16px;
   pointer-events: none;
   opacity: 0;
-  transition: opacity 0.3s ease;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
   z-index: 5;
+  letter-spacing: 1px;
 }
 
 .volume-hud.visible {
   opacity: 1;
+  transform: translate(-50%, -50%) scale(1.05);
 }
 
+/* 进度条优化 */
 .progress-container {
   width: 80%;
   max-width: 550px;
@@ -305,12 +463,13 @@ body {
 .progress-bar {
   -webkit-appearance: none;
   width: 100%;
-  height: 6px;
+  height: 5px;
   border-radius: 3px;
-  background: rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.1);
   outline: none;
   cursor: pointer;
   overflow: hidden;
+  transition: height 0.2s ease;
 }
 
 .progress-bar::-webkit-slider-thumb {
@@ -322,24 +481,35 @@ body {
 }
 
 .progress-bar:hover {
-  height: 8px;
-  border-radius: 4px;
+  height: 7px;
+}
+
+/* 进度条填充渐变 */
+.progress-bar::-webkit-slider-runnable-track {
+  background: linear-gradient(to right, 
+    rgba(255,255,255,0.9) 0%, 
+    rgba(255,255,255,0.6) var(--progress, 0%), 
+    rgba(255,255,255,0.1) var(--progress, 0%)
+  );
+  border-radius: 3px;
 }
 
 .time-labels {
   display: flex;
   justify-content: space-between;
-  margin-top: 8px;
-  font-size: 13px;
+  margin-top: 10px;
+  font-size: 12px;
   color: rgba(255, 255, 255, 0.5);
-  font-family: monospace;
+  font-family: "SF Mono", monospace;
+  letter-spacing: 0.5px;
 }
 
+/* 按钮区域优化 */
 .buttons {
   display: flex;
   justify-content: center;
   align-items: center;
-  gap: 20px;
+  gap: 24px;
   width: 100%;
   max-width: 500px;
   margin-top: 15px;
@@ -356,95 +526,129 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.2s ease;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.btn::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at center, rgba(255,255,255,0.2) 0%, transparent 70%);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  border-radius: 50%;
+}
+
+.btn:hover::before {
+  opacity: 1;
 }
 
 .btn:active {
   transform: scale(0.92);
 }
 
+/* 播放按钮特殊样式 */
 #btnPlay {
-  width: 64px;
-  height: 64px;
-  background: rgba(255, 255, 255, 0.15);
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  width: 68px;
+  height: 68px;
+  background: rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 
+    0 4px 20px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
 }
 
 #btnPlay:hover {
-  background: rgba(255, 255, 255, 0.25);
-  transform: scale(1.05);
+  background: rgba(255, 255, 255, 0.2);
+  transform: scale(1.08);
+  box-shadow: 
+    0 8px 30px rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.15);
 }
 
 #btnPlay svg {
-  width: 28px;
-  height: 28px;
+  width: 26px;
+  height: 26px;
   fill: currentColor;
   margin-left: 2px;
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));
 }
 
 #btnPlay svg#iconPause {
   margin-left: 0;
 }
 
+/* 上一首/下一首按钮 */
 #btnPrev,
 #btnNext {
-  width: 48px;
-  height: 48px;
-  opacity: 0.8;
+  width: 52px;
+  height: 52px;
+  opacity: 0.85;
 }
 
 #btnPrev:hover,
 #btnNext:hover {
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.08);
   opacity: 1;
+  transform: scale(1.05);
 }
 
 #btnPrev svg,
 #btnNext svg {
-  width: 22px;
-  height: 22px;
+  width: 24px;
+  height: 24px;
   fill: currentColor;
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));
 }
 
+/* 模式切换和播放列表按钮 */
 #btnMode,
 #btnPlaylist {
-  width: 40px;
-  height: 40px;
-  opacity: 0.5;
+  width: 44px;
+  height: 44px;
+  opacity: 0.6;
   color: rgba(255, 255, 255, 0.9);
 }
 
 #btnMode:hover,
 #btnPlaylist:hover {
-  background: rgba(255, 255, 255, 0.1);
-  opacity: 1;
+  background: rgba(255, 255, 255, 0.08);
+  opacity: 0.9;
+  transform: scale(1.05);
 }
 
 #btnMode svg,
 #btnPlaylist svg {
-  width: 20px;
-  height: 20px;
+  width: 22px;
+  height: 22px;
   stroke: currentColor;
   fill: none;
+  stroke-width: 1.8;
 }
 
+/* 播放列表抽屉 */
 .playlist-drawer {
   position: absolute;
   top: 0;
   right: 0;
   bottom: 0;
-  width: 320px;
-  background: rgba(30, 30, 30, 0.35);
-  backdrop-filter: blur(20px) saturate(180%);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  width: 340px;
+  background: rgba(20, 20, 20, 0.4);
+  backdrop-filter: blur(30px) saturate(180%);
+  -webkit-backdrop-filter: blur(30px) saturate(180%);
   transform: translateX(100%);
-  transition: transform 0.4s cubic-bezier(0.33, 1, 0.68, 1);
+  transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
   z-index: 10;
   display: flex;
   flex-direction: column;
-  padding: 30px 0 0 0;
-  border-left: 1px solid rgba(255, 255, 255, 0.15);
-  box-shadow: -10px 0 40px rgba(0, 0, 0, 0.5);
+  padding: 35px 0 0 0;
+  border-left: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 
+    -10px 0 50px rgba(0, 0, 0, 0.5),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.05);
 }
 
 .playlist-drawer.open {
@@ -452,32 +656,47 @@ body {
 }
 
 .playlist-header {
-  padding: 0 24px 15px;
+  padding: 0 28px 20px;
   font-weight: 700;
-  font-size: 20px;
+  font-size: 22px;
   flex-shrink: 0;
+  letter-spacing: -0.5px;
+}
+
+#playlistCount {
+  font-size: 13px;
+  opacity: 0.5;
+  margin-left: 10px;
+  font-weight: 500;
 }
 
 .search-container {
-  padding: 0 20px 15px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  padding: 0 24px 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
   flex-shrink: 0;
 }
 
 #searchInput {
   width: 100%;
-  padding: 10px 15px;
-  border-radius: 8px;
+  padding: 12px 16px;
+  border-radius: 10px;
   border: none;
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.08);
   color: #fff;
   font-size: 14px;
   outline: none;
   box-sizing: border-box;
+  transition: all 0.2s ease;
+  font-family: inherit;
 }
 
 #searchInput:focus {
-  background: rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.12);
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.1);
+}
+
+#searchInput::placeholder {
+  color: rgba(255, 255, 255, 0.4);
 }
 
 .playlist-list {
@@ -499,41 +718,88 @@ body {
 }
 
 .playlist-list::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.1);
   border-radius: 3px;
 }
 
 .playlist-list::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.4);
+  background: rgba(255, 255, 255, 0.3);
 }
 
 .playlist-item {
-  padding: 12px 24px;
+  padding: 14px 28px;
   cursor: pointer;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.03);
   display: flex;
   flex-direction: column;
-  transition: background 0.2s;
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.playlist-item::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: #fff;
+  opacity: 0;
+  transition: opacity 0.2s ease;
 }
 
 .playlist-item:hover {
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.06);
+  padding-left: 32px;
 }
 
 .playlist-item.active {
-  background: rgba(255, 255, 255, 0.12);
-  border-left: 4px solid #fff;
-  padding-left: 20px;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.playlist-item.active::before {
+  opacity: 1;
 }
 
 .item-title {
   font-size: 15px;
   color: #fff;
-  margin-bottom: 4px;
+  margin-bottom: 5px;
   font-weight: 500;
+  letter-spacing: -0.2px;
 }
 
 .item-artist {
   font-size: 13px;
-  opacity: 0.6;
+  opacity: 0.55;
+  font-weight: 400;
+}
+
+/* 响应 */
+@media (max-width: 768px) {
+  .album-art-container {
+    width: 280px;
+    height: 280px;
+  }
+  
+  .playlist-drawer {
+    width: 100%;
+  }
+  
+  .light-field {
+    filter: blur(80px) saturate(120%) brightness(100%);
+  }
+}
+
+/* 减少动画偏好支持 */
+@media (prefers-reduced-motion: reduce) {
+  .light-field,
+  .light-field::before,
+  .light-field::after {
+    animation: none;
+  }
+  
+  .album-art-container.playing .cover-img {
+    animation: none;
+  }
 }
