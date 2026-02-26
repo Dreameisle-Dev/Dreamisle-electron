@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "An offline music player",
   "license": "MIT",
-  "author": "HuanMeng",
+  "author": "Dreamisle-Dev",
   "type": "module",
   "main": "src/main.js",
   "scripts": {
