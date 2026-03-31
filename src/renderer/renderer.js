@@ -52,13 +52,13 @@ audio.volume = 0.5;
 
 window.addEventListener('DOMContentLoaded', async () => {
   initMouseFollow();
-
+  
   const savedSongs = await window.dreamApi.loadSavedMusic();
 
   if (savedSongs && savedSongs.length > 0) {
     songs = savedSongs;
     searchInput.value = '';
-    initVirtualList();
+    initVirtualList(); 
 
     const savedState = await window.dreamApi.loadPlaybackState();
     if (savedState && savedState.currentIndex >= 0 && savedState.currentIndex < songs.length) {
@@ -98,35 +98,42 @@ function initVirtualList(filterText = '') {
 
   playlistCountEl.innerText = `${filteredSongs.length}首`;
 
-  const totalHeight = filteredSongs.length * ITEM_HEIGHT;
-  playlistEl.innerHTML = `<div id="playlistSpacer" style="height: ${totalHeight}px; position: relative;"></div>`;
-
-  vsStartIndex = -1;
+  vsStartIndex = -1; 
   updateVirtualList();
 }
 
 function updateVirtualList() {
   const scrollTop = playlistEl.scrollTop;
   const viewportHeight = playlistEl.clientHeight || 800;
-
+  
   const newStart = Math.max(0, Math.floor(scrollTop / ITEM_HEIGHT) - 5);
   const newEnd = Math.min(filteredSongs.length, Math.ceil((scrollTop + viewportHeight) / ITEM_HEIGHT) + 5);
 
-  if (newStart === vsStartIndex && newEnd === vsEndIndex && playlistEl.children.length > 1) return;
+  if (newStart === vsStartIndex && newEnd === vsEndIndex && playlistEl.children.length > 0) return;
 
   vsStartIndex = newStart;
   vsEndIndex = newEnd;
 
-  const spacer = document.getElementById('playlistSpacer');
+  let spacer = document.getElementById('playlistSpacer');
+  if (!spacer) {
+    spacer = document.createElement('div');
+    spacer.id = 'playlistSpacer';
+  }
+  spacer.style.height = `${filteredSongs.length * ITEM_HEIGHT}px`;
+  spacer.style.width = '100%';
+
   playlistEl.innerHTML = '';
-  if (spacer) playlistEl.appendChild(spacer);
+  playlistEl.appendChild(spacer);
 
   const fragment = document.createDocumentFragment();
   for (let i = vsStartIndex; i < vsEndIndex; i++) {
     const songInfo = filteredSongs[i];
     const li = document.createElement('li');
     li.className = `playlist-item ${songInfo.originalIndex === currentIndex ? 'active' : ''}`;
+    
+    li.style.top = '10px'; 
     li.style.transform = `translateY(${i * ITEM_HEIGHT}px)`;
+    
     li.innerHTML = `<div class="item-title">${songInfo.title}</div><div class="item-artist">${songInfo.artist}</div>`;
     li.onclick = () => playSong(songInfo.originalIndex);
     fragment.appendChild(li);
@@ -184,7 +191,7 @@ function initMouseFollow() {
 
     document.documentElement.style.setProperty('--mouse-x', `${mouseX}%`);
     document.documentElement.style.setProperty('--mouse-y', `${mouseY}%`);
-
+    
     const lightField = document.querySelector('.light-field');
     if (lightField) {
       const offsetX = (mouseX - 50) * 0.2;
@@ -216,7 +223,7 @@ function initSongInfo(index) {
 
   titleEl.innerText = song.title;
   artistEl.innerText = song.artist;
-  updateVirtualList();
+  updateVirtualList(); 
 
   updateCoverAndColor(song);
   loadAndRenderLyrics(song);
@@ -240,7 +247,7 @@ function playSong(index) {
   }, 300);
 
   updatePlayButton(true);
-
+  
   vsStartIndex = -1;
   updateVirtualList();
 
@@ -286,34 +293,72 @@ async function updateCoverAndColor(song) {
 function parseLrc(lrcText) {
   if (!lrcText || typeof lrcText !== 'string') return [];
   const lines = lrcText.split(/\r\n|\r|\n/);
-  const result = [];
-  const timeExp = /\[(\d{1,2}):(\d{1,2})(\.\d{1,3})?\]/;
+  
+  const timeExp = /\[(\d{1,2}):(\d{1,2})(?:\.(\d{1,3}))?\]/g;
   let hasTimestamps = false;
+  const result = [];
 
   for (const line of lines) {
     const trimmedLine = line.trim();
     if (!trimmedLine) continue;
 
-    const match = timeExp.exec(trimmedLine);
-    if (match) {
+    const matches = [...trimmedLine.matchAll(timeExp)];
+
+    if (matches.length > 0) {
       hasTimestamps = true;
-      const min = parseInt(match[1]);
-      const sec = parseInt(match[2]);
-      const ms = match[3] ? parseFloat(match[3]) : 0;
-      const time = min * 60 + sec + ms;
-      const text = trimmedLine.replace(timeExp, '').trim();
-      if (text) result.push({ time, text });
+      const text = trimmedLine.replace(/\[\d{1,2}:\d{1,2}(?:\.\d{1,3})?\]/g, '').trim();
+
+      if (text) {
+        for (const match of matches) {
+          const min = parseInt(match[1]);
+          const sec = parseInt(match[2]);
+          const ms = match[3] ? parseFloat("0." + match[3]) : 0;
+          const time = min * 60 + sec + ms;
+          result.push({ time, text });
+        }
+      }
     }
   }
 
   if (!hasTimestamps && lines.length > 0) {
-    return lines.map(line => line.trim())
+    return lines
+      .map(line => line.trim())
       .filter(line => line.length > 0 && !/^\[.*?\]$/.test(line))
       .map(text => ({ time: 0, text, isStatic: true }));
   }
 
   result.sort((a, b) => a.time - b.time);
   return result;
+}
+
+function groupTranslations(lyricsArray) {
+  if (!lyricsArray || lyricsArray.length === 0 || lyricsArray[0].isStatic) return lyricsArray;
+  
+  const tempMap = new Map();
+  for (const item of lyricsArray) {
+    const timeKey = item.time.toFixed(2);
+    if (tempMap.has(timeKey)) {
+      tempMap.set(timeKey, tempMap.get(timeKey) + '\n' + item.text);
+    } else {
+      tempMap.set(timeKey, item.text);
+    }
+  }
+  
+  const result = Array.from(tempMap.entries()).map(([time, text]) => ({
+    time: parseFloat(time),
+    text
+  }));
+  result.sort((a, b) => a.time - b.time);
+  return result;
+}
+
+function escapeHtml(unsafe) {
+  return unsafe
+       .replace(/&/g, "&amp;")
+       .replace(/</g, "&lt;")
+       .replace(/>/g, "&gt;")
+       .replace(/"/g, "&quot;")
+       .replace(/'/g, "&#039;");
 }
 
 async function loadAndRenderLyrics(song) {
@@ -342,6 +387,10 @@ async function loadAndRenderLyrics(song) {
     }
   }
 
+  if (currentLyrics && currentLyrics.length > 0) {
+    currentLyrics = groupTranslations(currentLyrics);
+  }
+
   renderLyricsToDom();
 }
 
@@ -357,8 +406,14 @@ function renderLyricsToDom() {
       if (!line.text.trim()) return;
       const p = document.createElement('p');
       p.className = 'lyric-line';
-      p.innerText = line.text;
       p.dataset.index = index;
+
+      const textParts = line.text.split('\n').map(escapeHtml);
+      if (textParts.length > 1) {
+        p.innerHTML = `${textParts[0]}<br><span style="font-size: 0.8em; opacity: 0.75; margin-top: 6px; display: inline-block; font-weight: 400;">${textParts.slice(1).join('<br>')}</span>`;
+      } else {
+        p.innerText = line.text;
+      }
 
       if (!isStatic) {
         p.onclick = () => {
@@ -431,7 +486,7 @@ function updateThemeColor(src) {
       document.documentElement.style.setProperty('--glow-primary', `rgba(${r}, ${g + 20}, ${b + 40}, 0.15)`);
       document.documentElement.style.setProperty('--glow-secondary', `rgba(${r + 40}, ${g}, ${b + 20}, 0.12)`);
     }
-
+    
     ctx.clearRect(0, 0, 50, 50);
   };
 }
