@@ -6,12 +6,11 @@ contextBridge.exposeInMainWorld('dreamApi', {
   savePlaybackState: (state) => ipcRenderer.invoke('app:savePlaybackState', state),
   loadPlaybackState: () => ipcRenderer.invoke('app:loadPlaybackState'),
 
+  getCover: (path) => ipcRenderer.invoke('app:getCover', path),
   getLyrics: (path) => ipcRenderer.invoke('app:getLyrics', path),
 
-  // 窗口控制
   onWindowVisibilityChanged: (callback) => ipcRenderer.on('window-visibility-changed', (event, isVisible) => callback(isVisible)),
 
-  // 托盘控制
   onTrayPlayPause: (callback) => ipcRenderer.on('tray-play-pause', () => callback()),
   onTrayNext: (callback) => ipcRenderer.on('tray-next', () => callback()),
   onTrayPrev: (callback) => ipcRenderer.on('tray-prev', () => callback())

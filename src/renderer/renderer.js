@@ -35,17 +35,18 @@ let volumeTimeout;
 let currentLyrics = [];
 let currentLineIndex = -1;
 
-// 初始化音量
 audio.volume = 0.5;
 
-// 鼠标跟随光效变量
 let mouseX = 50;
 let mouseY = 50;
 let targetMouseX = 50;
 let targetMouseY = 50;
+let isAnimating = false;
+
+let isUserScrolling = false;
+let userScrollTimeout = null;
 
 window.addEventListener('DOMContentLoaded', async () => {
-  // 初始化鼠标跟随
   initMouseFollow();
   
   const savedSongs = await window.dreamApi.loadSavedMusic();
@@ -85,12 +86,33 @@ window.addEventListener('DOMContentLoaded', async () => {
   initProgressBarStyle();
 });
 
-// 初始化进度条样式
+lyricsScroll.addEventListener('wheel', () => {
+  isUserScrolling = true;
+  clearTimeout(userScrollTimeout);
+  userScrollTimeout = setTimeout(() => {
+    isUserScrolling = false;
+    if (currentLineIndex !== -1) {
+      const lines = lyricsScroll.querySelectorAll('.lyric-line');
+      let targetLine = null;
+      for (const line of lines) {
+        if (parseInt(line.dataset.index) === currentLineIndex) {
+          targetLine = line;
+          break;
+        }
+      }
+      if (targetLine) {
+        const containerHeight = lyricsContainer.clientHeight;
+        const targetScrollTop = targetLine.offsetTop - containerHeight / 2 + targetLine.clientHeight / 2;
+        lyricsScroll.scrollTop = targetScrollTop;
+      }
+    }
+  }, 3000);
+});
+
 function initProgressBarStyle() {
   updateProgressStyle(0);
 }
 
-// 更新进度条样式
 function updateProgressStyle(value) {
   progressBar.style.setProperty('--progress', `${value}%`);
   progressBar.style.background = `linear-gradient(to right, 
@@ -100,16 +122,27 @@ function updateProgressStyle(value) {
   )`;
 }
 
-// 鼠标跟随光效初始化
 function initMouseFollow() {
   document.addEventListener('mousemove', (e) => {
     targetMouseX = (e.clientX / window.innerWidth) * 100;
     targetMouseY = (e.clientY / window.innerHeight) * 100;
+    if (!isAnimating) {
+      isAnimating = true;
+      requestAnimationFrame(animateMouseFollow);
+    }
   });
 
   function animateMouseFollow() {
-    mouseX += (targetMouseX - mouseX) * 0.05;
-    mouseY += (targetMouseY - mouseY) * 0.05;
+    const dx = targetMouseX - mouseX;
+    const dy = targetMouseY - mouseY;
+
+    if (Math.abs(dx) < 0.05 && Math.abs(dy) < 0.05) {
+      isAnimating = false;
+      return;
+    }
+
+    mouseX += dx * 0.05;
+    mouseY += dy * 0.05;
 
     document.documentElement.style.setProperty('--mouse-x', `${mouseX}%`);
     document.documentElement.style.setProperty('--mouse-y', `${mouseY}%`);
@@ -121,13 +154,12 @@ function initMouseFollow() {
       lightField.style.transform = `translate3d(${offsetX}%, ${offsetY}%, 0) scale(var(--scale, 1))`;
     }
 
-    requestAnimationFrame(animateMouseFollow);
+    if (isAnimating) {
+      requestAnimationFrame(animateMouseFollow);
+    }
   }
-  
-  animateMouseFollow();
 }
 
-// 封面点击 - 直接导入音乐
 document.getElementById('coverContainer').addEventListener('click', () => {
   triggerImport();
 });
@@ -195,16 +227,17 @@ function playNext(auto = false) {
   playSong(next);
 }
 
-function updateCoverAndColor(song) {
-  if (song.cover) {
-    coverImg.src = song.cover;
+async function updateCoverAndColor(song) {
+  coverImg.style.display = 'none';
+  defaultCover.style.display = 'flex';
+  updateThemeColor(null);
+
+  const coverUrl = await window.dreamApi.getCover(song.path);
+  if (coverUrl) {
+    coverImg.src = coverUrl;
     coverImg.style.display = 'block';
     defaultCover.style.display = 'none';
-    updateThemeColor(song.cover);
-  } else {
-    coverImg.style.display = 'none';
-    defaultCover.style.display = 'flex';
-    updateThemeColor(null);
+    updateThemeColor(coverUrl);
   }
 }
 
@@ -354,7 +387,12 @@ function syncLyrics(currentTime) {
 
     if (targetLine) {
       targetLine.classList.add('active');
-      targetLine.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      
+      if (!isUserScrolling) {
+        const containerHeight = lyricsContainer.clientHeight;
+        const targetScrollTop = targetLine.offsetTop - containerHeight / 2 + targetLine.clientHeight / 2;
+        lyricsScroll.scrollTop = targetScrollTop;
+      }
     }
   }
 }
@@ -489,7 +527,6 @@ function handleVolumeWheel(e) {
 }
 
 coverContainer.addEventListener('wheel', handleVolumeWheel);
-if (lyricsContainer) lyricsContainer.addEventListener('wheel', handleVolumeWheel);
 
 document.getElementById('btnNext').addEventListener('click', () => playNext(false));
 document.getElementById('btnPrev').addEventListener('click', () => {

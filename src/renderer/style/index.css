@@ -372,16 +372,18 @@ body {
 }
 
 .lyric-line {
-  color: rgba(255, 255, 255, 0.5);
-  font-size: 16px;
+  color: rgba(255, 255, 255, 0.4);
+  font-size: 18px;
   line-height: 2;
-  margin: 16px 0;
-  font-weight: 400;
+  margin: 18px 0;
+  font-weight: 500;
   cursor: pointer;
-  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-  transform: scale(1);
-  filter: blur(0.3px);
+  transition: all 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  transform: scale(0.95);
+  transform-origin: center;
+  filter: blur(1px);
   padding: 0 20px;
+  will-change: transform, filter, color;
 }
 
 .lyric-line:hover {
@@ -391,11 +393,8 @@ body {
 
 .lyric-line.active {
   color: #fff;
-  font-size: 24px;
   font-weight: 600;
-  line-height: 1.6;
-  margin: 24px 0;
-  transform: scale(1.08);
+  transform: scale(1.25);
   filter: blur(0);
   text-shadow: 
     0 2px 20px rgba(0, 0, 0, 0.3),
@@ -403,10 +402,11 @@ body {
 }
 
 .lyric-line.placeholder {
-  font-size: 16px;
+  font-size: 18px;
   color: rgba(255, 255, 255, 0.3);
   margin-top: 40%;
   filter: blur(0);
+  transform: scale(1);
 }
 
 .song-info {
@@ -825,14 +825,6 @@ body {
   .lyrics-container {
     height: 50vh;
     max-height: 400px;
-  }
-  
-  .song-title {
-    font-size: 20px;
-  }
-  
-  .lyric-line.active {
-    font-size: 20px;
   }
 }
 
