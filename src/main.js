@@ -45,13 +45,8 @@ function createWindow() {
     return true;
   });
 
-  mainWindow.on('show', () => {
-    mainWindow.webContents.send('window-visibility-changed', true);
-  });
-
-  mainWindow.on('hide', () => {
-    mainWindow.webContents.send('window-visibility-changed', false);
-  });
+  mainWindow.on('show', () => { mainWindow.webContents.send('window-visibility-changed', true); });
+  mainWindow.on('hide', () => { mainWindow.webContents.send('window-visibility-changed', false); });
 }
 
 function createTray() {
@@ -61,42 +56,13 @@ function createTray() {
   tray = new Tray(trayIcon.resize({ width: 16, height: 16 }));
 
   const contextMenu = Menu.buildFromTemplate([
-    {
-      label: '播放/暂停',
-      click: () => {
-        if (mainWindow) mainWindow.webContents.send('tray-play-pause');
-      }
-    },
-    {
-      label: '下一首',
-      click: () => {
-        if (mainWindow) mainWindow.webContents.send('tray-next');
-      }
-    },
-    {
-      label: '上一首',
-      click: () => {
-        if (mainWindow) mainWindow.webContents.send('tray-prev');
-      }
-    },
+    { label: '播放/暂停', click: () => { if (mainWindow) mainWindow.webContents.send('tray-play-pause'); } },
+    { label: '下一首', click: () => { if (mainWindow) mainWindow.webContents.send('tray-next'); } },
+    { label: '上一首', click: () => { if (mainWindow) mainWindow.webContents.send('tray-prev'); } },
     { type: 'separator' },
-    {
-      label: '显示窗口',
-      click: () => {
-        if (mainWindow) {
-          mainWindow.show();
-          mainWindow.focus();
-        }
-      }
-    },
+    { label: '显示窗口', click: () => { if (mainWindow) { mainWindow.show(); mainWindow.focus(); } } },
     { type: 'separator' },
-    {
-      label: '退出',
-      click: () => {
-        app.isQuitting = true;
-        app.quit();
-      }
-    }
+    { label: '退出', click: () => { app.isQuitting = true; app.quit(); } }
   ]);
 
   tray.setToolTip('Dreamisle 音乐播放器');
@@ -104,34 +70,17 @@ function createTray() {
 
   tray.on('double-click', () => {
     if (mainWindow) {
-      if (mainWindow.isVisible()) {
-        mainWindow.hide();
-      } else {
-        mainWindow.show();
-        mainWindow.focus();
-      }
+      if (mainWindow.isVisible()) mainWindow.hide();
+      else { mainWindow.show(); mainWindow.focus(); }
     }
   });
 }
 
 app.whenReady().then(createWindow);
 
-app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') {
-  }
-});
-
-app.on('activate', () => {
-  if (mainWindow === null) {
-    createWindow();
-  } else {
-    mainWindow.show();
-  }
-});
-
-app.on('before-quit', () => {
-  app.isQuitting = true;
-});
+app.on('window-all-closed', () => { if (process.platform !== 'darwin') { } });
+app.on('activate', () => { if (mainWindow === null) createWindow(); else mainWindow.show(); });
+app.on('before-quit', () => { app.isQuitting = true; });
 
 async function scanDirectory(dirPath) {
   let results = [];
@@ -143,14 +92,10 @@ async function scanDirectory(dirPath) {
         results = results.concat(await scanDirectory(fullPath));
       } else if (entry.isFile()) {
         const ext = path.extname(entry.name).toLowerCase();
-        if (['.mp3', '.flac', '.wav', '.ogg', '.m4a'].includes(ext)) {
-          results.push(fullPath);
-        }
+        if (['.mp3', '.flac', '.wav', '.ogg', '.m4a'].includes(ext)) results.push(fullPath);
       }
     }
-  } catch (err) {
-    console.error('Scan Error:', err);
-  }
+  } catch (err) { console.error('Scan Error:', err); }
   return results;
 }
 
@@ -161,7 +106,6 @@ async function scanAndParse(folderPath) {
   for (const filePath of audioFiles) {
     try {
       const metadata = await parseFile(filePath, { skipCovers: true, skipPostHeaders: true });
-
       playlist.push({
         path: filePath,
         url: pathToFileURL(filePath).href,
@@ -170,10 +114,7 @@ async function scanAndParse(folderPath) {
       });
     } catch (e) {
       playlist.push({
-        path: filePath,
-        url: pathToFileURL(filePath).href,
-        title: path.basename(filePath),
-        artist: 'Unknown',
+        path: filePath, url: pathToFileURL(filePath).href, title: path.basename(filePath), artist: 'Unknown',
       });
     }
   }
@@ -181,28 +122,20 @@ async function scanAndParse(folderPath) {
 }
 
 ipcMain.handle('dialog:openFolder', async () => {
-  const { canceled, filePaths } = await dialog.showOpenDialog({
-    properties: ['openDirectory']
-  });
-
+  const { canceled, filePaths } = await dialog.showOpenDialog({ properties: ['openDirectory'] });
   if (canceled) return [];
-
   const folderPath = filePaths[0];
   store.set('musicFolder', folderPath);
-
   return await scanAndParse(folderPath);
 });
 
 ipcMain.handle('app:loadSavedMusic', async () => {
   const savedPath = store.get('musicFolder');
   if (!savedPath) return [];
-
   try {
     await fs.access(savedPath);
     return await scanAndParse(savedPath);
-  } catch (e) {
-    return [];
-  }
+  } catch (e) { return []; }
 });
 
 ipcMain.handle('app:getCover', async (event, filePath) => {
@@ -210,11 +143,9 @@ ipcMain.handle('app:getCover', async (event, filePath) => {
     const metadata = await parseFile(filePath, { skipCovers: false, skipPostHeaders: true });
     if (metadata.common.picture && metadata.common.picture.length > 0) {
       const pic = metadata.common.picture[0];
-      const base64String = Buffer.from(pic.data).toString('base64');
-      return `data:${pic.format};base64,${base64String}`;
+      return { buffer: pic.data, format: pic.format };
     }
-  } catch (e) {
-  }
+  } catch (e) { }
   return null;
 });
 
@@ -228,28 +159,17 @@ ipcMain.handle('app:loadPlaybackState', async () => {
 });
 
 ipcMain.handle('app:getLyrics', async (event, audioPath) => {
-  console.log(`[Main] 正在获取歌词: ${audioPath}`);
-
   try {
     const lrcPath = audioPath.substring(0, audioPath.lastIndexOf('.')) + '.lrc';
     await fs.access(lrcPath);
-    const lrcContent = await fs.readFile(lrcPath, 'utf-8');
-    console.log('[Main] 找到外部 .lrc 文件');
-    return lrcContent;
-  } catch (e) {
-  }
+    return await fs.readFile(lrcPath, 'utf-8');
+  } catch (e) { }
 
   try {
     const metadata = await parseFile(audioPath);
-
     if (metadata.common && metadata.common.lyrics && metadata.common.lyrics.length > 0) {
-      console.log('[Main] 找到内嵌歌词');
       return metadata.common.lyrics[0];
     }
-  } catch (err) {
-    console.error('[Main] 解析内嵌歌词失败:', err);
-  }
-
-  console.log('[Main] 未找到任何歌词');
+  } catch (err) { }
   return null;
 });

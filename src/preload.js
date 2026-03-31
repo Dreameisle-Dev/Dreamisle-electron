@@ -6,11 +6,18 @@ contextBridge.exposeInMainWorld('dreamApi', {
   savePlaybackState: (state) => ipcRenderer.invoke('app:savePlaybackState', state),
   loadPlaybackState: () => ipcRenderer.invoke('app:loadPlaybackState'),
 
-  getCover: (path) => ipcRenderer.invoke('app:getCover', path),
+  getCover: async (path) => {
+    const res = await ipcRenderer.invoke('app:getCover', path);
+    if (res && res.buffer) {
+      const blob = new Blob([res.buffer], { type: res.format });
+      return URL.createObjectURL(blob);
+    }
+    return null;
+  },
+
   getLyrics: (path) => ipcRenderer.invoke('app:getLyrics', path),
 
   onWindowVisibilityChanged: (callback) => ipcRenderer.on('window-visibility-changed', (event, isVisible) => callback(isVisible)),
-
   onTrayPlayPause: (callback) => ipcRenderer.on('tray-play-pause', () => callback()),
   onTrayNext: (callback) => ipcRenderer.on('tray-next', () => callback()),
   onTrayPrev: (callback) => ipcRenderer.on('tray-prev', () => callback())

@@ -35,26 +35,30 @@ let volumeTimeout;
 let currentLyrics = [];
 let currentLineIndex = -1;
 
-audio.volume = 0.5;
-
-let mouseX = 50;
-let mouseY = 50;
-let targetMouseX = 50;
-let targetMouseY = 50;
+let mouseX = 50, mouseY = 50;
+let targetMouseX = 50, targetMouseY = 50;
 let isAnimating = false;
-
 let isUserScrolling = false;
 let userScrollTimeout = null;
 
+let currentCoverBlobUrl = null;
+
+const ITEM_HEIGHT = 62;
+let filteredSongs = [];
+let vsStartIndex = 0;
+let vsEndIndex = 0;
+
+audio.volume = 0.5;
+
 window.addEventListener('DOMContentLoaded', async () => {
   initMouseFollow();
-  
+
   const savedSongs = await window.dreamApi.loadSavedMusic();
 
   if (savedSongs && savedSongs.length > 0) {
     songs = savedSongs;
     searchInput.value = '';
-    renderPlaylist();
+    initVirtualList();
 
     const savedState = await window.dreamApi.loadPlaybackState();
     if (savedState && savedState.currentIndex >= 0 && savedState.currentIndex < songs.length) {
@@ -83,8 +87,55 @@ window.addEventListener('DOMContentLoaded', async () => {
   }
 
   setupIpcListeners();
-  initProgressBarStyle();
+  updateProgressStyle(0);
 });
+
+function initVirtualList(filterText = '') {
+  const lowerFilter = filterText.toLowerCase();
+  filteredSongs = filterText
+    ? songs.map((s, i) => ({ ...s, originalIndex: i })).filter(s => s.title.toLowerCase().includes(lowerFilter) || s.artist.toLowerCase().includes(lowerFilter))
+    : songs.map((s, i) => ({ ...s, originalIndex: i }));
+
+  playlistCountEl.innerText = `${filteredSongs.length}首`;
+
+  const totalHeight = filteredSongs.length * ITEM_HEIGHT;
+  playlistEl.innerHTML = `<div id="playlistSpacer" style="height: ${totalHeight}px; position: relative;"></div>`;
+
+  vsStartIndex = -1;
+  updateVirtualList();
+}
+
+function updateVirtualList() {
+  const scrollTop = playlistEl.scrollTop;
+  const viewportHeight = playlistEl.clientHeight || 800;
+
+  const newStart = Math.max(0, Math.floor(scrollTop / ITEM_HEIGHT) - 5);
+  const newEnd = Math.min(filteredSongs.length, Math.ceil((scrollTop + viewportHeight) / ITEM_HEIGHT) + 5);
+
+  if (newStart === vsStartIndex && newEnd === vsEndIndex && playlistEl.children.length > 1) return;
+
+  vsStartIndex = newStart;
+  vsEndIndex = newEnd;
+
+  const spacer = document.getElementById('playlistSpacer');
+  playlistEl.innerHTML = '';
+  if (spacer) playlistEl.appendChild(spacer);
+
+  const fragment = document.createDocumentFragment();
+  for (let i = vsStartIndex; i < vsEndIndex; i++) {
+    const songInfo = filteredSongs[i];
+    const li = document.createElement('li');
+    li.className = `playlist-item ${songInfo.originalIndex === currentIndex ? 'active' : ''}`;
+    li.style.transform = `translateY(${i * ITEM_HEIGHT}px)`;
+    li.innerHTML = `<div class="item-title">${songInfo.title}</div><div class="item-artist">${songInfo.artist}</div>`;
+    li.onclick = () => playSong(songInfo.originalIndex);
+    fragment.appendChild(li);
+  }
+  playlistEl.appendChild(fragment);
+}
+
+playlistEl.addEventListener('scroll', updateVirtualList);
+searchInput.addEventListener('input', (e) => initVirtualList(e.target.value.trim()));
 
 lyricsScroll.addEventListener('wheel', () => {
   isUserScrolling = true;
@@ -92,26 +143,13 @@ lyricsScroll.addEventListener('wheel', () => {
   userScrollTimeout = setTimeout(() => {
     isUserScrolling = false;
     if (currentLineIndex !== -1) {
-      const lines = lyricsScroll.querySelectorAll('.lyric-line');
-      let targetLine = null;
-      for (const line of lines) {
-        if (parseInt(line.dataset.index) === currentLineIndex) {
-          targetLine = line;
-          break;
-        }
-      }
-      if (targetLine) {
-        const containerHeight = lyricsContainer.clientHeight;
-        const targetScrollTop = targetLine.offsetTop - containerHeight / 2 + targetLine.clientHeight / 2;
-        lyricsScroll.scrollTop = targetScrollTop;
+      const activeLine = Array.from(lyricsScroll.querySelectorAll('.lyric-line')).find(line => parseInt(line.dataset.index) === currentLineIndex);
+      if (activeLine) {
+        lyricsScroll.scrollTop = activeLine.offsetTop - lyricsContainer.clientHeight / 2 + activeLine.clientHeight / 2;
       }
     }
   }, 3000);
 });
-
-function initProgressBarStyle() {
-  updateProgressStyle(0);
-}
 
 function updateProgressStyle(value) {
   progressBar.style.setProperty('--progress', `${value}%`);
@@ -146,7 +184,7 @@ function initMouseFollow() {
 
     document.documentElement.style.setProperty('--mouse-x', `${mouseX}%`);
     document.documentElement.style.setProperty('--mouse-y', `${mouseY}%`);
-    
+
     const lightField = document.querySelector('.light-field');
     if (lightField) {
       const offsetX = (mouseX - 50) * 0.2;
@@ -154,22 +192,18 @@ function initMouseFollow() {
       lightField.style.transform = `translate3d(${offsetX}%, ${offsetY}%, 0) scale(var(--scale, 1))`;
     }
 
-    if (isAnimating) {
-      requestAnimationFrame(animateMouseFollow);
-    }
+    if (isAnimating) requestAnimationFrame(animateMouseFollow);
   }
 }
 
-document.getElementById('coverContainer').addEventListener('click', () => {
-  triggerImport();
-});
+coverContainer.addEventListener('click', triggerImport);
 
 async function triggerImport() {
   const newSongs = await window.dreamApi.importFolder();
   if (newSongs && newSongs.length > 0) {
     songs = newSongs;
     searchInput.value = '';
-    renderPlaylist();
+    initVirtualList();
     if (currentIndex === -1) playSong(0);
   }
 }
@@ -182,7 +216,7 @@ function initSongInfo(index) {
 
   titleEl.innerText = song.title;
   artistEl.innerText = song.artist;
-  renderPlaylist();
+  updateVirtualList();
 
   updateCoverAndColor(song);
   loadAndRenderLyrics(song);
@@ -206,7 +240,9 @@ function playSong(index) {
   }, 300);
 
   updatePlayButton(true);
-  renderPlaylist(searchInput.value.trim());
+
+  vsStartIndex = -1;
+  updateVirtualList();
 
   updateCoverAndColor(song);
   loadAndRenderLyrics(song);
@@ -232,8 +268,14 @@ async function updateCoverAndColor(song) {
   defaultCover.style.display = 'flex';
   updateThemeColor(null);
 
+  if (currentCoverBlobUrl) {
+    URL.revokeObjectURL(currentCoverBlobUrl);
+    currentCoverBlobUrl = null;
+  }
+
   const coverUrl = await window.dreamApi.getCover(song.path);
   if (coverUrl) {
+    currentCoverBlobUrl = coverUrl;
     coverImg.src = coverUrl;
     coverImg.style.display = 'block';
     defaultCover.style.display = 'none';
@@ -243,9 +285,7 @@ async function updateCoverAndColor(song) {
 
 function parseLrc(lrcText) {
   if (!lrcText || typeof lrcText !== 'string') return [];
-
   const lines = lrcText.split(/\r\n|\r|\n/);
-
   const result = [];
   const timeExp = /\[(\d{1,2}):(\d{1,2})(\.\d{1,3})?\]/;
   let hasTimestamps = false;
@@ -261,16 +301,13 @@ function parseLrc(lrcText) {
       const sec = parseInt(match[2]);
       const ms = match[3] ? parseFloat(match[3]) : 0;
       const time = min * 60 + sec + ms;
-
       const text = trimmedLine.replace(timeExp, '').trim();
-
       if (text) result.push({ time, text });
     }
   }
 
   if (!hasTimestamps && lines.length > 0) {
-    return lines
-      .map(line => line.trim())
+    return lines.map(line => line.trim())
       .filter(line => line.length > 0 && !/^\[.*?\]$/.test(line))
       .map(text => ({ time: 0, text, isStatic: true }));
   }
@@ -293,23 +330,14 @@ async function loadAndRenderLyrics(song) {
   if (lrcData) {
     if (typeof lrcData === 'object' && lrcData !== null) {
       if (Array.isArray(lrcData.syncText) && lrcData.syncText.length > 0) {
-        currentLyrics = lrcData.syncText.map(item => ({
-          time: item.timestamp / 1000,
-          text: item.text || ''
-        }));
+        currentLyrics = lrcData.syncText.map(item => ({ time: item.timestamp / 1000, text: item.text || '' }));
         currentLyrics.sort((a, b) => a.time - b.time);
-      }
-      else if (typeof lrcData.text === 'string') {
+      } else if (typeof lrcData.text === 'string') {
         currentLyrics = parseLrc(lrcData.text);
+      } else if (lrcData.type === 'Buffer') {
+        try { currentLyrics = parseLrc(new TextDecoder().decode(new Uint8Array(lrcData.data))); } catch (e) { }
       }
-      else if (lrcData.type === 'Buffer') {
-        try {
-          const str = new TextDecoder().decode(new Uint8Array(lrcData.data));
-          currentLyrics = parseLrc(str);
-        } catch (e) { }
-      }
-    }
-    else if (typeof lrcData === 'string') {
+    } else if (typeof lrcData === 'string') {
       currentLyrics = parseLrc(lrcData);
     }
   }
@@ -327,7 +355,6 @@ function renderLyricsToDom() {
 
     currentLyrics.forEach((line, index) => {
       if (!line.text.trim()) return;
-
       const p = document.createElement('p');
       p.className = 'lyric-line';
       p.innerText = line.text;
@@ -336,17 +363,11 @@ function renderLyricsToDom() {
       if (!isStatic) {
         p.onclick = () => {
           audio.currentTime = line.time;
-          if (audio.paused) {
-            audio.play();
-            updatePlayButton(true);
-          }
+          if (audio.paused) { audio.play(); updatePlayButton(true); }
         };
       } else {
-        p.style.cursor = 'default';
-        p.style.opacity = '0.9';
-        p.style.margin = '8px 0';
+        p.style.cursor = 'default'; p.style.opacity = '0.9'; p.style.margin = '8px 0';
       }
-
       fragment.appendChild(p);
     });
     lyricsScroll.appendChild(fragment);
@@ -356,16 +377,12 @@ function renderLyricsToDom() {
 }
 
 function syncLyrics(currentTime) {
-  if (!currentLyrics.length) return;
-  if (currentLyrics[0].isStatic) return;
+  if (!currentLyrics.length || currentLyrics[0].isStatic) return;
 
   let activeIndex = -1;
   for (let i = 0; i < currentLyrics.length; i++) {
-    if (currentTime >= currentLyrics[i].time) {
-      activeIndex = i;
-    } else {
-      break;
-    }
+    if (currentTime >= currentLyrics[i].time) activeIndex = i;
+    else break;
   }
 
   if (activeIndex === currentLineIndex) return;
@@ -375,23 +392,11 @@ function syncLyrics(currentTime) {
   if (activeItem) activeItem.classList.remove('active');
 
   if (activeIndex !== -1) {
-    const lines = lyricsScroll.querySelectorAll('.lyric-line');
-
-    let targetLine = null;
-    for (const line of lines) {
-      if (parseInt(line.dataset.index) === activeIndex) {
-        targetLine = line;
-        break;
-      }
-    }
-
+    const targetLine = Array.from(lyricsScroll.querySelectorAll('.lyric-line')).find(l => parseInt(l.dataset.index) === activeIndex);
     if (targetLine) {
       targetLine.classList.add('active');
-      
       if (!isUserScrolling) {
-        const containerHeight = lyricsContainer.clientHeight;
-        const targetScrollTop = targetLine.offsetTop - containerHeight / 2 + targetLine.clientHeight / 2;
-        lyricsScroll.scrollTop = targetScrollTop;
+        lyricsScroll.scrollTop = targetLine.offsetTop - lyricsContainer.clientHeight / 2 + targetLine.clientHeight / 2;
       }
     }
   }
@@ -423,35 +428,12 @@ function updateThemeColor(src) {
       r = Math.floor(r / c); g = Math.floor(g / c); b = Math.floor(b / c);
       document.documentElement.style.setProperty('--bg-color-1', `rgb(${r},${g},${b})`);
       document.documentElement.style.setProperty('--bg-color-2', `rgb(${r * 0.6},${g * 0.6},${b * 0.6})`);
-      
       document.documentElement.style.setProperty('--glow-primary', `rgba(${r}, ${g + 20}, ${b + 40}, 0.15)`);
       document.documentElement.style.setProperty('--glow-secondary', `rgba(${r + 40}, ${g}, ${b + 20}, 0.12)`);
     }
+
+    ctx.clearRect(0, 0, 50, 50);
   };
-}
-
-function renderPlaylist(filterText = '') {
-  playlistEl.innerHTML = '';
-  const lowerFilter = filterText.toLowerCase();
-  let visibleCount = 0;
-
-  songs.forEach((song, index) => {
-    if (filterText && !song.title.toLowerCase().includes(lowerFilter) && !song.artist.toLowerCase().includes(lowerFilter)) {
-      return;
-    }
-    visibleCount++;
-    const li = document.createElement('li');
-    li.className = `playlist-item ${index === currentIndex ? 'active' : ''}`;
-    li.innerHTML = `<div class="item-title">${song.title}</div><div class="item-artist">${song.artist}</div>`;
-    li.onclick = () => playSong(index);
-    playlistEl.appendChild(li);
-  });
-
-  playlistCountEl.innerText = `${visibleCount}首`;
-}
-
-function updateProgress(val) {
-  updateProgressStyle(val);
 }
 
 btnMode.addEventListener('click', () => {
@@ -469,13 +451,11 @@ btnPlaylist.addEventListener('click', (e) => {
 document.querySelector('.app-container').addEventListener('click', () => playlistDrawer.classList.remove('open'));
 playlistDrawer.addEventListener('click', (e) => e.stopPropagation());
 
-searchInput.addEventListener('input', (e) => renderPlaylist(e.target.value.trim()));
-
 audio.addEventListener('timeupdate', () => {
   if (!isDragging && audio.duration) {
     const p = (audio.currentTime / audio.duration) * 100;
     progressBar.value = p;
-    updateProgress(p);
+    updateProgressStyle(p);
     currentTimeEl.innerText = formatTime(audio.currentTime);
     totalTimeEl.innerText = formatTime(audio.duration);
     syncLyrics(audio.currentTime);
@@ -484,7 +464,7 @@ audio.addEventListener('timeupdate', () => {
 
 progressBar.addEventListener('input', () => {
   isDragging = true;
-  updateProgress(progressBar.value);
+  updateProgressStyle(progressBar.value);
   currentTimeEl.innerText = formatTime((progressBar.value / 100) * audio.duration);
 });
 
@@ -509,20 +489,14 @@ btnPlay.addEventListener('click', () => {
 function handleVolumeWheel(e) {
   e.preventDefault();
   let newVolume = audio.volume - (e.deltaY > 0 ? 0.05 : -0.05);
-
   if (newVolume > 1) newVolume = 1;
   if (newVolume < 0) newVolume = 0;
-
   audio.volume = newVolume;
 
   volumeHud.innerText = `VOL ${Math.round(newVolume * 100)}%`;
   volumeHud.classList.add('visible');
-
   clearTimeout(volumeTimeout);
-  volumeTimeout = setTimeout(() => {
-    volumeHud.classList.remove('visible');
-  }, 1000);
-
+  volumeTimeout = setTimeout(() => volumeHud.classList.remove('visible'), 1000);
   saveStateOnChange();
 }
 
@@ -541,11 +515,8 @@ audio.addEventListener('ended', () => playNext(true));
 function updatePlayButton(isPlaying) {
   document.getElementById('iconPlay').style.display = isPlaying ? 'none' : 'block';
   document.getElementById('iconPause').style.display = isPlaying ? 'block' : 'none';
-  if (isPlaying) {
-    document.querySelector('.album-art-container').classList.add('playing');
-  } else {
-    document.querySelector('.album-art-container').classList.remove('playing');
-  }
+  if (isPlaying) document.querySelector('.album-art-container').classList.add('playing');
+  else document.querySelector('.album-art-container').classList.remove('playing');
 }
 
 function formatTime(s) {
@@ -555,34 +526,20 @@ function formatTime(s) {
 
 async function savePlaybackState() {
   if (songs.length === 0) return;
-  const state = {
-    currentIndex: currentIndex,
-    currentTime: audio.currentTime || 0,
-    volume: audio.volume,
-    playMode: playMode,
-    isPlaying: !audio.paused
-  };
-  try { await window.dreamApi.savePlaybackState(state); } catch (error) { }
+  const state = { currentIndex, currentTime: audio.currentTime || 0, volume: audio.volume, playMode, isPlaying: !audio.paused };
+  try { await window.dreamApi.savePlaybackState(state); } catch (e) { }
 }
 
 setInterval(() => { if (songs.length > 0) savePlaybackState(); }, 60000);
 
 window.addEventListener('beforeunload', () => {
   if (songs.length > 0) {
-    const state = {
-      currentIndex: currentIndex,
-      currentTime: audio.currentTime || 0,
-      volume: audio.volume,
-      playMode: playMode,
-      isPlaying: !audio.paused
-    };
+    const state = { currentIndex, currentTime: audio.currentTime || 0, volume: audio.volume, playMode, isPlaying: !audio.paused };
     window.dreamApi.savePlaybackState(state).catch(() => { });
   }
 });
 
-function saveStateOnChange() {
-  if (songs.length > 0) savePlaybackState();
-}
+function saveStateOnChange() { if (songs.length > 0) savePlaybackState(); }
 
 audio.addEventListener('play', saveStateOnChange);
 audio.addEventListener('pause', saveStateOnChange);
