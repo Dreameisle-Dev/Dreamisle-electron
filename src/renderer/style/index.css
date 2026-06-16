@@ -1,11 +1,5 @@
 :root {
-  --bg-color-1: #222;
-  --bg-color-2: #111;
   --text-main: #fff;
-
-  --glow-primary: rgba(120, 140, 255, 0.15);
-  --glow-secondary: rgba(255, 120, 180, 0.12);
-  --glow-tertiary: rgba(100, 220, 255, 0.08);
 }
 
 body {
@@ -19,100 +13,104 @@ body {
 }
 
 .ambient-bg {
+  --bg-color-1: #222;
+  --bg-color-2: #111;
+  --glow-primary: rgba(120, 140, 255, 0.15);
+  --glow-secondary: rgba(255, 120, 180, 0.12);
+  --glow-tertiary: rgba(100, 220, 255, 0.08);
+
   position: fixed;
   inset: 0;
   z-index: 0;
   overflow: hidden;
   background: #000;
   pointer-events: none;
-  transform: translateZ(0); /* 强制开启 GPU 复合层 */
+  transform: translate3d(0, 0, 0); 
 }
 
-/* 使用 transform 动画代替 Houdini 变量重绘 */
+/* 
+  1. 将元素物理长宽缩减为 320px * 320px
+  2. 采用较低强度的 blur(30px)
+  3. 用 GPU 直接 scale(5) 放大
+*/
 .light-field {
   position: absolute;
-  inset: -60%;
+  top: 50%;
+  left: 50%;
+  width: 320px;
+  height: 320px;
+  margin-left: -160px;
+  margin-top: -160px;
   pointer-events: none;
-  opacity: 0.85;
+  opacity: 0.8;
   mix-blend-mode: screen;
-  filter: blur(80px) saturate(140%) brightness(110%);
+  filter: blur(30px) saturate(130%) brightness(105%);
   will-change: transform;
-  transform: translate3d(0, 0, 0);
+  transform: translate3d(0, 0, 0) scale(5);
 
   background:
-    radial-gradient(circle at 30% 35%, color-mix(in srgb, var(--bg-color-1) 60%, transparent), transparent 50%),
-    radial-gradient(circle at 70% 65%, color-mix(in srgb, var(--bg-color-2) 50%, transparent), transparent 55%),
+    radial-gradient(circle at 30% 35%, color-mix(in srgb, var(--bg-color-1) 70%, transparent), transparent 60%),
+    radial-gradient(circle at 70% 65%, color-mix(in srgb, var(--bg-color-2) 60%, transparent), transparent 60%),
     radial-gradient(circle at 50% 50%, var(--glow-tertiary), transparent 40%);
+}
 
-  animation: rotateGlow 25s linear infinite;
+/* 仅在播放时执行后台动画 */
+.ambient-bg.playing .light-field {
+  animation: rotateGlow 30s linear infinite;
 }
 
 .light-field::before {
   content: '';
   position: absolute;
-  inset: 0;
+  inset: -20px;
   background:
-    radial-gradient(circle at 70% 30%, var(--glow-primary), transparent 45%),
-    radial-gradient(circle at 30% 70%, var(--glow-secondary), transparent 50%);
-  opacity: 0.5;
-  filter: blur(80px);
+    radial-gradient(circle at 65% 35%, var(--glow-primary), transparent 50%),
+    radial-gradient(circle at 35% 65%, var(--glow-secondary), transparent 50%);
+  opacity: 0.6;
+  filter: blur(25px);
   will-change: transform;
   transform: translate3d(0, 0, 0);
-  animation: rotateGlowReverse 30s linear infinite;
 }
 
-.light-field::after {
-  content: '';
-  position: absolute;
-  inset: -10%;
-  background:
-    repeating-conic-gradient(from 0deg at 50% 50%, transparent 0deg, rgba(255, 255, 255, 0.01) 5deg, transparent 10deg);
-  opacity: 0.3;
-  mix-blend-mode: overlay;
-  will-change: transform;
-  transform: translate3d(0, 0, 0);
-  animation: rotateNoise 60s linear infinite;
+.ambient-bg.playing .light-field::before {
+  animation: rotateGlowReverse 35s linear infinite;
 }
 
 @keyframes rotateGlow {
   0% {
-    transform: translate3d(0, 0, 0) rotate(0deg) scale(1);
+    transform: translate3d(0, 0, 0) rotate(0deg) scale(5);
   }
   50% {
-    transform: translate3d(1%, 2%, 0) rotate(180deg) scale(1.05);
+    transform: translate3d(5px, 10px, 0) rotate(180deg) scale(5.3);
   }
   100% {
-    transform: translate3d(0, 0, 0) rotate(360deg) scale(1);
+    transform: translate3d(0, 0, 0) rotate(360deg) scale(5);
   }
 }
 
 @keyframes rotateGlowReverse {
   0% {
-    transform: rotate(360deg) scale(1.05);
+    transform: rotate(360deg) scale(1);
   }
   50% {
-    transform: rotate(180deg) scale(0.95);
+    transform: rotate(180deg) scale(0.9);
   }
   100% {
-    transform: rotate(0deg) scale(1.05);
+    transform: rotate(0deg) scale(1);
   }
 }
 
-@keyframes rotateNoise {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
-}
-
+/* 移除了极其沉重的 conic 渐变旋转，保留静态轻噪点 overlay，节约全屏带宽 */
 .noise-overlay {
   position: absolute;
   inset: 0;
-  background-image: url('data:image/svg+xml;utf8,%3Csvg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg"%3E%3Cfilter id="n"%3E%3CfeTurbulence type="fractalNoise" baseFrequency="0.7" numOctaves="3" stitchTiles="stitch"/%3E%3C/filter%3E%3Crect width="100%25" height="100%25" filter="url(%23n)" opacity="0.04"/%3E%3C/svg%3E');
+  background-image: url('data:image/svg+xml;utf8,%3Csvg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg"%3E%3Cfilter id="n"%3E%3CfeTurbulence type="fractalNoise" baseFrequency="0.8" numOctaves="2" stitchTiles="stitch"/%3E%3C/filter%3E%3Crect width="100%25" height="100%25" filter="url(%23n)" opacity="0.03"/%3E%3C/svg%3E');
   background-repeat: repeat;
   pointer-events: none;
   z-index: 1;
-  opacity: 0.6;
+  opacity: 0.4;
   mix-blend-mode: overlay;
-  transform: translate3d(0, 0, 0); /* 提升至复合图层，防止污染重绘 */
+  transform: translate3d(0, 0, 0);
 }
 
 .vignette {
@@ -197,7 +195,6 @@ body {
   -webkit-app-region: no-drag;
 }
 
-/* 优化播放效果：使用轻微的 transform 呼吸代替极其耗性能的 box-shadow 动画 */
 .album-art-container.playing {
   animation: albumBreathe 8s ease-in-out infinite alternate;
 }
@@ -734,8 +731,7 @@ body {
 
 @media (prefers-reduced-motion: reduce) {
   .light-field,
-  .light-field::before,
-  .light-field::after {
+  .light-field::before {
     animation: none;
   }
 

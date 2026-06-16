@@ -13,7 +13,7 @@ let tray = null;
 
 app.isQuitting = false;
 
-// 性能优化：添加 Chromium 指令开关，协助减少渲染丢帧和全屏抖动
+// 开启显卡栅格化和零拷贝以提升渲染性能
 app.commandLine.appendSwitch('enable-gpu-rasterization');
 app.commandLine.appendSwitch('enable-zero-copy');
 
@@ -130,15 +130,27 @@ ipcMain.handle('dialog:openFolder', async () => {
   if (canceled) return [];
   const folderPath = filePaths[0];
   store.set('musicFolder', folderPath);
-  return await scanAndParse(folderPath);
+  
+  // 重新选择目录时扫描并写入缓存，避免重复工作
+  const playlist = await scanAndParse(folderPath);
+  store.set('cachedPlaylist', playlist);
+  return playlist;
 });
 
 ipcMain.handle('app:loadSavedMusic', async () => {
+  // 优先从本地 Store 获取已缓存的列表
+  const cached = store.get('cachedPlaylist');
+  if (cached && cached.length > 0) {
+    return cached;
+  }
+
   const savedPath = store.get('musicFolder');
   if (!savedPath) return [];
   try {
     await fs.access(savedPath);
-    return await scanAndParse(savedPath);
+    const playlist = await scanAndParse(savedPath);
+    store.set('cachedPlaylist', playlist);
+    return playlist;
   } catch (e) { return []; }
 });
 

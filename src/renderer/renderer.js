@@ -34,7 +34,7 @@ let volumeTimeout;
 
 let currentLyrics = [];
 let currentLineIndex = -1;
-let lyricDoms = []; // 缓存歌词对应的 DOM 节点引用，优化检索
+let lyricDoms = []; 
 
 let mouseX = 50, mouseY = 50;
 let targetMouseX = 50, targetMouseY = 50;
@@ -190,7 +190,6 @@ function initMouseFollow() {
     mouseX += dx * 0.05;
     mouseY += dy * 0.05;
 
-    // 修改：将自定义属性应用在 ambientBg，避免触发 document 根节点全局重绘
     if (ambientBg) {
       ambientBg.style.setProperty('--mouse-x', `${mouseX}%`);
       ambientBg.style.setProperty('--mouse-y', `${mouseY}%`);
@@ -401,7 +400,7 @@ async function loadAndRenderLyrics(song) {
 function renderLyricsToDom() {
   if (!lyricsScroll) return;
   lyricsScroll.innerHTML = '';
-  lyricDoms = []; // 清空重置 DOM 缓存
+  lyricDoms = []; 
 
   if (currentLyrics && currentLyrics.length > 0) {
     const fragment = document.createDocumentFragment();
@@ -429,7 +428,7 @@ function renderLyricsToDom() {
         p.style.cursor = 'default'; p.style.opacity = '0.9'; p.style.margin = '8px 0';
       }
       fragment.appendChild(p);
-      lyricDoms.push(p); // 将元素节点推入缓存
+      lyricDoms.push(p); 
     });
     lyricsScroll.appendChild(fragment);
   } else {
@@ -448,7 +447,6 @@ function syncLyrics(currentTime) {
 
   if (activeIndex === currentLineIndex) return;
 
-  // 优化：利用节点缓存直接移除旧的 active 类，不再通过 querySelector 遍历
   if (currentLineIndex !== -1 && lyricDoms[currentLineIndex]) {
     lyricDoms[currentLineIndex].classList.remove('active');
   }
@@ -465,11 +463,14 @@ function syncLyrics(currentTime) {
 }
 
 function updateThemeColor(src) {
+  const ambientBg = document.querySelector('.ambient-bg');
   if (!src) {
-    document.documentElement.style.setProperty('--bg-color-1', '#222');
-    document.documentElement.style.setProperty('--bg-color-2', '#111');
-    document.documentElement.style.setProperty('--glow-primary', 'rgba(120, 140, 255, 0.15)');
-    document.documentElement.style.setProperty('--glow-secondary', 'rgba(255, 120, 180, 0.12)');
+    if (ambientBg) {
+      ambientBg.style.setProperty('--bg-color-1', '#222');
+      ambientBg.style.setProperty('--bg-color-2', '#111');
+      ambientBg.style.setProperty('--glow-primary', 'rgba(120, 140, 255, 0.15)');
+      ambientBg.style.setProperty('--glow-secondary', 'rgba(255, 120, 180, 0.12)');
+    }
     return;
   }
   const img = new Image();
@@ -488,13 +489,17 @@ function updateThemeColor(src) {
     }
     if (c > 0) {
       r = Math.floor(r / c); g = Math.floor(g / c); b = Math.floor(b / c);
-      document.documentElement.style.setProperty('--bg-color-1', `rgb(${r},${g},${b})`);
-      document.documentElement.style.setProperty('--bg-color-2', `rgb(${r * 0.6},${g * 0.6},${b * 0.6})`);
-      document.documentElement.style.setProperty('--glow-primary', `rgba(${r}, ${g + 20}, ${b + 40}, 0.15)`);
-      document.documentElement.style.setProperty('--glow-secondary', `rgba(${r + 40}, ${g}, ${b + 20}, 0.12)`);
+      if (ambientBg) {
+        ambientBg.style.setProperty('--bg-color-1', `rgb(${r},${g},${b})`);
+        ambientBg.style.setProperty('--bg-color-2', `rgb(${r * 0.6},${g * 0.6},${b * 0.6})`);
+        ambientBg.style.setProperty('--glow-primary', `rgba(${r}, ${g + 20}, ${b + 40}, 0.15)`);
+        ambientBg.style.setProperty('--glow-secondary', `rgba(${r + 40}, ${g}, ${b + 20}, 0.12)`);
+      }
     }
     
     ctx.clearRect(0, 0, 50, 50);
+    img.onload = null;
+    img.src = ''; // 显式回收图片资源，释放 Chromium 占用的 GPU 纹理显存
   };
 }
 
@@ -577,8 +582,15 @@ audio.addEventListener('ended', () => playNext(true));
 function updatePlayButton(isPlaying) {
   document.getElementById('iconPlay').style.display = isPlaying ? 'none' : 'block';
   document.getElementById('iconPause').style.display = isPlaying ? 'block' : 'none';
-  if (isPlaying) document.querySelector('.album-art-container').classList.add('playing');
-  else document.querySelector('.album-art-container').classList.remove('playing');
+  
+  const ambientBg = document.querySelector('.ambient-bg');
+  if (isPlaying) {
+    document.querySelector('.album-art-container').classList.add('playing');
+    if (ambientBg) ambientBg.classList.add('playing'); // 同步控制背景层开始旋转
+  } else {
+    document.querySelector('.album-art-container').classList.remove('playing');
+    if (ambientBg) ambientBg.classList.remove('playing'); // 音乐暂停时挂起旋转，避免空转耗费 GPU
+  }
 }
 
 function formatTime(s) {
