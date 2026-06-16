@@ -26,6 +26,13 @@ const iconLoop = document.getElementById('iconLoop');
 const iconOne = document.getElementById('iconOne');
 const iconShuffle = document.getElementById('iconShuffle');
 
+// 排序交互节点
+const btnSortDefault = document.getElementById('sortDefault');
+const btnSortTitle = document.getElementById('sortTitle');
+const btnSortArtist = document.getElementById('sortArtist');
+const btnSortRandom = document.getElementById('sortRandom');
+
+let originalSongs = []; // 保存最原始物理读取顺序的备份
 let songs = [];
 let currentIndex = -1;
 let isDragging = false;
@@ -57,7 +64,8 @@ window.addEventListener('DOMContentLoaded', async () => {
   const savedSongs = await window.dreamApi.loadSavedMusic();
 
   if (savedSongs && savedSongs.length > 0) {
-    songs = savedSongs;
+    originalSongs = [...savedSongs]; // 备份原始数据
+    songs = [...savedSongs];
     searchInput.value = '';
     initVirtualList(); 
 
@@ -211,8 +219,12 @@ coverContainer.addEventListener('click', triggerImport);
 async function triggerImport() {
   const newSongs = await window.dreamApi.importFolder();
   if (newSongs && newSongs.length > 0) {
-    songs = newSongs;
+    originalSongs = [...newSongs]; // 备份原始数据
+    songs = [...newSongs];
     searchInput.value = '';
+    
+    // 重置为默认物理排序状态
+    updateSortButtons(btnSortDefault);
     initVirtualList();
     if (currentIndex === -1) playSong(0);
   }
@@ -499,7 +511,7 @@ function updateThemeColor(src) {
     
     ctx.clearRect(0, 0, 50, 50);
     img.onload = null;
-    img.src = ''; // 显式回收图片资源，释放 Chromium 占用的 GPU 纹理显存
+    img.src = ''; 
   };
 }
 
@@ -586,10 +598,10 @@ function updatePlayButton(isPlaying) {
   const ambientBg = document.querySelector('.ambient-bg');
   if (isPlaying) {
     document.querySelector('.album-art-container').classList.add('playing');
-    if (ambientBg) ambientBg.classList.add('playing'); // 同步控制背景层开始旋转
+    if (ambientBg) ambientBg.classList.add('playing'); 
   } else {
     document.querySelector('.album-art-container').classList.remove('playing');
-    if (ambientBg) ambientBg.classList.remove('playing'); // 音乐暂停时挂起旋转，避免空转耗费 GPU
+    if (ambientBg) ambientBg.classList.remove('playing'); 
   }
 }
 
@@ -640,3 +652,89 @@ function setupIpcListeners() {
     playSong(prev);
   });
 }
+
+/* ==========================================================================
+   新加入的排序核心算法与控制逻辑
+   ========================================================================== */
+
+/**
+ * 混排比对器：优先 A-Z 排序英文，然后按拼音排序中文，其余字符排在尾部
+ */
+function compareMixed(aStr, bStr) {
+  const cleanA = (aStr || '').trim();
+  const cleanB = (bStr || '').trim();
+  
+  if (!cleanA && !cleanB) return 0;
+  if (!cleanA) return 1;
+  if (!cleanB) return -1;
+
+  const charA = cleanA[0];
+  const charB = cleanB[0];
+
+  const isLatin = (ch) => /^[a-zA-Z]/.test(ch);
+  const isChinese = (ch) => /^[\u4e00-\u9fa5]/.test(ch);
+
+  // 分类评级：1-英文 2-中文 3-数字或其它符号
+  const typeA = isLatin(charA) ? 1 : isChinese(charA) ? 2 : 3;
+  const typeB = isLatin(charB) ? 1 : isChinese(charB) ? 2 : 3;
+
+  if (typeA !== typeB) {
+    return typeA - typeB; 
+  }
+
+  if (typeA === 1) {
+    // 英文按标准 A-Z 忽略大小写及数字排序
+    return cleanA.localeCompare(cleanB, 'en', { sensitivity: 'base', numeric: true });
+  } else if (typeA === 2) {
+    // 中文按本地化拼音排序
+    return cleanA.localeCompare(cleanB, 'zh-CN', { numeric: true });
+  } else {
+    // 其它边缘符号或数字
+    return cleanA.localeCompare(cleanB, undefined, { numeric: true });
+  }
+}
+
+/**
+ * 更新排序按钮的高亮状态
+ */
+function updateSortButtons(activeBtn) {
+  [btnSortDefault, btnSortTitle, btnSortArtist, btnSortRandom].forEach(btn => {
+    if (btn) btn.classList.remove('active');
+  });
+  if (activeBtn) activeBtn.classList.add('active');
+}
+
+/**
+ * 执行队列重排并更新播放指针
+ */
+function applySort(mode, btnEl) {
+  if (originalSongs.length === 0) return;
+  
+  updateSortButtons(btnEl);
+
+  // 记录当前播放的歌曲，以便重排后重定向指针，不干扰当前播放
+  const currentPlayingSong = songs[currentIndex];
+
+  if (mode === 'default') {
+    songs = [...originalSongs];
+  } else if (mode === 'title') {
+    songs = [...originalSongs].sort((a, b) => compareMixed(a.title, b.title));
+  } else if (mode === 'artist') {
+    songs = [...originalSongs].sort((a, b) => compareMixed(a.artist, b.artist));
+  } else if (mode === 'random') {
+    // 洗牌算法重新排列
+    songs = [...originalSongs].sort(() => Math.random() - 0.5);
+  }
+
+  if (currentPlayingSong) {
+    currentIndex = songs.findIndex(s => s.path === currentPlayingSong.path);
+  }
+
+  // 刷新前端过滤和列表渲染，保留搜索框已有字符
+  initVirtualList(searchInput.value.trim());
+}
+
+if (btnSortDefault) btnSortDefault.onclick = () => applySort('default', btnSortDefault);
+if (btnSortTitle) btnSortTitle.onclick = () => applySort('title', btnSortTitle);
+if (btnSortArtist) btnSortArtist.onclick = () => applySort('artist', btnSortArtist);
+if (btnSortRandom) btnSortRandom.onclick = () => applySort('random', btnSortRandom);
