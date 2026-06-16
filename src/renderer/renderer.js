@@ -207,7 +207,8 @@ function initMouseFollow() {
     if (lightField) {
       const offsetX = (mouseX - 50) * 0.15;
       const offsetY = (mouseY - 50) * 0.15;
-      lightField.style.transform = `translate3d(${offsetX}%, ${offsetY}%, 0) scale(var(--scale, 1))`;
+      // 将缩放值改为固定的 scale(5)，保证暂停状态下背景灯光依然铺满全屏
+      lightField.style.transform = `translate3d(${offsetX}%, ${offsetY}%, 0) scale(5)`;
     }
 
     if (isAnimating) requestAnimationFrame(animateMouseFollow);
@@ -219,7 +220,7 @@ coverContainer.addEventListener('click', triggerImport);
 async function triggerImport() {
   const newSongs = await window.dreamApi.importFolder();
   if (newSongs && newSongs.length > 0) {
-    originalSongs = [...newSongs]; // 备份原始数据
+    originalSongs = [...newSongs]; 
     songs = [...newSongs];
     searchInput.value = '';
     
