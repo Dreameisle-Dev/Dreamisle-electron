@@ -34,6 +34,7 @@ let volumeTimeout;
 
 let currentLyrics = [];
 let currentLineIndex = -1;
+let lyricDoms = []; // 缓存歌词对应的 DOM 节点引用，优化检索
 
 let mouseX = 50, mouseY = 50;
 let targetMouseX = 50, targetMouseY = 50;
@@ -149,11 +150,9 @@ lyricsScroll.addEventListener('wheel', () => {
   clearTimeout(userScrollTimeout);
   userScrollTimeout = setTimeout(() => {
     isUserScrolling = false;
-    if (currentLineIndex !== -1) {
-      const activeLine = Array.from(lyricsScroll.querySelectorAll('.lyric-line')).find(line => parseInt(line.dataset.index) === currentLineIndex);
-      if (activeLine) {
-        lyricsScroll.scrollTop = activeLine.offsetTop - lyricsContainer.clientHeight / 2 + activeLine.clientHeight / 2;
-      }
+    if (currentLineIndex !== -1 && lyricDoms[currentLineIndex]) {
+      const activeLine = lyricDoms[currentLineIndex];
+      lyricsScroll.scrollTop = activeLine.offsetTop - lyricsContainer.clientHeight / 2 + activeLine.clientHeight / 2;
     }
   }, 3000);
 });
@@ -168,6 +167,8 @@ function updateProgressStyle(value) {
 }
 
 function initMouseFollow() {
+  const ambientBg = document.querySelector('.ambient-bg');
+  
   document.addEventListener('mousemove', (e) => {
     targetMouseX = (e.clientX / window.innerWidth) * 100;
     targetMouseY = (e.clientY / window.innerHeight) * 100;
@@ -189,13 +190,16 @@ function initMouseFollow() {
     mouseX += dx * 0.05;
     mouseY += dy * 0.05;
 
-    document.documentElement.style.setProperty('--mouse-x', `${mouseX}%`);
-    document.documentElement.style.setProperty('--mouse-y', `${mouseY}%`);
+    // 修改：将自定义属性应用在 ambientBg，避免触发 document 根节点全局重绘
+    if (ambientBg) {
+      ambientBg.style.setProperty('--mouse-x', `${mouseX}%`);
+      ambientBg.style.setProperty('--mouse-y', `${mouseY}%`);
+    }
     
     const lightField = document.querySelector('.light-field');
     if (lightField) {
-      const offsetX = (mouseX - 50) * 0.2;
-      const offsetY = (mouseY - 50) * 0.2;
+      const offsetX = (mouseX - 50) * 0.15;
+      const offsetY = (mouseY - 50) * 0.15;
       lightField.style.transform = `translate3d(${offsetX}%, ${offsetY}%, 0) scale(var(--scale, 1))`;
     }
 
@@ -397,6 +401,7 @@ async function loadAndRenderLyrics(song) {
 function renderLyricsToDom() {
   if (!lyricsScroll) return;
   lyricsScroll.innerHTML = '';
+  lyricDoms = []; // 清空重置 DOM 缓存
 
   if (currentLyrics && currentLyrics.length > 0) {
     const fragment = document.createDocumentFragment();
@@ -424,6 +429,7 @@ function renderLyricsToDom() {
         p.style.cursor = 'default'; p.style.opacity = '0.9'; p.style.margin = '8px 0';
       }
       fragment.appendChild(p);
+      lyricDoms.push(p); // 将元素节点推入缓存
     });
     lyricsScroll.appendChild(fragment);
   } else {
@@ -432,7 +438,7 @@ function renderLyricsToDom() {
 }
 
 function syncLyrics(currentTime) {
-  if (!currentLyrics.length || currentLyrics[0].isStatic) return;
+  if (!currentLyrics.length || currentLyrics[0].isStatic || lyricDoms.length === 0) return;
 
   let activeIndex = -1;
   for (let i = 0; i < currentLyrics.length; i++) {
@@ -441,18 +447,19 @@ function syncLyrics(currentTime) {
   }
 
   if (activeIndex === currentLineIndex) return;
+
+  // 优化：利用节点缓存直接移除旧的 active 类，不再通过 querySelector 遍历
+  if (currentLineIndex !== -1 && lyricDoms[currentLineIndex]) {
+    lyricDoms[currentLineIndex].classList.remove('active');
+  }
+
   currentLineIndex = activeIndex;
 
-  const activeItem = lyricsScroll.querySelector('.active');
-  if (activeItem) activeItem.classList.remove('active');
-
-  if (activeIndex !== -1) {
-    const targetLine = Array.from(lyricsScroll.querySelectorAll('.lyric-line')).find(l => parseInt(l.dataset.index) === activeIndex);
-    if (targetLine) {
-      targetLine.classList.add('active');
-      if (!isUserScrolling) {
-        lyricsScroll.scrollTop = targetLine.offsetTop - lyricsContainer.clientHeight / 2 + targetLine.clientHeight / 2;
-      }
+  if (activeIndex !== -1 && lyricDoms[activeIndex]) {
+    const targetLine = lyricDoms[activeIndex];
+    targetLine.classList.add('active');
+    if (!isUserScrolling) {
+      lyricsScroll.scrollTop = targetLine.offsetTop - lyricsContainer.clientHeight / 2 + targetLine.clientHeight / 2;
     }
   }
 }

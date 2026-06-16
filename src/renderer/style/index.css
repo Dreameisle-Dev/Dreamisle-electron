@@ -8,54 +8,6 @@
   --glow-tertiary: rgba(100, 220, 255, 0.08);
 }
 
-@property --x1 {
-  syntax: '<percentage>';
-  inherits: false;
-  initial-value: 30%;
-}
-
-@property --y1 {
-  syntax: '<percentage>';
-  inherits: false;
-  initial-value: 35%;
-}
-
-@property --x2 {
-  syntax: '<percentage>';
-  inherits: false;
-  initial-value: 70%;
-}
-
-@property --y2 {
-  syntax: '<percentage>';
-  inherits: false;
-  initial-value: 65%;
-}
-
-@property --x3 {
-  syntax: '<percentage>';
-  inherits: false;
-  initial-value: 50%;
-}
-
-@property --y3 {
-  syntax: '<percentage>';
-  inherits: false;
-  initial-value: 50%;
-}
-
-@property --scale {
-  syntax: '<number>';
-  inherits: false;
-  initial-value: 1;
-}
-
-@property --rotation {
-  syntax: '<angle>';
-  inherits: false;
-  initial-value: 0deg;
-}
-
 body {
   margin: 0;
   height: 100vh;
@@ -73,35 +25,26 @@ body {
   overflow: hidden;
   background: #000;
   pointer-events: none;
+  transform: translateZ(0); /* 强制开启 GPU 复合层 */
 }
 
+/* 使用 transform 动画代替 Houdini 变量重绘 */
 .light-field {
   position: absolute;
-  inset: -50%;
+  inset: -60%;
   pointer-events: none;
-  opacity: 0.9;
+  opacity: 0.85;
   mix-blend-mode: screen;
-  filter: blur(100px) saturate(140%) brightness(110%);
-  will-change: transform, opacity;
-  transform: translateZ(0);
+  filter: blur(80px) saturate(140%) brightness(110%);
+  will-change: transform;
+  transform: translate3d(0, 0, 0);
 
   background:
-    radial-gradient(circle at var(--x1) var(--y1),
-      color-mix(in srgb, var(--bg-color-1) 60%, transparent), transparent 50%),
-    radial-gradient(circle at var(--x2) var(--y2),
-      color-mix(in srgb, var(--bg-color-2) 50%, transparent), transparent 55%),
-    radial-gradient(circle at var(--x3) var(--y3),
-      var(--glow-tertiary), transparent 40%),
-    conic-gradient(from var(--rotation) at 50% 50%,
-      transparent 0deg,
-      color-mix(in srgb, var(--bg-color-1) 8%, transparent) 90deg,
-      transparent 180deg,
-      color-mix(in srgb, var(--bg-color-2) 6%, transparent) 270deg,
-      transparent 360deg);
+    radial-gradient(circle at 30% 35%, color-mix(in srgb, var(--bg-color-1) 60%, transparent), transparent 50%),
+    radial-gradient(circle at 70% 65%, color-mix(in srgb, var(--bg-color-2) 50%, transparent), transparent 55%),
+    radial-gradient(circle at 50% 50%, var(--glow-tertiary), transparent 40%);
 
-  animation:
-    slowGlow 25s cubic-bezier(0.4, 0, 0.2, 1) infinite alternate,
-    breathe 15s ease-in-out infinite alternate;
+  animation: rotateGlow 25s linear infinite;
 }
 
 .light-field::before {
@@ -109,92 +52,55 @@ body {
   position: absolute;
   inset: 0;
   background:
-    radial-gradient(circle at calc(100% - var(--x1)) calc(100% - var(--y1)), var(--glow-primary), transparent 45%),
-    radial-gradient(circle at calc(100% - var(--x2)) calc(100% - var(--y2)), var(--glow-secondary), transparent 50%);
-  opacity: 0.6;
-  animation: slowGlow 30s cubic-bezier(0.4, 0, 0.2, 1) infinite alternate-reverse;
+    radial-gradient(circle at 70% 30%, var(--glow-primary), transparent 45%),
+    radial-gradient(circle at 30% 70%, var(--glow-secondary), transparent 50%);
+  opacity: 0.5;
   filter: blur(80px);
+  will-change: transform;
+  transform: translate3d(0, 0, 0);
+  animation: rotateGlowReverse 30s linear infinite;
 }
 
 .light-field::after {
   content: '';
   position: absolute;
-  inset: -20%;
+  inset: -10%;
   background:
-    repeating-conic-gradient(from var(--rotation) at 50% 50%, transparent 0deg, rgba(255, 255, 255, 0.02) 5deg, transparent 10deg);
-  opacity: 0.4;
-  animation: rotate 60s linear infinite;
+    repeating-conic-gradient(from 0deg at 50% 50%, transparent 0deg, rgba(255, 255, 255, 0.01) 5deg, transparent 10deg);
+  opacity: 0.3;
   mix-blend-mode: overlay;
+  will-change: transform;
+  transform: translate3d(0, 0, 0);
+  animation: rotateNoise 60s linear infinite;
 }
 
-@keyframes slowGlow {
+@keyframes rotateGlow {
   0% {
-    --x1: 25%;
-    --y1: 30%;
-    --x2: 75%;
-    --y2: 70%;
-    --x3: 40%;
-    --y3: 45%;
-    --rotation: 0deg;
-    transform: translate3d(-2%, -1%, 0) scale(1.05);
+    transform: translate3d(0, 0, 0) rotate(0deg) scale(1);
   }
-
-  33% {
-    --x1: 45%;
-    --y1: 25%;
-    --x2: 55%;
-    --y2: 75%;
-    --x3: 60%;
-    --y3: 40%;
-    --rotation: 15deg;
-    transform: translate3d(1%, 0.5%, 0) scale(1.08);
-  }
-
-  66% {
-    --x1: 35%;
-    --y1: 60%;
-    --x2: 80%;
-    --y2: 45%;
-    --x3: 30%;
-    --y3: 65%;
-    --rotation: 30deg;
-    transform: translate3d(-0.5%, 1.5%, 0) scale(1.06);
-  }
-
-  100% {
-    --x1: 30%;
-    --y1: 45%;
-    --x2: 70%;
-    --y2: 55%;
-    --x3: 50%;
-    --y3: 50%;
-    --rotation: 45deg;
-    transform: translate3d(0.5%, -0.5%, 0) scale(1.07);
-  }
-}
-
-@keyframes breathe {
-
-  0%,
-  100% {
-    --scale: 1;
-    opacity: 0.85;
-  }
-
   50% {
-    --scale: 1.02;
-    opacity: 0.95;
+    transform: translate3d(1%, 2%, 0) rotate(180deg) scale(1.05);
+  }
+  100% {
+    transform: translate3d(0, 0, 0) rotate(360deg) scale(1);
   }
 }
 
-@keyframes rotate {
-  from {
-    --rotation: 0deg;
+@keyframes rotateGlowReverse {
+  0% {
+    transform: rotate(360deg) scale(1.05);
   }
+  50% {
+    transform: rotate(180deg) scale(0.95);
+  }
+  100% {
+    transform: rotate(0deg) scale(1.05);
+  }
+}
 
-  to {
-    --rotation: 360deg;
-  }
+@keyframes rotateNoise {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
 
 .noise-overlay {
@@ -206,7 +112,7 @@ body {
   z-index: 1;
   opacity: 0.6;
   mix-blend-mode: overlay;
-  transform: translateZ(0);
+  transform: translate3d(0, 0, 0); /* 提升至复合图层，防止污染重绘 */
 }
 
 .vignette {
@@ -215,6 +121,7 @@ body {
   background: radial-gradient(ellipse at center, transparent 40%, rgba(0, 0, 0, 0.4) 100%);
   pointer-events: none;
   z-index: 1;
+  transform: translate3d(0, 0, 0);
 }
 
 .app-container {
@@ -285,24 +192,27 @@ body {
   height: 100%;
   object-fit: cover;
   border-radius: 16px;
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5), 0 0 100px var(--bg-color-1), 0 0 200px rgba(255, 255, 255, 0.05);
-  transition: all 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5), 0 0 100px var(--bg-color-1);
+  transition: transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
   -webkit-app-region: no-drag;
 }
 
-.album-art-container.playing .cover-img {
-  transform: scale(1.03) translateY(-5px);
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6), 0 0 120px var(--bg-color-1), 0 0 300px rgba(255, 255, 255, 0.08);
-  animation: albumGlow 4s ease-in-out infinite alternate;
+/* 优化播放效果：使用轻微的 transform 呼吸代替极其耗性能的 box-shadow 动画 */
+.album-art-container.playing {
+  animation: albumBreathe 8s ease-in-out infinite alternate;
 }
 
-@keyframes albumGlow {
-  from {
-    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6), 0 0 120px var(--bg-color-1), 0 0 300px rgba(255, 255, 255, 0.05);
-  }
+.album-art-container.playing .cover-img {
+  transform: scale(1.03);
+  box-shadow: 0 15px 45px rgba(0, 0, 0, 0.6), 0 0 120px var(--bg-color-1);
+}
 
-  to {
-    box-shadow: 0 25px 60px rgba(0, 0, 0, 0.7), 0 0 140px var(--bg-color-1), 0 0 400px rgba(255, 255, 255, 0.1);
+@keyframes albumBreathe {
+  0% {
+    transform: translateY(0) scale(1);
+  }
+  100% {
+    transform: translateY(-4px) scale(1.01);
   }
 }
 
@@ -352,12 +262,12 @@ body {
   margin: 18px 0;
   font-weight: 500;
   cursor: pointer;
-  transition: all 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  transition: transform 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94), color 0.4s ease, filter 0.4s ease;
   transform: scale(0.95);
   transform-origin: center;
   filter: blur(1px);
   padding: 0 20px;
-  will-change: transform, filter, color;
+  will-change: transform, color, filter;
 }
 
 .lyric-line:hover {
@@ -434,7 +344,7 @@ body {
   font-size: 16px;
   pointer-events: none;
   opacity: 0;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1), transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   border: 1px solid rgba(255, 255, 255, 0.1);
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
   z-index: 5;
@@ -515,7 +425,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
   overflow: hidden;
 }
@@ -665,7 +575,7 @@ body {
   font-size: 14px;
   outline: none;
   box-sizing: border-box;
-  transition: all 0.2s ease;
+  transition: background-color 0.2s ease, box-shadow 0.2s ease;
   font-family: inherit;
 }
 
@@ -687,7 +597,6 @@ body {
   padding-top: 10px;
   overflow-y: auto;
   position: relative;
-  /* 虚拟列表关键属性 */
 }
 
 .playlist-list::-webkit-scrollbar {
@@ -707,7 +616,6 @@ body {
   background: rgba(255, 255, 255, 0.3);
 }
 
-/* 虚拟列表项绝对定位 */
 .playlist-item {
   padding: 12px 28px;
   cursor: pointer;
@@ -715,7 +623,6 @@ body {
   flex-direction: column;
   box-sizing: border-box;
   transition: background-color 0.2s ease, padding-left 0.2s ease;
-  /* 移除 all 过渡，防止虚拟列表卡顿 */
   position: absolute;
   left: 0;
   right: 0;
@@ -826,14 +733,13 @@ body {
 }
 
 @media (prefers-reduced-motion: reduce) {
-
   .light-field,
   .light-field::before,
   .light-field::after {
     animation: none;
   }
 
-  .album-art-container.playing .cover-img {
+  .album-art-container.playing {
     animation: none;
   }
 }

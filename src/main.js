@@ -13,6 +13,10 @@ let tray = null;
 
 app.isQuitting = false;
 
+// 性能优化：添加 Chromium 指令开关，协助减少渲染丢帧和全屏抖动
+app.commandLine.appendSwitch('enable-gpu-rasterization');
+app.commandLine.appendSwitch('enable-zero-copy');
+
 function createWindow() {
   Menu.setApplicationMenu(null)
 
