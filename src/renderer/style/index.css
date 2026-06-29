@@ -940,3 +940,26 @@ body.platform-darwin .titlebar-logo {
 body.mini-mode .custom-titlebar {
   display: none !important;
 }
+
+.mini-lyrics {
+  display: none; /* 普通模式下默认隐藏 */
+}
+
+body.mini-mode .mini-lyrics {
+  display: block;
+  width: 100%;
+  max-width: 240px;
+  text-align: center;
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.8);
+  font-weight: 500;
+  margin-top: 14px; /* 精准定位在控制按钮下方 14px 处 */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+  pointer-events: none; /* 穿透鼠标事件以防干扰背景拖拽 */
+  box-sizing: border-box;
+  padding: 0 10px;
+  -webkit-app-region: no-drag;
+}

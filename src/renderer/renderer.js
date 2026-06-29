@@ -4,6 +4,8 @@ const playlistEl = document.getElementById('playlist');
 const playlistCountEl = document.getElementById('playlistCount');
 const searchInput = document.getElementById('searchInput');
 
+const miniLyricsEl = document.getElementById('miniLyrics');
+
 const coverContainer = document.getElementById('coverContainer');
 const coverImg = document.getElementById('coverImg');
 const defaultCover = document.getElementById('defaultCover');
@@ -429,6 +431,7 @@ function escapeHtml(unsafe) {
 async function loadAndRenderLyrics(song) {
   currentLineIndex = -1;
   currentLyrics = [];
+  if (miniLyricsEl) miniLyricsEl.innerText = ""; // 切换歌曲时首先清空单行歌词
 
   if (lyricsScroll) {
     lyricsScroll.innerHTML = '<p class="lyric-line placeholder">加载歌词中...</p>';
@@ -500,7 +503,10 @@ function renderLyricsToDom() {
 }
 
 function syncLyrics(currentTime) {
-  if (!currentLyrics.length || currentLyrics[0].isStatic || lyricDoms.length === 0) return;
+  if (!currentLyrics.length || currentLyrics[0].isStatic || lyricDoms.length === 0) {
+    if (miniLyricsEl) miniLyricsEl.innerText = "";
+    return;
+  }
 
   let activeIndex = -1;
   for (let i = 0; i < currentLyrics.length; i++) {
@@ -522,6 +528,13 @@ function syncLyrics(currentTime) {
     if (!isUserScrolling) {
       lyricsScroll.scrollTop = targetLine.offsetTop - lyricsContainer.clientHeight / 2 + targetLine.clientHeight / 2;
     }
+
+    if (miniLyricsEl && currentLyrics[activeIndex]) {
+      const text = currentLyrics[activeIndex].text || '';
+      miniLyricsEl.innerText = text.replace(/\n/g, ' / ');
+    }
+  } else {
+    if (miniLyricsEl) miniLyricsEl.innerText = "";
   }
 }
 
