@@ -20,5 +20,9 @@ contextBridge.exposeInMainWorld('dreamApi', {
   onWindowVisibilityChanged: (callback) => ipcRenderer.on('window-visibility-changed', (event, isVisible) => callback(isVisible)),
   onTrayPlayPause: (callback) => ipcRenderer.on('tray-play-pause', () => callback()),
   onTrayNext: (callback) => ipcRenderer.on('tray-next', () => callback()),
-  onTrayPrev: (callback) => ipcRenderer.on('tray-prev', () => callback())
+  onTrayPrev: (callback) => ipcRenderer.on('tray-prev', () => callback()),
+
+  // 新增小窗口模式切换方法及监听
+  toggleMiniMode: () => ipcRenderer.invoke('app:toggleMiniMode'),
+  onWindowModeChanged: (callback) => ipcRenderer.on('window-mode-changed', (event, mode) => callback(mode))
 });

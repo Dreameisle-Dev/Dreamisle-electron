@@ -56,10 +56,33 @@ let filteredSongs = [];
 let vsStartIndex = 0;
 let vsEndIndex = 0;
 
+// 小窗口模式标志
+let isMiniMode = false;
+
 audio.volume = 0.5;
 
 window.addEventListener('DOMContentLoaded', async () => {
   initMouseFollow();
+
+  // F5 切换小窗模式
+  window.addEventListener('keydown', (e) => {
+    if (e.key === 'F5') {
+      e.preventDefault();
+      window.dreamApi.toggleMiniMode();
+    }
+  });
+
+  // 监听主进程发来的窗口模式切换通知
+  window.dreamApi.onWindowModeChanged((mode) => {
+    if (mode === 'mini') {
+      isMiniMode = true;
+      document.body.classList.add('mini-mode');
+    } else {
+      isMiniMode = false;
+      document.body.classList.remove('mini-mode');
+    }
+    updateProgressStyle(progressBar.value);
+  });
   
   const savedSongs = await window.dreamApi.loadSavedMusic();
 
@@ -167,11 +190,21 @@ lyricsScroll.addEventListener('wheel', () => {
 
 function updateProgressStyle(value) {
   progressBar.style.setProperty('--progress', `${value}%`);
-  progressBar.style.background = `linear-gradient(to right, 
-    rgba(255,255,255,0.9) 0%, 
-    rgba(255,255,255,0.6) ${value}%, 
-    rgba(255,255,255,0.1) ${value}%
-  )`;
+  
+  if (isMiniMode) {
+    // 小窗下采用微弱低调色系，不易分神
+    progressBar.style.background = `linear-gradient(to right, 
+      rgba(255,255,255,0.4) 0%, 
+      rgba(255,255,255,0.3) ${value}%, 
+      rgba(255,255,255,0.05) ${value}%
+    )`;
+  } else {
+    progressBar.style.background = `linear-gradient(to right, 
+      rgba(255,255,255,0.9) 0%, 
+      rgba(255,255,255,0.6) ${value}%, 
+      rgba(255,255,255,0.1) ${value}%
+    )`;
+  }
 }
 
 function initMouseFollow() {
@@ -218,6 +251,9 @@ function initMouseFollow() {
 coverContainer.addEventListener('click', triggerImport);
 
 async function triggerImport() {
+  // 小窗模式下不触发导入操作，防止不小心误触
+  if (isMiniMode) return; 
+  
   const newSongs = await window.dreamApi.importFolder();
   if (newSongs && newSongs.length > 0) {
     originalSongs = [...newSongs]; 
@@ -655,7 +691,7 @@ function setupIpcListeners() {
 }
 
 /* ==========================================================================
-   新加入的排序核心算法与控制逻辑
+   排序核心算法与控制逻辑
    ========================================================================== */
 
 /**
