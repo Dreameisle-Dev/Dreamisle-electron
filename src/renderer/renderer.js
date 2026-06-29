@@ -345,8 +345,8 @@ async function updateCoverAndColor(song) {
 function parseLrc(lrcText) {
   if (!lrcText || typeof lrcText !== 'string') return [];
   const lines = lrcText.split(/\r\n|\r|\n/);
-  
-  const timeExp = /\[(\d{1,2}):(\d{1,2})(?:\.(\d{1,3}))?\]/g;
+
+  const timeExp = /\[(\d{1,2}):(\d{1,2})(?:[.,](\d{1,3}))?\]/g;
   let hasTimestamps = false;
   const result = [];
 
@@ -358,7 +358,7 @@ function parseLrc(lrcText) {
 
     if (matches.length > 0) {
       hasTimestamps = true;
-      const text = trimmedLine.replace(/\[\d{1,2}:\d{1,2}(?:\.\d{1,3})?\]/g, '').trim();
+      const text = trimmedLine.replace(/\[\d{1,2}:\d{1,2}(?:[.,]\d{1,3})?\]/g, '').trim();
 
       if (text) {
         for (const match of matches) {
@@ -441,6 +441,8 @@ async function loadAndRenderLyrics(song) {
 
   if (currentLyrics && currentLyrics.length > 0) {
     currentLyrics = groupTranslations(currentLyrics);
+    // 统一过滤掉空白行，防止在不同歌词来源下，渲染列表与数据列表因空白行产生索引错位
+    currentLyrics = currentLyrics.filter(line => line.text && line.text.trim() !== '');
   }
 
   renderLyricsToDom();
@@ -456,7 +458,6 @@ function renderLyricsToDom() {
     const isStatic = currentLyrics[0].isStatic;
 
     currentLyrics.forEach((line, index) => {
-      if (!line.text.trim()) return;
       const p = document.createElement('p');
       p.className = 'lyric-line';
       p.dataset.index = index;
