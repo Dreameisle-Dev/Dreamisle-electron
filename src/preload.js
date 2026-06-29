@@ -22,7 +22,11 @@ contextBridge.exposeInMainWorld('dreamApi', {
   onTrayNext: (callback) => ipcRenderer.on('tray-next', () => callback()),
   onTrayPrev: (callback) => ipcRenderer.on('tray-prev', () => callback()),
 
-  // 新增小窗口模式切换方法及监听
   toggleMiniMode: () => ipcRenderer.invoke('app:toggleMiniMode'),
-  onWindowModeChanged: (callback) => ipcRenderer.on('window-mode-changed', (event, mode) => callback(mode))
+  onWindowModeChanged: (callback) => ipcRenderer.on('window-mode-changed', (event, mode) => callback(mode)),
+
+  minimizeWindow: () => ipcRenderer.invoke('window:minimize'),
+  maximizeWindow: () => ipcRenderer.invoke('window:maximize'),
+  closeWindow: () => ipcRenderer.invoke('window:close'),
+  getPlatform: () => process.platform
 });

@@ -35,7 +35,7 @@ function createWindow() {
     height: 700,
     minWidth: 800,
     minHeight: 600,
-    titleBarStyle: 'hiddenInset',
+    titleBarStyle: 'hidden', // 隐藏默认系统标题栏
     backgroundColor: '#000000',
     icon: path.join(__dirname, 'assets/app_icon.ico'),
     webPreferences: {
@@ -246,4 +246,21 @@ ipcMain.handle('app:toggleMiniMode', () => {
     mainWindow.webContents.send('window-mode-changed', 'normal');
   }
   return isMiniMode;
+});
+
+// 窗口控制 IPC
+ipcMain.handle('window:minimize', () => {
+  if (mainWindow) mainWindow.minimize();
+});
+ipcMain.handle('window:maximize', () => {
+  if (mainWindow) {
+    if (mainWindow.isMaximized()) {
+      mainWindow.unmaximize();
+    } else {
+      mainWindow.maximize();
+    }
+  }
+});
+ipcMain.handle('window:close', () => {
+  if (mainWindow) mainWindow.close();
 });

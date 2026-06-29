@@ -5,6 +5,8 @@
 body {
   margin: 0;
   height: 100vh;
+  display: flex;         /* 开启上下排列布局 */
+  flex-direction: column; /* 主轴垂直 */
   font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif;
   overflow: hidden;
   background: #000;
@@ -125,10 +127,9 @@ body {
 .app-container {
   position: relative;
   z-index: 2;
-  height: 100%;
+  flex: 1;
   display: flex;
   flex-direction: row;
-  -webkit-app-region: drag;
 }
 
 .left-panel {
@@ -852,5 +853,90 @@ body.mini-mode #btnPlaylist {
 }
 
 body.mini-mode .playlist-drawer {
+  display: none !important;
+}
+
+.custom-titlebar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 32px;
+  background: transparent; /* 背景透明：使下方的氛围背景光晕能够完美渗透过来 */
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 12px;
+  position: relative;
+  z-index: 999;
+  flex-shrink: 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+  box-sizing: border-box;
+}
+
+/* 拖拽感应区域 */
+.titlebar-drag-region {
+  position: absolute;
+  inset: 0;
+  -webkit-app-region: drag; /* 声明拖动区 */
+  z-index: -1;
+}
+
+.titlebar-logo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-left: 15px;
+  pointer-events: none; /* 让鼠标事件穿透，以便双击也能触动拖拽区域实现最大化 */
+}
+
+.titlebar-text {
+  font-weight: 500;
+  letter-spacing: 0.3px;
+}
+
+.titlebar-controls {
+  display: flex;
+  height: 100%;
+  -webkit-app-region: no-drag; /* 按钮区域不能拖动 */
+}
+
+.titlebar-btn {
+  width: 46px;
+  height: 100%;
+  background: transparent;
+  border: none;
+  color: inherit;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background-color 0.2s ease, color 0.2s ease;
+  outline: none;
+}
+
+.titlebar-btn:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+
+/* 红色关闭高亮特效 */
+.titlebar-btn.btn-close:hover {
+  background-color: #e81123 !important;
+  color: #fff !important;
+}
+
+/* macOS macOS macOS 特殊适配 */
+body.platform-darwin .custom-titlebar {
+  padding-left: 75px; /* 在 Mac 上为左侧三色控制键腾出空间 */
+}
+
+body.platform-darwin .titlebar-controls {
+  display: none !important; /* Mac 上不需要 Windows 风格控制键 */
+}
+
+body.platform-darwin .titlebar-logo {
+  padding-left: 0;
+}
+
+/* 小窗口模式适配：在小窗下直接隐藏标题栏 */
+body.mini-mode .custom-titlebar {
   display: none !important;
 }

@@ -64,6 +64,19 @@ audio.volume = 0.5;
 window.addEventListener('DOMContentLoaded', async () => {
   initMouseFollow();
 
+  // 检测当前系统并添加类标识
+  const platform = window.dreamApi.getPlatform();
+  document.body.classList.add(`platform-${platform}`);
+
+  // 绑定自绘标题栏按钮点击事件
+  const btnMin = document.getElementById('btnMin');
+  const btnMax = document.getElementById('btnMax');
+  const btnClose = document.getElementById('btnClose');
+
+  if (btnMin) btnMin.onclick = () => window.dreamApi.minimizeWindow();
+  if (btnMax) btnMax.onclick = () => window.dreamApi.maximizeWindow();
+  if (btnClose) btnClose.onclick = () => window.dreamApi.closeWindow();
+
   // F5 切换小窗模式
   window.addEventListener('keydown', (e) => {
     if (e.key === 'F5') {
