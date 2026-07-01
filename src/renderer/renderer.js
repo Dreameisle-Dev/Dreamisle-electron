@@ -4,8 +4,6 @@ const playlistEl = document.getElementById('playlist');
 const playlistCountEl = document.getElementById('playlistCount');
 const searchInput = document.getElementById('searchInput');
 
-const miniLyricsEl = document.getElementById('miniLyrics');
-
 const coverContainer = document.getElementById('coverContainer');
 const coverImg = document.getElementById('coverImg');
 const defaultCover = document.getElementById('defaultCover');
@@ -34,6 +32,9 @@ const btnSortTitle = document.getElementById('sortTitle');
 const btnSortArtist = document.getElementById('sortArtist');
 const btnSortRandom = document.getElementById('sortRandom');
 
+// 小窗单行歌词元素
+const miniLyricsEl = document.getElementById('miniLyrics');
+
 let originalSongs = []; // 保存最原始物理读取顺序的备份
 let songs = [];
 let currentIndex = -1;
@@ -58,7 +59,7 @@ let filteredSongs = [];
 let vsStartIndex = 0;
 let vsEndIndex = 0;
 
-// 小窗口模式标志
+// 窗口模式追踪
 let isMiniMode = false;
 
 audio.volume = 0.5;
@@ -79,15 +80,68 @@ window.addEventListener('DOMContentLoaded', async () => {
   if (btnMax) btnMax.onclick = () => window.dreamApi.maximizeWindow();
   if (btnClose) btnClose.onclick = () => window.dreamApi.closeWindow();
 
-  // F5 切换小窗模式
+  // 绑定键盘快捷键
+  let altTimer = null;
   window.addEventListener('keydown', (e) => {
+    const isInputActive = document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA';
+
+    // F5：独立于输入框外，任何时候均允许切换窗口模式
     if (e.key === 'F5') {
       e.preventDefault();
       window.dreamApi.toggleMiniMode();
+      return;
+    }
+
+    // 焦点位于搜索框或输入框时，屏蔽以下快捷键
+    if (isInputActive) return;
+
+    // Space：播放/暂停
+    if (e.code === 'Space') {
+      e.preventDefault();
+      btnPlay.click();
+    }
+
+    // Q：上一首
+    if (e.code === 'KeyQ') {
+      e.preventDefault();
+      document.getElementById('btnPrev').click();
+    }
+
+    // E：下一首
+    if (e.code === 'KeyE') {
+      e.preventDefault();
+      document.getElementById('btnNext').click();
+    }
+
+    // R：切换播放模式
+    if (e.code === 'KeyR') {
+      e.preventDefault();
+      btnMode.click();
+    }
+
+    // LeftALT：长按 0.5s 呼出/折叠播放列表
+    if (e.code === 'AltLeft') {
+      e.preventDefault();
+      if (e.repeat) return; // 屏蔽自动重复
+      
+      altTimer = setTimeout(() => {
+        playlistDrawer.classList.toggle('open');
+        altTimer = null;
+      }, 500);
     }
   });
 
-  // 监听主进程发来的窗口模式切换通知
+  window.addEventListener('keyup', (e) => {
+    if (e.code === 'AltLeft') {
+      e.preventDefault();
+      if (altTimer) {
+        clearTimeout(altTimer);
+        altTimer = null;
+      }
+    }
+  });
+
+  // 监听窗口模式更改通知
   window.dreamApi.onWindowModeChanged((mode) => {
     if (mode === 'mini') {
       isMiniMode = true;
@@ -207,7 +261,6 @@ function updateProgressStyle(value) {
   progressBar.style.setProperty('--progress', `${value}%`);
   
   if (isMiniMode) {
-    // 小窗下采用微弱低调色系，不易分神
     progressBar.style.background = `linear-gradient(to right, 
       rgba(255,255,255,0.4) 0%, 
       rgba(255,255,255,0.3) ${value}%, 
@@ -717,13 +770,7 @@ function setupIpcListeners() {
   });
 }
 
-/* ==========================================================================
-   排序核心算法与控制逻辑
-   ========================================================================== */
-
-/**
- * 混排比对器：优先 A-Z 排序英文，然后按拼音排序中文，其余字符排在尾部
- */
+// 混排比对器：优先 A-Z 排序英文，然后按拼音排序中文，其余字符排在尾部
 function compareMixed(aStr, bStr) {
   const cleanA = (aStr || '').trim();
   const cleanB = (bStr || '').trim();
