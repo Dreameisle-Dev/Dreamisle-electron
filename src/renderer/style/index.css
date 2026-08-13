@@ -354,6 +354,33 @@ body {
   transform: translate(-50%, -50%) scale(1.05);
 }
 
+.sync-toast {
+  position: fixed;
+  bottom: 32px;
+  left: 50%;
+  transform: translate(-50%, 20px);
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  padding: 10px 22px;
+  border-radius: 22px;
+  color: #fff;
+  font-weight: 600;
+  font-size: 14px;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1), transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+  z-index: 20;
+  letter-spacing: 1px;
+}
+
+.sync-toast.visible {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
 .progress-container {
   width: 100%;
   max-width: 400px;

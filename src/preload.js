@@ -5,6 +5,7 @@ contextBridge.exposeInMainWorld('dreamApi', {
   loadSavedMusic: () => ipcRenderer.invoke('app:loadSavedMusic'),
   savePlaybackState: (state) => ipcRenderer.invoke('app:savePlaybackState', state),
   loadPlaybackState: () => ipcRenderer.invoke('app:loadPlaybackState'),
+  syncFolder: () => ipcRenderer.invoke('app:syncFolder'),
 
   getCover: async (path) => {
     const res = await ipcRenderer.invoke('app:getCover', path);

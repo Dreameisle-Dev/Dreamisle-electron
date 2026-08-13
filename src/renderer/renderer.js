@@ -56,6 +56,10 @@ let userScrollTimeout = null;
 
 let currentCoverBlobUrl = null;
 
+// 同步提示 toast
+const syncToastEl = document.getElementById('syncToast');
+let syncToastTimer = null;
+
 const ITEM_HEIGHT = 62;
 let filteredSongs = [];
 let vsStartIndex = 0;
@@ -192,6 +196,9 @@ window.addEventListener('DOMContentLoaded', async () => {
 
   setupIpcListeners();
   updateProgressStyle(0);
+
+  // 播放恢复完成后，后台同步文件夹新增/删除的歌曲
+  applyFolderSync().catch(() => { });
 });
 
 function initVirtualList(filterText = '') {
@@ -846,6 +853,39 @@ function applySort(mode, btnEl) {
 
   // 刷新前端过滤和列表渲染，保留搜索框已有字符
   initVirtualList(searchInput.value.trim());
+}
+
+function showSyncToast(text) {
+  if (!syncToastEl) return;
+  syncToastEl.innerText = text;
+  syncToastEl.classList.add('visible');
+  clearTimeout(syncToastTimer);
+  syncToastTimer = setTimeout(() => syncToastEl.classList.remove('visible'), 3000);
+}
+
+// 启动后自动同步：合并文件夹新增/删除的歌曲，不打断当前播放
+async function applyFolderSync() {
+  const result = await window.dreamApi.syncFolder();
+  if (!result || (result.added === 0 && result.removed === 0)) return;
+
+  // 记住当前播放歌曲，合并后按路径重定位（复用 resolveRestoredIndex）
+  const playingPath = songs[currentIndex] ? songs[currentIndex].path : null;
+
+  originalSongs = [...result.playlist];
+  songs = [...originalSongs];
+  currentIndex = resolveRestoredIndex(songs, { currentSongPath: playingPath });
+  if (currentIndex === -1) currentIndex = songs.length > 0 ? 0 : -1;
+
+  // 用户开着排序则重新套用（applySort 内部会按路径重定位 currentIndex 并刷新列表）
+  const activeSortBtn = [btnSortDefault, btnSortTitle, btnSortArtist, btnSortRandom]
+    .find((btn) => btn && btn.classList.contains('active'));
+  if (activeSortBtn && activeSortBtn !== btnSortDefault) {
+    applySort(activeSortBtn.dataset.mode, activeSortBtn);
+  } else {
+    initVirtualList(searchInput.value.trim());
+  }
+
+  if (result.added > 0) showSyncToast(`发现 ${result.added} 首新歌`);
 }
 
 if (btnSortDefault) btnSortDefault.onclick = () => applySort('default', btnSortDefault);

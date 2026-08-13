@@ -4,9 +4,13 @@ import { fileURLToPath, pathToFileURL } from 'url';
 import { parseFile } from 'music-metadata';
 import fs from 'fs/promises';
 import Store from 'electron-store';
+import { diffPlaylistPaths, applySyncToPlaylist } from './sync-playlist.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const store = new Store();
+
+// 手动导入时递增，使进行中的自动同步结果作废
+let syncGeneration = 0;
 
 let mainWindow = null;
 let tray = null;
@@ -113,24 +117,27 @@ async function scanDirectory(dirPath) {
   return results;
 }
 
+async function parseAudioFile(filePath) {
+  try {
+    const metadata = await parseFile(filePath, { skipCovers: true, skipPostHeaders: true });
+    return {
+      path: filePath,
+      url: pathToFileURL(filePath).href,
+      title: metadata.common.title || path.basename(filePath),
+      artist: metadata.common.artist || 'Unknown',
+    };
+  } catch (e) {
+    return {
+      path: filePath, url: pathToFileURL(filePath).href, title: path.basename(filePath), artist: 'Unknown',
+    };
+  }
+}
+
 async function scanAndParse(folderPath) {
   const audioFiles = await scanDirectory(folderPath);
   const playlist = [];
-
   for (const filePath of audioFiles) {
-    try {
-      const metadata = await parseFile(filePath, { skipCovers: true, skipPostHeaders: true });
-      playlist.push({
-        path: filePath,
-        url: pathToFileURL(filePath).href,
-        title: metadata.common.title || path.basename(filePath),
-        artist: metadata.common.artist || 'Unknown',
-      });
-    } catch (e) {
-      playlist.push({
-        path: filePath, url: pathToFileURL(filePath).href, title: path.basename(filePath), artist: 'Unknown',
-      });
-    }
+    playlist.push(await parseAudioFile(filePath));
   }
   return playlist;
 }
@@ -139,6 +146,7 @@ ipcMain.handle('dialog:openFolder', async () => {
   const { canceled, filePaths } = await dialog.showOpenDialog({ properties: ['openDirectory'] });
   if (canceled) return [];
   const folderPath = filePaths[0];
+  syncGeneration++; // 手动导入新文件夹，作废进行中的自动同步
   store.set('musicFolder', folderPath);
   
   // 重新选择目录时扫描并写入缓存，避免重复工作
@@ -162,6 +170,27 @@ ipcMain.handle('app:loadSavedMusic', async () => {
     store.set('cachedPlaylist', playlist);
     return playlist;
   } catch (e) { return []; }
+});
+
+ipcMain.handle('app:syncFolder', async () => {
+  const gen = syncGeneration;
+  const folderPath = store.get('musicFolder');
+  if (!folderPath) return null;
+  try { await fs.access(folderPath); } catch (e) { return null; }
+
+  const diskPaths = await scanDirectory(folderPath);
+  const cached = store.get('cachedPlaylist') || [];
+  const { added, removed } = diffPlaylistPaths(cached.map((s) => s.path), diskPaths);
+  if (added.length === 0 && removed.length === 0) return { added: 0, removed: 0, playlist: cached };
+  if (gen !== syncGeneration) return null; // 扫描期间用户手动导入了新文件夹
+
+  const newEntries = [];
+  for (const p of added) newEntries.push(await parseAudioFile(p));
+  if (gen !== syncGeneration) return null; // 解析期间用户手动导入了新文件夹
+
+  const playlist = applySyncToPlaylist(cached, newEntries, removed);
+  store.set('cachedPlaylist', playlist);
+  return { added: added.length, removed: removed.length, playlist };
 });
 
 ipcMain.handle('app:getCover', async (event, filePath) => {
