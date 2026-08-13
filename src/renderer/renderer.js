@@ -1,3 +1,5 @@
+import { resolveRestoredIndex } from './playback-restore.js';
+
 const audio = document.getElementById('audioPlayer');
 const playlistDrawer = document.getElementById('playlistDrawer');
 const playlistEl = document.getElementById('playlist');
@@ -162,8 +164,9 @@ window.addEventListener('DOMContentLoaded', async () => {
     initVirtualList(); 
 
     const savedState = await window.dreamApi.loadPlaybackState();
-    if (savedState && savedState.currentIndex >= 0 && savedState.currentIndex < songs.length) {
-      currentIndex = savedState.currentIndex;
+    const restoredIndex = resolveRestoredIndex(songs, savedState);
+    if (restoredIndex >= 0) {
+      currentIndex = restoredIndex;
       playMode = savedState.playMode || 0;
       audio.volume = savedState.volume || 0.5;
 
@@ -729,7 +732,7 @@ function formatTime(s) {
 
 async function savePlaybackState() {
   if (songs.length === 0) return;
-  const state = { currentIndex, currentTime: audio.currentTime || 0, volume: audio.volume, playMode, isPlaying: !audio.paused };
+  const state = { currentIndex, currentSongPath: songs[currentIndex] ? songs[currentIndex].path : null, currentTime: audio.currentTime || 0, volume: audio.volume, playMode, isPlaying: !audio.paused };
   try { await window.dreamApi.savePlaybackState(state); } catch (e) { }
 }
 
@@ -737,7 +740,7 @@ setInterval(() => { if (songs.length > 0) savePlaybackState(); }, 60000);
 
 window.addEventListener('beforeunload', () => {
   if (songs.length > 0) {
-    const state = { currentIndex, currentTime: audio.currentTime || 0, volume: audio.volume, playMode, isPlaying: !audio.paused };
+    const state = { currentIndex, currentSongPath: songs[currentIndex] ? songs[currentIndex].path : null, currentTime: audio.currentTime || 0, volume: audio.volume, playMode, isPlaying: !audio.paused };
     window.dreamApi.savePlaybackState(state).catch(() => { });
   }
 });
