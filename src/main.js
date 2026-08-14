@@ -293,3 +293,6 @@ ipcMain.handle('window:maximize', () => {
 ipcMain.handle('window:close', () => {
   if (mainWindow) mainWindow.close();
 });
+
+// 获取应用版本号
+ipcMain.handle('app:getVersion', () => app.getVersion());

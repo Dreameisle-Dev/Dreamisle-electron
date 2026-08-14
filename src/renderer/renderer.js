@@ -37,6 +37,11 @@ const btnSortRandom = document.getElementById('sortRandom');
 // 小窗单行歌词元素
 const miniLyricsEl = document.getElementById('miniLyrics');
 
+// 帮助浮层元素
+const helpOverlayEl = document.getElementById('helpOverlay');
+const btnHelpClose = document.getElementById('btnHelpClose');
+const helpVersionEl = document.getElementById('helpVersion');
+
 let originalSongs = []; // 保存最原始物理读取顺序的备份
 let songs = [];
 let currentIndex = -1;
@@ -86,6 +91,12 @@ window.addEventListener('DOMContentLoaded', async () => {
   if (btnMax) btnMax.onclick = () => window.dreamApi.maximizeWindow();
   if (btnClose) btnClose.onclick = () => window.dreamApi.closeWindow();
 
+  // 绑定帮助浮层关闭交互
+  if (btnHelpClose) btnHelpClose.onclick = closeHelp;
+  helpOverlayEl.addEventListener('click', (e) => {
+    if (e.target === helpOverlayEl) closeHelp(); // 点击卡片外部遮罩关闭
+  });
+
   // 绑定键盘快捷键
   let altTimer = null;
   window.addEventListener('keydown', (e) => {
@@ -95,6 +106,15 @@ window.addEventListener('DOMContentLoaded', async () => {
     if (e.key === 'F5') {
       e.preventDefault();
       window.dreamApi.toggleMiniMode();
+      return;
+    }
+
+    // Esc：关闭帮助浮层（无论焦点位置）
+    if (e.code === 'Escape') {
+      if (helpOverlayEl.classList.contains('open')) {
+        e.preventDefault();
+        closeHelp();
+      }
       return;
     }
 
@@ -123,6 +143,12 @@ window.addEventListener('DOMContentLoaded', async () => {
     if (e.code === 'KeyR') {
       e.preventDefault();
       btnMode.click();
+    }
+
+    // H：打开/关闭帮助浮层
+    if (e.code === 'KeyH') {
+      e.preventDefault();
+      toggleHelp();
     }
 
     // LeftALT：长按 0.5s 呼出/折叠播放列表
@@ -601,15 +627,32 @@ function syncLyrics(currentTime) {
   }
 }
 
+function openHelp() {
+  helpOverlayEl.classList.add('open');
+  // 版本号仅首次打开时请求一次
+  if (!helpVersionEl.textContent) {
+    window.dreamApi.getVersion()
+      .then((v) => { helpVersionEl.textContent = `v${v}`; })
+      .catch(() => { });
+  }
+}
+
+function closeHelp() {
+  helpOverlayEl.classList.remove('open');
+}
+
+function toggleHelp() {
+  if (helpOverlayEl.classList.contains('open')) closeHelp();
+  else openHelp();
+}
+
 function updateThemeColor(src) {
-  const ambientBg = document.querySelector('.ambient-bg');
+  const root = document.documentElement; // 设在根节点：ambient 背景与帮助浮层都能继承
   if (!src) {
-    if (ambientBg) {
-      ambientBg.style.setProperty('--bg-color-1', '#222');
-      ambientBg.style.setProperty('--bg-color-2', '#111');
-      ambientBg.style.setProperty('--glow-primary', 'rgba(120, 140, 255, 0.15)');
-      ambientBg.style.setProperty('--glow-secondary', 'rgba(255, 120, 180, 0.12)');
-    }
+    root.style.setProperty('--bg-color-1', '#222');
+    root.style.setProperty('--bg-color-2', '#111');
+    root.style.setProperty('--glow-primary', 'rgba(120, 140, 255, 0.15)');
+    root.style.setProperty('--glow-secondary', 'rgba(255, 120, 180, 0.12)');
     return;
   }
   const img = new Image();
@@ -628,12 +671,10 @@ function updateThemeColor(src) {
     }
     if (c > 0) {
       r = Math.floor(r / c); g = Math.floor(g / c); b = Math.floor(b / c);
-      if (ambientBg) {
-        ambientBg.style.setProperty('--bg-color-1', `rgb(${r},${g},${b})`);
-        ambientBg.style.setProperty('--bg-color-2', `rgb(${r * 0.6},${g * 0.6},${b * 0.6})`);
-        ambientBg.style.setProperty('--glow-primary', `rgba(${r}, ${g + 20}, ${b + 40}, 0.15)`);
-        ambientBg.style.setProperty('--glow-secondary', `rgba(${r + 40}, ${g}, ${b + 20}, 0.12)`);
-      }
+      root.style.setProperty('--bg-color-1', `rgb(${r},${g},${b})`);
+      root.style.setProperty('--bg-color-2', `rgb(${r * 0.6},${g * 0.6},${b * 0.6})`);
+      root.style.setProperty('--glow-primary', `rgba(${r}, ${g + 20}, ${b + 40}, 0.15)`);
+      root.style.setProperty('--glow-secondary', `rgba(${r + 40}, ${g}, ${b + 20}, 0.12)`);
     }
     
     ctx.clearRect(0, 0, 50, 50);

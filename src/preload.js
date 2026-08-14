@@ -29,5 +29,6 @@ contextBridge.exposeInMainWorld('dreamApi', {
   minimizeWindow: () => ipcRenderer.invoke('window:minimize'),
   maximizeWindow: () => ipcRenderer.invoke('window:maximize'),
   closeWindow: () => ipcRenderer.invoke('window:close'),
-  getPlatform: () => process.platform
+  getPlatform: () => process.platform,
+  getVersion: () => ipcRenderer.invoke('app:getVersion')
 });
