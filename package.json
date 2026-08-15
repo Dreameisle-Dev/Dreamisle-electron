@@ -13,6 +13,11 @@
   "build": {
     "win": {
       "icon": "src/assets/app_icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "perMachine": true
     }
   },
   "dependencies": {
