@@ -5,6 +5,7 @@ import { parseFile } from 'music-metadata';
 import fs from 'fs/promises';
 import Store from 'electron-store';
 import { diffPlaylistPaths, applySyncToPlaylist } from './sync-playlist.js';
+import { initLyricsModule, registerLyricsHotkey, disposeLyrics, setLyricsText } from './lyrics-window.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const store = new Store();
@@ -94,11 +95,18 @@ function createTray() {
   });
 }
 
-app.whenReady().then(createWindow);
+app.whenReady().then(() => {
+  createWindow();
+  initLyricsModule(store);
+  registerLyricsHotkey();
+});
 
 app.on('window-all-closed', () => { if (process.platform !== 'darwin') { } });
 app.on('activate', () => { if (mainWindow === null) createWindow(); else mainWindow.show(); });
-app.on('before-quit', () => { app.isQuitting = true; });
+app.on('before-quit', () => {
+  app.isQuitting = true;
+  disposeLyrics();
+});
 
 async function scanDirectory(dirPath) {
   let results = [];
@@ -227,6 +235,11 @@ ipcMain.handle('app:getLyrics', async (event, audioPath) => {
     }
   } catch (err) { }
   return null;
+});
+
+ipcMain.handle('app:updateDesktopLyrics', (event, text) => {
+  setLyricsText(typeof text === 'string' ? text : '');
+  return true;
 });
 
 // 处理小窗模式切换

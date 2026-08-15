@@ -52,6 +52,7 @@ let volumeTimeout;
 let currentLyrics = [];
 let currentLineIndex = -1;
 let lyricDoms = []; 
+let lastDesktopText = null; // 去重：仅在实际变化时向主进程推送桌面歌词
 
 let mouseX = 50, mouseY = 50;
 let targetMouseX = 50, targetMouseY = 50;
@@ -520,6 +521,8 @@ function escapeHtml(unsafe) {
 async function loadAndRenderLyrics(song) {
   currentLineIndex = -1;
   currentLyrics = [];
+  lastDesktopText = null;
+  pushDesktopLyrics("");
   if (miniLyricsEl) miniLyricsEl.innerText = ""; // 切换歌曲时首先清空单行歌词
 
   if (lyricsScroll) {
@@ -594,6 +597,7 @@ function renderLyricsToDom() {
 function syncLyrics(currentTime) {
   if (!currentLyrics.length || currentLyrics[0].isStatic || lyricDoms.length === 0) {
     if (miniLyricsEl) miniLyricsEl.innerText = "";
+    pushDesktopLyrics("");
     return;
   }
 
@@ -621,10 +625,19 @@ function syncLyrics(currentTime) {
     if (miniLyricsEl && currentLyrics[activeIndex]) {
       const text = currentLyrics[activeIndex].text || '';
       miniLyricsEl.innerText = text.replace(/\n/g, ' / ');
+      pushDesktopLyrics(miniLyricsEl.innerText);
     }
   } else {
     if (miniLyricsEl) miniLyricsEl.innerText = "";
+    pushDesktopLyrics("");
   }
+}
+
+// 向主进程推送桌面歌词文本（含翻译行合并、去重）
+function pushDesktopLyrics(text) {
+  if (text === lastDesktopText) return;
+  lastDesktopText = text;
+  window.dreamApi.updateDesktopLyrics(text);
 }
 
 function openHelp() {

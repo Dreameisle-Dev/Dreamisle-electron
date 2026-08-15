@@ -17,6 +17,7 @@ contextBridge.exposeInMainWorld('dreamApi', {
   },
 
   getLyrics: (path) => ipcRenderer.invoke('app:getLyrics', path),
+  updateDesktopLyrics: (text) => ipcRenderer.invoke('app:updateDesktopLyrics', text),
 
   onWindowVisibilityChanged: (callback) => ipcRenderer.on('window-visibility-changed', (event, isVisible) => callback(isVisible)),
   onTrayPlayPause: (callback) => ipcRenderer.on('tray-play-pause', () => callback()),
