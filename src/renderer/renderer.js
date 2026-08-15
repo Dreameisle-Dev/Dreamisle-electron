@@ -1,4 +1,5 @@
 import { resolveRestoredIndex } from './playback-restore.js';
+import { t, setLang, applyLang } from '../i18n.js';
 
 const audio = document.getElementById('audioPlayer');
 const playlistDrawer = document.getElementById('playlistDrawer');
@@ -33,6 +34,25 @@ const btnSortDefault = document.getElementById('sortDefault');
 const btnSortTitle = document.getElementById('sortTitle');
 const btnSortArtist = document.getElementById('sortArtist');
 const btnSortRandom = document.getElementById('sortRandom');
+
+// 设置浮层元素
+const settingsOverlay = document.getElementById('settingsOverlay');
+const btnSettingsClose = document.getElementById('btnSettingsClose');
+const folderListEl = document.getElementById('folderList');
+const btnAddFolder = document.getElementById('btnAddFolder');
+const langSelectWrap = document.getElementById('langSelectWrap');
+const langSelectBtn = document.getElementById('langSelectBtn');
+const langSelectValue = document.getElementById('langSelectValue');
+const langSelectList = document.getElementById('langSelectList');
+const bgOpacityInput = document.getElementById('bgOpacity');
+const textOpacityInput = document.getElementById('textOpacity');
+const textColorInput = document.getElementById('textColor');
+const bgOpacityVal = document.getElementById('bgOpacityVal');
+const textOpacityVal = document.getElementById('textOpacityVal');
+const btnResetStyle = document.getElementById('btnResetStyle');
+
+const DEFAULT_LYRICS_STYLE = { bgOpacity: 45, textOpacity: 100, textColor: '#ffffff' };
+let currentLyricsStyle = { ...DEFAULT_LYRICS_STYLE };
 
 // 小窗单行歌词元素
 const miniLyricsEl = document.getElementById('miniLyrics');
@@ -77,6 +97,12 @@ let isMiniMode = false;
 audio.volume = 0.5;
 
 window.addEventListener('DOMContentLoaded', async () => {
+  // 启动时应用已存语言并刷新界面文案
+  const settings = await window.dreamApi.getSettings();
+  setLang(settings.language);
+  applyLang();
+  volumeHud.innerText = t('hud.volume', { n: Math.round(audio.volume * 100) });
+
   initMouseFollow();
 
   // 检测当前系统并添加类标识
@@ -98,6 +124,13 @@ window.addEventListener('DOMContentLoaded', async () => {
     if (e.target === helpOverlayEl) closeHelp(); // 点击卡片外部遮罩关闭
   });
 
+  if (btnSettingsClose) btnSettingsClose.onclick = closeSettings;
+  settingsOverlay.addEventListener('click', (e) => {
+    if (e.target === settingsOverlay) closeSettings(); // 点击卡片外部遮罩关闭
+    else if (!langSelectWrap.contains(e.target)) langSelectWrap.classList.remove('open'); // 点下拉外部收起
+  });
+  if (btnAddFolder) btnAddFolder.onclick = handleAddFolder;
+
   // 绑定键盘快捷键
   let altTimer = null;
   window.addEventListener('keydown', (e) => {
@@ -110,9 +143,19 @@ window.addEventListener('DOMContentLoaded', async () => {
       return;
     }
 
-    // Esc：关闭帮助浮层（无论焦点位置）
+    // Ctrl+,：打开/关闭设置（无论焦点位置）
+    if (e.ctrlKey && e.code === 'Comma') {
+      e.preventDefault();
+      toggleSettings();
+      return;
+    }
+
+    // Esc：先关设置浮层，再关帮助浮层（无论焦点位置）
     if (e.code === 'Escape') {
-      if (helpOverlayEl.classList.contains('open')) {
+      if (settingsOverlay.classList.contains('open')) {
+        e.preventDefault();
+        closeSettings();
+      } else if (helpOverlayEl.classList.contains('open')) {
         e.preventDefault();
         closeHelp();
       }
@@ -216,9 +259,15 @@ window.addEventListener('DOMContentLoaded', async () => {
       if (songs.length > 0) initSongInfo(0);
     }
   } else {
-    setTimeout(() => {
-      if (songs.length === 0) triggerImport();
-    }, 500);
+    // 首次启动（未配置任何音乐文件夹）：弹一次添加文件夹对话框
+    const settings = await window.dreamApi.getSettings();
+    if (!settings.musicFolders || settings.musicFolders.length === 0) {
+      const res = await window.dreamApi.addFolder();
+      if (res && res.playlist && res.playlist.length > 0) {
+        applyPlaylistFromMain(res.playlist);
+        playSong(0);
+      }
+    }
   }
 
   setupIpcListeners();
@@ -234,7 +283,7 @@ function initVirtualList(filterText = '') {
     ? songs.map((s, i) => ({ ...s, originalIndex: i })).filter(s => s.title.toLowerCase().includes(lowerFilter) || s.artist.toLowerCase().includes(lowerFilter))
     : songs.map((s, i) => ({ ...s, originalIndex: i }));
 
-  playlistCountEl.innerText = `${filteredSongs.length}首`;
+  playlistCountEl.innerText = t('playlist.count', { n: filteredSongs.length });
 
   vsStartIndex = -1; 
   updateVirtualList();
@@ -350,25 +399,6 @@ function initMouseFollow() {
     }
 
     if (isAnimating) requestAnimationFrame(animateMouseFollow);
-  }
-}
-
-coverContainer.addEventListener('click', triggerImport);
-
-async function triggerImport() {
-  // 小窗模式下不触发导入操作，防止不小心误触
-  if (isMiniMode) return; 
-  
-  const newSongs = await window.dreamApi.importFolder();
-  if (newSongs && newSongs.length > 0) {
-    originalSongs = [...newSongs]; 
-    songs = [...newSongs];
-    searchInput.value = '';
-    
-    // 重置为默认物理排序状态
-    updateSortButtons(btnSortDefault);
-    initVirtualList();
-    if (currentIndex === -1) playSong(0);
   }
 }
 
@@ -526,7 +556,7 @@ async function loadAndRenderLyrics(song) {
   if (miniLyricsEl) miniLyricsEl.innerText = ""; // 切换歌曲时首先清空单行歌词
 
   if (lyricsScroll) {
-    lyricsScroll.innerHTML = '<p class="lyric-line placeholder">加载歌词中...</p>';
+    lyricsScroll.innerHTML = `<p class="lyric-line placeholder">${t('lyrics.loading')}</p>`;
     lyricsScroll.scrollTop = 0;
   }
 
@@ -590,7 +620,7 @@ function renderLyricsToDom() {
     });
     lyricsScroll.appendChild(fragment);
   } else {
-    lyricsScroll.innerHTML = '<p class="lyric-line placeholder">Dreamisle<br><br>暂无歌词信息</p>';
+    lyricsScroll.innerHTML = `<p class="lyric-line placeholder">Dreamisle<br><br>${t('lyrics.noLyrics')}</p>`;
   }
 }
 
@@ -658,6 +688,149 @@ function toggleHelp() {
   if (helpOverlayEl.classList.contains('open')) closeHelp();
   else openHelp();
 }
+
+function toggleSettings() {
+  if (settingsOverlay.classList.contains('open')) closeSettings();
+  else openSettings();
+}
+
+function openSettings() {
+  settingsOverlay.classList.add('open');
+  refreshSettingsUi();
+}
+
+function closeSettings() {
+  settingsOverlay.classList.remove('open');
+}
+
+// 打开时同步主进程中的设置到控件
+async function refreshSettingsUi() {
+  const settings = await window.dreamApi.getSettings();
+  const lang = settings.language || 'zh-CN';
+  langSelectList.querySelectorAll('.lang-select-option').forEach((item) => {
+    const selected = item.dataset.value === lang;
+    item.classList.toggle('selected', selected);
+    if (selected) langSelectValue.textContent = item.textContent;
+  });
+  renderFolderList(settings.musicFolders || []);
+  syncLyricsStyleUi(settings.lyricsStyle || DEFAULT_LYRICS_STYLE);
+}
+
+function renderFolderList(folders) {
+  folderListEl.innerHTML = '';
+  if (!folders.length) {
+    const empty = document.createElement('li');
+    empty.className = 'folder-empty';
+    empty.textContent = t('settings.noFolders');
+    folderListEl.appendChild(empty);
+    return;
+  }
+  for (const folder of folders) {
+    const li = document.createElement('li');
+    li.className = 'folder-item';
+
+    const span = document.createElement('span');
+    span.className = 'folder-path' + (folder.available ? '' : ' unavailable');
+    span.textContent = folder.path + (folder.available ? '' : t('settings.folderUnavailable'));
+    li.appendChild(span);
+
+    const btn = document.createElement('button');
+    btn.className = 'folder-remove';
+    btn.textContent = '✕';
+    btn.title = t('settings.removeFolder');
+    btn.onclick = () => handleRemoveFolder(folder.path);
+    li.appendChild(btn);
+
+    folderListEl.appendChild(li);
+  }
+}
+
+async function handleAddFolder() {
+  const res = await window.dreamApi.addFolder();
+  if (!res) return;
+  if (res.duplicate) {
+    showSyncToast(t('folders.duplicate'));
+    return;
+  }
+  if (res.playlist && res.playlist.length > 0) {
+    applyPlaylistFromMain(res.playlist);
+  }
+  refreshSettingsUi();
+}
+
+async function handleRemoveFolder(folderPath) {
+  const res = await window.dreamApi.removeFolder(folderPath);
+  if (res && res.playlist) {
+    applyPlaylistFromMain(res.playlist);
+  }
+  refreshSettingsUi();
+}
+
+async function handleLanguageChange(lang) {
+  setLang(lang);
+  applyLang();
+  await window.dreamApi.setLanguage(lang);
+  refreshSettingsUi(); // 重建动态行（文件夹列表/移除按钮标题），跟随新语言
+}
+
+function syncLyricsStyleUi(style) {
+  currentLyricsStyle = { ...DEFAULT_LYRICS_STYLE, ...style };
+  bgOpacityInput.value = currentLyricsStyle.bgOpacity;
+  textOpacityInput.value = currentLyricsStyle.textOpacity;
+  textColorInput.value = currentLyricsStyle.textColor;
+  bgOpacityVal.textContent = `${currentLyricsStyle.bgOpacity}%`;
+  textOpacityVal.textContent = `${currentLyricsStyle.textOpacity}%`;
+  bgOpacityInput.style.setProperty('--progress', `${currentLyricsStyle.bgOpacity}%`);
+  textOpacityInput.style.setProperty('--progress', `${currentLyricsStyle.textOpacity}%`);
+}
+
+function pushLyricsStyle() {
+  window.dreamApi.setLyricsStyle(currentLyricsStyle);
+}
+
+bgOpacityInput.addEventListener('input', () => {
+  currentLyricsStyle.bgOpacity = Number(bgOpacityInput.value);
+  bgOpacityVal.textContent = `${currentLyricsStyle.bgOpacity}%`;
+  bgOpacityInput.style.setProperty('--progress', `${currentLyricsStyle.bgOpacity}%`);
+  pushLyricsStyle();
+});
+
+textOpacityInput.addEventListener('input', () => {
+  currentLyricsStyle.textOpacity = Number(textOpacityInput.value);
+  textOpacityVal.textContent = `${currentLyricsStyle.textOpacity}%`;
+  textOpacityInput.style.setProperty('--progress', `${currentLyricsStyle.textOpacity}%`);
+  pushLyricsStyle();
+});
+
+textColorInput.addEventListener('input', () => {
+  currentLyricsStyle.textColor = textColorInput.value;
+  pushLyricsStyle();
+});
+
+btnResetStyle.addEventListener('click', () => {
+  syncLyricsStyleUi(DEFAULT_LYRICS_STYLE);
+  pushLyricsStyle();
+});
+
+langSelectBtn.addEventListener('click', () => {
+  langSelectWrap.classList.toggle('open');
+});
+
+langSelectList.querySelectorAll('.lang-select-option').forEach((item) => {
+  item.addEventListener('click', () => {
+    langSelectValue.textContent = item.textContent;
+    langSelectWrap.classList.remove('open');
+    handleLanguageChange(item.dataset.value);
+  });
+});
+
+// 左侧导航切换设置分区（面板互斥显示）
+document.querySelectorAll('.settings-nav-item').forEach((item) => {
+  item.addEventListener('click', () => {
+    document.querySelectorAll('.settings-nav-item').forEach((n) => n.classList.toggle('active', n === item));
+    document.querySelectorAll('.settings-panel').forEach((p) => p.classList.toggle('active', p.dataset.panel === item.dataset.section));
+  });
+});
 
 function updateThemeColor(src) {
   const root = document.documentElement; // 设在根节点：ambient 背景与帮助浮层都能继承
@@ -753,7 +926,7 @@ function handleVolumeWheel(e) {
   if (newVolume < 0) newVolume = 0;
   audio.volume = newVolume;
 
-  volumeHud.innerText = `VOL ${Math.round(newVolume * 100)}%`;
+  volumeHud.innerText = t('hud.volume', { n: Math.round(newVolume * 100) });
   volumeHud.classList.add('visible');
   clearTimeout(volumeTimeout);
   volumeTimeout = setTimeout(() => volumeHud.classList.remove('visible'), 1000);
@@ -917,20 +1090,38 @@ function showSyncToast(text) {
   syncToastTimer = setTimeout(() => syncToastEl.classList.remove('visible'), 3000);
 }
 
-// 启动后自动同步：合并文件夹新增/删除的歌曲，不打断当前播放
-async function applyFolderSync() {
-  const result = await window.dreamApi.syncFolder();
-  if (!result || (result.added === 0 && result.removed === 0)) return;
-
-  // 记住当前播放歌曲，合并后按路径重定位（复用 resolveRestoredIndex）
+// 用主进程返回的新播放列表替换本地列表：按路径重定位当前歌曲、套用排序、刷新列表
+function applyPlaylistFromMain(playlist) {
   const playingPath = songs[currentIndex] ? songs[currentIndex].path : null;
 
-  originalSongs = [...result.playlist];
+  originalSongs = [...playlist];
   songs = [...originalSongs];
   currentIndex = resolveRestoredIndex(songs, { currentSongPath: playingPath });
   if (currentIndex === -1) currentIndex = songs.length > 0 ? 0 : -1;
 
-  // 用户开着排序则重新套用（applySort 内部会按路径重定位 currentIndex 并刷新列表）
+  // 空库（如移除最后一个文件夹）：停止播放并复位界面状态
+  if (songs.length === 0) {
+    audio.pause();
+    updatePlayButton(false);
+    titleEl.innerText = 'Dreamisle';
+    artistEl.innerText = t('app.waitingForMusic');
+    if (miniLyricsEl) miniLyricsEl.innerText = '';
+    pushDesktopLyrics('');
+    currentLyrics = [];
+    currentLineIndex = -1;
+    lyricDoms = [];
+    if (lyricsScroll) {
+      lyricsScroll.innerHTML = `<p class="lyric-line placeholder">${t('lyrics.noLyrics')}</p>`;
+    }
+    if (currentCoverBlobUrl) {
+      URL.revokeObjectURL(currentCoverBlobUrl);
+      currentCoverBlobUrl = null;
+    }
+    coverImg.style.display = 'none';
+    defaultCover.style.display = 'flex';
+    updateThemeColor(null);
+  }
+
   const activeSortBtn = [btnSortDefault, btnSortTitle, btnSortArtist, btnSortRandom]
     .find((btn) => btn && btn.classList.contains('active'));
   if (activeSortBtn && activeSortBtn !== btnSortDefault) {
@@ -938,8 +1129,15 @@ async function applyFolderSync() {
   } else {
     initVirtualList(searchInput.value.trim());
   }
+}
 
-  if (result.added > 0) showSyncToast(`发现 ${result.added} 首新歌`);
+// 启动后自动同步：合并文件夹新增/删除的歌曲，不打断当前播放
+async function applyFolderSync() {
+  const result = await window.dreamApi.syncFolder();
+  if (!result || (result.added === 0 && result.removed === 0)) return;
+
+  applyPlaylistFromMain(result.playlist);
+  if (result.added > 0) showSyncToast(t('sync.foundNew', { n: result.added }));
 }
 
 if (btnSortDefault) btnSortDefault.onclick = () => applySort('default', btnSortDefault);

@@ -5,7 +5,8 @@ import { parseFile } from 'music-metadata';
 import fs from 'fs/promises';
 import Store from 'electron-store';
 import { diffPlaylistPaths, applySyncToPlaylist } from './sync-playlist.js';
-import { initLyricsModule, registerLyricsHotkey, disposeLyrics, setLyricsText } from './lyrics-window.js';
+import { initLyricsModule, registerLyricsHotkey, disposeLyrics, setLyricsText, setLyricsStyle, setLyricsLang } from './lyrics-window.js';
+import { t, setLang as i18nSetLang } from './i18n.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const store = new Store();
@@ -15,6 +16,11 @@ let syncGeneration = 0;
 
 let mainWindow = null;
 let tray = null;
+
+// 语言状态：默认跟随系统，用户可在设置中切换
+let currentLanguage = null;
+
+const DEFAULT_LYRICS_STYLE = { bgOpacity: 45, textOpacity: 100, textColor: '#ffffff' };
 
 app.isQuitting = false;
 
@@ -26,6 +32,39 @@ let wasMaximized = false;
 // 开启显卡栅格化和零拷贝以提升渲染性能
 app.commandLine.appendSwitch('enable-gpu-rasterization');
 app.commandLine.appendSwitch('enable-zero-copy');
+
+function getMusicFolders() {
+  return store.get('musicFolders') || [];
+}
+
+function getLanguage() {
+  if (!currentLanguage) {
+    const stored = store.get('settings.language');
+    currentLanguage = stored || (app.getLocale().startsWith('zh') ? 'zh-CN' : 'en');
+    i18nSetLang(currentLanguage);
+  }
+  return currentLanguage;
+}
+
+function getLyricsStyle() {
+  return { ...DEFAULT_LYRICS_STYLE, ...(store.get('settings.lyricsStyle') || {}) };
+}
+
+function clampPercent(value, fallback) {
+  if (value === null || value === undefined) return fallback;
+  const n = Number(value);
+  if (!Number.isFinite(n)) return fallback;
+  return Math.min(100, Math.max(0, Math.round(n)));
+}
+
+// 旧版单文件夹配置迁移为文件夹列表
+function migrateLegacyMusicFolder() {
+  const legacy = store.get('musicFolder');
+  if (legacy && !store.has('musicFolders')) {
+    store.set('musicFolders', [legacy]);
+    store.delete('musicFolder');
+  }
+}
 
 function createWindow() {
   Menu.setApplicationMenu(null)
@@ -68,23 +107,33 @@ function createWindow() {
   mainWindow.on('hide', () => { mainWindow.webContents.send('window-visibility-changed', false); });
 }
 
+function buildTrayMenuTemplate() {
+  return [
+    { label: t('tray.playPause'), click: () => { if (mainWindow) mainWindow.webContents.send('tray-play-pause'); } },
+    { label: t('tray.next'), click: () => { if (mainWindow) mainWindow.webContents.send('tray-next'); } },
+    { label: t('tray.prev'), click: () => { if (mainWindow) mainWindow.webContents.send('tray-prev'); } },
+    { type: 'separator' },
+    { label: t('tray.showWindow'), click: () => { if (mainWindow) { mainWindow.show(); mainWindow.focus(); } } },
+    { type: 'separator' },
+    { label: t('tray.quit'), click: () => { app.isQuitting = true; app.quit(); } }
+  ];
+}
+
+function rebuildTrayMenu() {
+  if (!tray) return;
+  tray.setContextMenu(Menu.buildFromTemplate(buildTrayMenuTemplate()));
+  tray.setToolTip(t('tray.tooltip'));
+}
+
 function createTray() {
   const iconPath = path.join(__dirname, 'assets/app_icon.ico');
   const trayIcon = nativeImage.createFromPath(iconPath);
 
   tray = new Tray(trayIcon.resize({ width: 16, height: 16 }));
 
-  const contextMenu = Menu.buildFromTemplate([
-    { label: '播放/暂停', click: () => { if (mainWindow) mainWindow.webContents.send('tray-play-pause'); } },
-    { label: '下一首', click: () => { if (mainWindow) mainWindow.webContents.send('tray-next'); } },
-    { label: '上一首', click: () => { if (mainWindow) mainWindow.webContents.send('tray-prev'); } },
-    { type: 'separator' },
-    { label: '显示窗口', click: () => { if (mainWindow) { mainWindow.show(); mainWindow.focus(); } } },
-    { type: 'separator' },
-    { label: '退出', click: () => { app.isQuitting = true; app.quit(); } }
-  ]);
+  const contextMenu = Menu.buildFromTemplate(buildTrayMenuTemplate());
 
-  tray.setToolTip('Dreamisle 音乐播放器');
+  tray.setToolTip(t('tray.tooltip'));
   tray.setContextMenu(contextMenu);
 
   tray.on('double-click', () => {
@@ -96,8 +145,12 @@ function createTray() {
 }
 
 app.whenReady().then(() => {
+  migrateLegacyMusicFolder();
+  getLanguage(); // 初始化语言（createTray 依赖 t()）
   createWindow();
   initLyricsModule(store);
+  setLyricsStyle(getLyricsStyle()); // 同步已存歌词样式
+  setLyricsLang(getLanguage()); // 同步已存语言
   registerLyricsHotkey();
 });
 
@@ -141,26 +194,46 @@ async function parseAudioFile(filePath) {
   }
 }
 
-async function scanAndParse(folderPath) {
-  const audioFiles = await scanDirectory(folderPath);
+// 合并扫描多个文件夹：跨文件夹按路径去重，逐个解析元数据
+async function scanAllFolders(folderPaths) {
+  const seen = new Set();
   const playlist = [];
-  for (const filePath of audioFiles) {
-    playlist.push(await parseAudioFile(filePath));
+  for (const folderPath of folderPaths) {
+    const files = await scanDirectory(folderPath); // 文件夹不存在时返回 []
+    for (const filePath of files) {
+      if (seen.has(filePath)) continue;
+      seen.add(filePath);
+      playlist.push(await parseAudioFile(filePath));
+    }
   }
   return playlist;
 }
 
-ipcMain.handle('dialog:openFolder', async () => {
+ipcMain.handle('folders:add', async () => {
   const { canceled, filePaths } = await dialog.showOpenDialog({ properties: ['openDirectory'] });
-  if (canceled) return [];
+  if (canceled) return { playlist: store.get('cachedPlaylist') || [], duplicate: false };
+
   const folderPath = filePaths[0];
-  syncGeneration++; // 手动导入新文件夹，作废进行中的自动同步
-  store.set('musicFolder', folderPath);
-  
-  // 重新选择目录时扫描并写入缓存，避免重复工作
-  const playlist = await scanAndParse(folderPath);
+  const folders = getMusicFolders();
+  if (folders.includes(folderPath)) {
+    return { playlist: store.get('cachedPlaylist') || [], duplicate: true };
+  }
+
+  syncGeneration++; // 作废进行中的自动同步
+  const next = [...folders, folderPath];
+  store.set('musicFolders', next);
+  const playlist = await scanAllFolders(next);
   store.set('cachedPlaylist', playlist);
-  return playlist;
+  return { playlist, duplicate: false };
+});
+
+ipcMain.handle('folders:remove', async (event, folderPath) => {
+  syncGeneration++;
+  const next = getMusicFolders().filter((p) => p !== folderPath);
+  store.set('musicFolders', next);
+  const playlist = next.length > 0 ? await scanAllFolders(next) : [];
+  store.set('cachedPlaylist', playlist);
+  return { playlist };
 });
 
 ipcMain.handle('app:loadSavedMusic', async () => {
@@ -170,11 +243,10 @@ ipcMain.handle('app:loadSavedMusic', async () => {
     return cached;
   }
 
-  const savedPath = store.get('musicFolder');
-  if (!savedPath) return [];
+  const folders = getMusicFolders();
+  if (folders.length === 0) return [];
   try {
-    await fs.access(savedPath);
-    const playlist = await scanAndParse(savedPath);
+    const playlist = await scanAllFolders(folders);
     store.set('cachedPlaylist', playlist);
     return playlist;
   } catch (e) { return []; }
@@ -182,19 +254,24 @@ ipcMain.handle('app:loadSavedMusic', async () => {
 
 ipcMain.handle('app:syncFolder', async () => {
   const gen = syncGeneration;
-  const folderPath = store.get('musicFolder');
-  if (!folderPath) return null;
-  try { await fs.access(folderPath); } catch (e) { return null; }
+  const folders = getMusicFolders();
+  if (folders.length === 0) return null;
 
-  const diskPaths = await scanDirectory(folderPath);
+  const diskPaths = [];
+  for (const folderPath of folders) {
+    try { await fs.access(folderPath); } catch (e) { continue; } // 已删除的文件夹跳过
+    diskPaths.push(...(await scanDirectory(folderPath)));
+  }
+  const uniquePaths = [...new Set(diskPaths)];
+
   const cached = store.get('cachedPlaylist') || [];
-  const { added, removed } = diffPlaylistPaths(cached.map((s) => s.path), diskPaths);
+  const { added, removed } = diffPlaylistPaths(cached.map((s) => s.path), uniquePaths);
   if (added.length === 0 && removed.length === 0) return { added: 0, removed: 0, playlist: cached };
-  if (gen !== syncGeneration) return null; // 扫描期间用户手动导入了新文件夹
+  if (gen !== syncGeneration) return null; // 扫描期间用户修改了文件夹列表
 
   const newEntries = [];
   for (const p of added) newEntries.push(await parseAudioFile(p));
-  if (gen !== syncGeneration) return null; // 解析期间用户手动导入了新文件夹
+  if (gen !== syncGeneration) return null;
 
   const playlist = applySyncToPlaylist(cached, newEntries, removed);
   store.set('cachedPlaylist', playlist);
@@ -235,6 +312,40 @@ ipcMain.handle('app:getLyrics', async (event, audioPath) => {
     }
   } catch (err) { }
   return null;
+});
+
+ipcMain.handle('settings:get', async () => {
+  const folders = await Promise.all(getMusicFolders().map(async (p) => {
+    let available = false;
+    try { await fs.access(p); available = true; } catch (e) { }
+    return { path: p, available };
+  }));
+  return {
+    language: getLanguage(),
+    lyricsStyle: getLyricsStyle(),
+    musicFolders: folders,
+  };
+});
+
+ipcMain.handle('settings:setLanguage', (event, lang) => {
+  if (lang !== 'zh-CN' && lang !== 'en') return false;
+  currentLanguage = lang;
+  i18nSetLang(lang);
+  store.set('settings.language', lang);
+  rebuildTrayMenu();
+  setLyricsLang(lang);
+  return true;
+});
+
+ipcMain.handle('settings:setLyricsStyle', (event, style) => {
+  const next = {
+    bgOpacity: clampPercent(style && style.bgOpacity, DEFAULT_LYRICS_STYLE.bgOpacity),
+    textOpacity: clampPercent(style && style.textOpacity, DEFAULT_LYRICS_STYLE.textOpacity),
+    textColor: typeof (style && style.textColor) === 'string' ? style.textColor : DEFAULT_LYRICS_STYLE.textColor,
+  };
+  store.set('settings.lyricsStyle', next);
+  setLyricsStyle(next);
+  return next;
 });
 
 ipcMain.handle('app:updateDesktopLyrics', (event, text) => {

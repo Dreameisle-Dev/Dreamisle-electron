@@ -29,6 +29,24 @@ export function setLyricsText(text) {
   }
 }
 
+let lastStyle = { bgOpacity: 45, textOpacity: 100, textColor: '#ffffff' };
+let lastLang = 'zh-CN';
+
+export function setLyricsStyle(style) {
+  lastStyle = { ...lastStyle, ...(style || {}) };
+  if (isLyricsWindowVisible()) {
+    lyricsWindow.webContents.send('lyrics:style', lastStyle);
+  }
+}
+
+export function setLyricsLang(lang) {
+  if (lang !== 'zh-CN' && lang !== 'en') return;
+  lastLang = lang;
+  if (isLyricsWindowVisible()) {
+    lyricsWindow.webContents.send('lyrics:lang', lang);
+  }
+}
+
 // 默认位置：主显示器工作区底部居中，任务栏上方 80px
 function defaultBounds() {
   const { workArea } = screen.getPrimaryDisplay();
@@ -103,6 +121,8 @@ function createLyricsWindow() {
   lyricsWindow.loadFile(path.join(__dirname, 'lyrics-window.html'));
 
   lyricsWindow.webContents.on('did-finish-load', () => {
+    lyricsWindow.webContents.send('lyrics:lang', lastLang);
+    lyricsWindow.webContents.send('lyrics:style', lastStyle);
     lyricsWindow.webContents.send('lyrics:text', lastText);
     lyricsWindow.showInactive(); // 显示但不获取焦点
   });

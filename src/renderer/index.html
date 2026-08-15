@@ -24,13 +24,13 @@
       <span class="titlebar-text">Dreamisle</span>
     </div>
     <div class="titlebar-controls" id="windowControls">
-      <button class="titlebar-btn" id="btnMin" title="最小化">
+      <button class="titlebar-btn" id="btnMin" title="最小化" data-i18n-title="titlebar.minimize">
         <svg width="10" height="10" viewBox="0 0 10 1"><rect width="10" height="1" fill="currentColor"/></svg>
       </button>
-      <button class="titlebar-btn" id="btnMax" title="最大化">
+      <button class="titlebar-btn" id="btnMax" title="最大化" data-i18n-title="titlebar.maximize">
         <svg width="10" height="10" viewBox="0 0 10 10"><rect width="8" height="8" x="1" y="1" fill="none" stroke="currentColor" stroke-width="1.2"/></svg>
       </button>
-      <button class="titlebar-btn btn-close" id="btnClose" title="关闭">
+      <button class="titlebar-btn btn-close" id="btnClose" title="关闭" data-i18n-title="common.close">
         <svg width="10" height="10" viewBox="0 0 10 10">
           <line x1="1" y1="1" x2="9" y2="9" stroke="currentColor" stroke-width="1.2"/>
           <line x1="9" y1="1" x2="1" y2="9" stroke="currentColor" stroke-width="1.2"/>
@@ -50,7 +50,7 @@
     <!-- 左侧：主界面 -->
     <div class="left-panel">
       <!-- 封面区域 -->
-      <div class="album-art-container" id="coverContainer" title="点击导入音乐文件夹">
+      <div class="album-art-container" id="coverContainer">
         <img id="coverImg" class="cover-img" src="" style="display:none;" />
         <div id="defaultCover" class="default-cover">
           <svg width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="1" stroke-linecap="round" stroke-linejoin="round">
@@ -65,7 +65,7 @@
       <!-- 歌曲信息 -->
       <div class="song-info">
         <div class="song-title" id="songTitle">Dreamisle</div>
-        <div class="artist-name" id="artistName">Waiting for music...</div>
+        <div class="artist-name" id="artistName" data-i18n="app.waitingForMusic">Waiting for music...</div>
       </div>
 
       <!-- 进度条 -->
@@ -80,7 +80,7 @@
       <!-- 底部控制按钮 -->
       <div class="buttons">
         <!-- 模式切换 -->
-        <button class="btn secondary-btn" id="btnMode" title="播放模式">
+        <button class="btn secondary-btn" id="btnMode" title="播放模式" data-i18n-title="btn.playMode">
           <svg id="iconLoop" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
             stroke-linecap="round" stroke-linejoin="round">
             <path d="M17 1l4 4-4 4"></path>
@@ -130,7 +130,7 @@
         </button>
 
         <!-- 列表开关 -->
-        <button class="btn secondary-btn" id="btnPlaylist" title="播放列表">
+        <button class="btn secondary-btn" id="btnPlaylist" title="播放列表" data-i18n-title="btn.playlist">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
             stroke-linecap="round" stroke-linejoin="round">
             <line x1="8" y1="6" x2="21" y2="6"></line>
@@ -151,7 +151,7 @@
     <div class="right-panel" id="lyricsPanel">
       <div class="lyrics-container" id="lyricsContainer">
         <div class="lyrics-scroll" id="lyricsScroll">
-          <p class="lyric-line placeholder">暂无歌词</p>
+          <p class="lyric-line placeholder" data-i18n="lyrics.noLyricsShort">暂无歌词</p>
         </div>
       </div>
     </div>
@@ -160,22 +160,22 @@
   <!-- 播放列表抽屉 -->
   <div class="playlist-drawer" id="playlistDrawer">
     <div class="playlist-header">
-      <span>正在播放</span>
+      <span data-i18n="playlist.nowPlaying">正在播放</span>
       <span id="playlistCount" style="font-size:12px; opacity:0.5; margin-left:10px;"></span>
     </div>
 
     <!-- 搜索框 -->
     <div class="search-container">
-      <input type="text" id="searchInput" placeholder="搜索歌曲..." autocomplete="off">
+      <input type="text" id="searchInput" placeholder="搜索歌曲..." data-i18n-placeholder="playlist.searchPlaceholder" autocomplete="off">
     </div>
 
     <!-- 排序控制栏 -->
     <div class="sort-container">
-      <span class="sort-label">排序:</span>
-      <button class="sort-btn active" id="sortDefault" data-mode="default">默认</button>
-      <button class="sort-btn" id="sortTitle" data-mode="title">歌名</button>
-      <button class="sort-btn" id="sortArtist" data-mode="artist">歌手</button>
-      <button class="sort-btn" id="sortRandom" data-mode="random">随机</button>
+      <span class="sort-label" data-i18n="playlist.sortLabel">排序:</span>
+      <button class="sort-btn active" id="sortDefault" data-mode="default" data-i18n="playlist.sortDefault">默认</button>
+      <button class="sort-btn" id="sortTitle" data-mode="title" data-i18n="playlist.sortTitle">歌名</button>
+      <button class="sort-btn" id="sortArtist" data-mode="artist" data-i18n="playlist.sortArtist">歌手</button>
+      <button class="sort-btn" id="sortRandom" data-mode="random" data-i18n="playlist.sortRandom">随机</button>
     </div>
 
     <ul class="playlist-list" id="playlist"></ul>
@@ -194,7 +194,7 @@
           <span>Dreamisle</span>
           <span class="help-version" id="helpVersion"></span>
         </div>
-        <button class="help-close" id="btnHelpClose" title="关闭">
+        <button class="help-close" id="btnHelpClose" title="关闭" data-i18n-title="common.close">
           <svg width="12" height="12" viewBox="0 0 10 10">
             <line x1="1" y1="1" x2="9" y2="9" stroke="currentColor" stroke-width="1.2"/>
             <line x1="9" y1="1" x2="1" y2="9" stroke="currentColor" stroke-width="1.2"/>
@@ -202,26 +202,123 @@
         </button>
       </div>
 
-      <p class="help-intro">一款离线音乐播放器</p>
+      <p class="help-intro" data-i18n="help.intro">一款离线音乐播放器</p>
 
       <div class="help-section">
-        <h3>键盘快捷键</h3>
-        <div class="help-row"><span class="help-desc">播放 / 暂停</span><kbd>Space</kbd></div>
-        <div class="help-row"><span class="help-desc">上一曲</span><kbd>Q</kbd></div>
-        <div class="help-row"><span class="help-desc">下一曲</span><kbd>E</kbd></div>
-        <div class="help-row"><span class="help-desc">切换播放模式</span><kbd>R</kbd></div>
-        <div class="help-row"><span class="help-desc">呼出 / 折叠播放列表</span><span class="help-keys"><kbd>Alt</kbd><span class="help-key-hint">长按 0.5 秒</span></span></div>
-        <div class="help-row"><span class="help-desc">切换小窗模式</span><kbd>F5</kbd></div>
-        <div class="help-row"><span class="help-desc">桌面歌词</span><span class="help-keys"><kbd>Ctrl</kbd><kbd>Alt</kbd><kbd>L</kbd></span></div>
-        <div class="help-row"><span class="help-desc">打开 / 关闭帮助</span><kbd>H</kbd></div>
-        <div class="help-row"><span class="help-desc">关闭帮助</span><kbd>Esc</kbd></div>
+        <h3 data-i18n="help.shortcuts">键盘快捷键</h3>
+        <div class="help-row"><span class="help-desc" data-i18n="help.playPause">播放 / 暂停</span><kbd>Space</kbd></div>
+        <div class="help-row"><span class="help-desc" data-i18n="help.prev">上一曲</span><kbd>Q</kbd></div>
+        <div class="help-row"><span class="help-desc" data-i18n="help.next">下一曲</span><kbd>E</kbd></div>
+        <div class="help-row"><span class="help-desc" data-i18n="help.playMode">切换播放模式</span><kbd>R</kbd></div>
+        <div class="help-row"><span class="help-desc" data-i18n="help.playlistToggle">呼出 / 折叠播放列表</span><span class="help-keys"><kbd>Alt</kbd><span class="help-key-hint" data-i18n="help.holdHint">长按 0.5 秒</span></span></div>
+        <div class="help-row"><span class="help-desc" data-i18n="help.miniMode">切换小窗模式</span><kbd>F5</kbd></div>
+        <div class="help-row"><span class="help-desc" data-i18n="help.desktopLyrics">桌面歌词</span><span class="help-keys"><kbd>Ctrl</kbd><kbd>Alt</kbd><kbd>L</kbd></span></div>
+        <div class="help-row"><span class="help-desc" data-i18n="help.settings">打开设置</span><span class="help-keys"><kbd>Ctrl</kbd><kbd>,</kbd></span></div>
+        <div class="help-row"><span class="help-desc" data-i18n="help.help">打开 / 关闭帮助</span><kbd>H</kbd></div>
+        <div class="help-row"><span class="help-desc" data-i18n="help.closeHelp">关闭浮窗</span><kbd>Esc</kbd></div>
       </div>
 
       <div class="help-section">
-        <h3>鼠标操作</h3>
-        <div class="help-row"><span class="help-desc">调节音量</span><span class="help-desc-sub">封面区域滚动滚轮</span></div>
-        <div class="help-row"><span class="help-desc">导入音乐文件夹</span><span class="help-desc-sub">点击封面</span></div>
-        <div class="help-row"><span class="help-desc">显示 / 隐藏窗口</span><span class="help-desc-sub">双击托盘图标</span></div>
+        <h3 data-i18n="help.mouse">鼠标操作</h3>
+        <div class="help-row"><span class="help-desc" data-i18n="help.volume">调节音量</span><span class="help-desc-sub" data-i18n="help.volumeHint">封面区域滚动滚轮</span></div>
+        <div class="help-row"><span class="help-desc" data-i18n="help.showHide">显示 / 隐藏窗口</span><span class="help-desc-sub" data-i18n="help.showHideHint">双击托盘图标</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 设置浮层 -->
+  <div class="help-overlay" id="settingsOverlay">
+    <div class="help-card settings-card">
+      <div class="help-header">
+        <div class="help-logo">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M9 18V5l12-2v13"></path>
+            <circle cx="6" cy="18" r="3"></circle>
+            <circle cx="18" cy="16" r="3"></circle>
+          </svg>
+          <span data-i18n="settings.title">设置</span>
+        </div>
+        <button class="help-close" id="btnSettingsClose" data-i18n-title="common.close" title="关闭">
+          <svg width="12" height="12" viewBox="0 0 10 10">
+            <line x1="1" y1="1" x2="9" y2="9" stroke="currentColor" stroke-width="1.2"/>
+            <line x1="9" y1="1" x2="1" y2="9" stroke="currentColor" stroke-width="1.2"/>
+          </svg>
+        </button>
+      </div>
+
+      <div class="settings-body">
+        <nav class="settings-nav">
+          <button class="settings-nav-item active" data-section="language">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <circle cx="12" cy="12" r="9"></circle>
+              <path d="M3 12h18"></path>
+              <path d="M12 3a15 15 0 0 1 0 18a15 15 0 0 1 0-18"></path>
+            </svg>
+            <span data-i18n="settings.language">语言</span>
+          </button>
+          <button class="settings-nav-item" data-section="folders">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <path d="M3 7a2 2 0 0 1 2-2h4l2 3h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+            </svg>
+            <span data-i18n="settings.folders">音乐文件夹</span>
+          </button>
+          <button class="settings-nav-item" data-section="lyrics">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <path d="M4 6h16"></path>
+              <path d="M4 12h10"></path>
+              <path d="M4 18h7"></path>
+            </svg>
+            <span data-i18n="settings.lyricsStyle">桌面歌词样式</span>
+          </button>
+        </nav>
+        <div class="settings-content">
+          <section class="settings-panel active" data-panel="language">
+            <p class="settings-desc" data-i18n="settings.languageDesc">界面与托盘菜单的显示语言</p>
+            <div class="lang-select" id="langSelectWrap">
+              <button type="button" class="lang-select-btn" id="langSelectBtn">
+                <span id="langSelectValue">中文</span>
+                <svg width="10" height="6" viewBox="0 0 10 6" fill="none" stroke="currentColor" stroke-width="1.2">
+                  <path d="M1 1l4 4 4-4"></path>
+                </svg>
+              </button>
+              <ul class="lang-select-list" id="langSelectList">
+                <li class="lang-select-option" data-value="zh-CN">中文</li>
+                <li class="lang-select-option" data-value="en">English</li>
+              </ul>
+            </div>
+          </section>
+          <section class="settings-panel" data-panel="folders">
+            <p class="settings-desc" data-i18n="settings.foldersDesc">添加多个文件夹，歌曲将合并到播放列表</p>
+            <ul class="folder-list" id="folderList"></ul>
+            <button class="settings-add-btn" id="btnAddFolder" data-i18n="settings.addFolder">添加文件夹</button>
+          </section>
+          <section class="settings-panel" data-panel="lyrics">
+            <p class="settings-desc" data-i18n="settings.lyricsStyleDesc">调整桌面歌词悬浮窗的外观</p>
+            <div class="style-control">
+              <div class="style-label-row">
+                <span data-i18n="settings.bgOpacity">背景不透明度</span>
+                <span class="style-value" id="bgOpacityVal">45%</span>
+              </div>
+              <input type="range" id="bgOpacity" min="0" max="100" step="1">
+            </div>
+            <div class="style-control">
+              <div class="style-label-row">
+                <span data-i18n="settings.textOpacity">字体不透明度</span>
+                <span class="style-value" id="textOpacityVal">100%</span>
+              </div>
+              <input type="range" id="textOpacity" min="0" max="100" step="1">
+            </div>
+            <div class="style-control">
+              <div class="style-label-row">
+                <span data-i18n="settings.textColor">字体颜色</span>
+                <span class="style-row-actions">
+                  <input type="color" id="textColor" value="#ffffff">
+                  <button class="settings-reset-btn" id="btnResetStyle" data-i18n="settings.reset">重置默认</button>
+                </span>
+              </div>
+            </div>
+          </section>
+        </div>
       </div>
     </div>
   </div>

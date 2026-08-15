@@ -1124,3 +1124,346 @@ kbd {
   border-bottom-width: 2px;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3), 0 0 12px var(--glow-primary); /* 辉光色随歌曲封面变化 */
 }
+
+/* ===== 设置浮层 ===== */
+.settings-card {
+  width: min(860px, calc(100vw - 48px));
+  max-height: 80vh;
+}
+
+.settings-body {
+  display: flex;
+  min-height: 400px;
+}
+
+.settings-nav {
+  width: 190px;
+  flex-shrink: 0;
+  border-right: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 10px 8px 10px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.settings-nav-item {
+  background: none;
+  border: none;
+  color: inherit;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  opacity: 0.65;
+}
+
+.settings-nav-item svg {
+  flex-shrink: 0;
+  opacity: 0.7;
+}
+
+.settings-nav-item:hover {
+  opacity: 1;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.settings-nav-item.active {
+  opacity: 1;
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.settings-content {
+  flex: 1;
+  min-width: 0;
+  padding: 4px 0 0 20px;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.settings-content::-webkit-scrollbar,
+.folder-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.settings-content::-webkit-scrollbar-thumb,
+.folder-list::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.14);
+  border-radius: 999px;
+}
+
+.settings-content::-webkit-scrollbar-thumb:hover,
+.folder-list::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+.settings-content::-webkit-scrollbar-track,
+.folder-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.settings-panel {
+  display: none;
+}
+
+.settings-panel.active {
+  display: block;
+}
+
+.settings-desc {
+  font-size: 12px;
+  opacity: 0.45;
+  margin: 0 0 18px;
+}
+
+.lang-select {
+  position: relative;
+}
+
+.lang-select-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 9px 12px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #fff;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s;
+}
+
+.lang-select-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.lang-select.open .lang-select-btn {
+  border-color: rgba(255, 255, 255, 0.35);
+}
+
+.lang-select-btn svg {
+  flex-shrink: 0;
+  opacity: 0.6;
+  transition: transform 0.2s;
+}
+
+.lang-select.open .lang-select-btn svg {
+  transform: rotate(180deg);
+}
+
+.lang-select-list {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  margin: 0;
+  padding: 6px;
+  list-style: none;
+  background: rgba(20, 20, 20, 0.4);
+  backdrop-filter: blur(30px) saturate(180%);
+  -webkit-backdrop-filter: blur(30px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  display: none;
+  z-index: 10;
+}
+
+.lang-select.open .lang-select-list {
+  display: block;
+}
+
+.lang-select-option {
+  padding: 8px 10px;
+  border-radius: 6px;
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.75);
+  cursor: pointer;
+}
+
+.lang-select-option:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+}
+
+.lang-select-option.selected {
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+}
+
+.folder-list {
+  list-style: none;
+  margin: 0 0 14px;
+  padding: 0;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.folder-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 9px 12px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.05);
+  margin-bottom: 6px;
+  font-size: 13px;
+}
+
+.folder-item:hover {
+  background: rgba(255, 255, 255, 0.09);
+}
+
+.folder-item .folder-path {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  opacity: 0.85;
+}
+
+.folder-item .folder-path.unavailable {
+  opacity: 0.45;
+  text-decoration: line-through;
+}
+
+.folder-remove {
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.45);
+  cursor: pointer;
+  font-size: 13px;
+  line-height: 1;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s, color 0.2s;
+}
+
+.folder-remove:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+}
+
+.folder-empty {
+  font-size: 13px;
+  opacity: 0.45;
+  padding: 8px 2px;
+}
+
+.settings-add-btn {
+  width: 100%;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px dashed rgba(255, 255, 255, 0.22);
+  color: rgba(255, 255, 255, 0.85);
+  border-radius: 8px;
+  padding: 9px 0;
+  cursor: pointer;
+  font-size: 13px;
+  transition: background 0.2s, color 0.2s;
+}
+
+.settings-add-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+
+.settings-reset-btn {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: rgba(255, 255, 255, 0.8);
+  border-radius: 8px;
+  padding: 6px 12px;
+  cursor: pointer;
+  font-size: 12px;
+  transition: background 0.2s, color 0.2s;
+}
+
+.settings-reset-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+}
+
+.style-control {
+  margin-bottom: 22px;
+}
+
+.style-control:last-child {
+  margin-bottom: 4px;
+}
+
+.style-label-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  font-size: 13px;
+}
+
+.style-label-row > span:first-child {
+  opacity: 0.7;
+}
+
+.style-row-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.style-value {
+  min-width: 44px;
+  text-align: right;
+  opacity: 0.6;
+  font-variant-numeric: tabular-nums;
+}
+
+.style-control input[type="range"] {
+  width: 100%;
+  -webkit-appearance: none;
+  appearance: none;
+  height: 4px;
+  border-radius: 999px;
+  background: linear-gradient(to right,
+    rgba(255, 255, 255, 0.8) 0%,
+    rgba(255, 255, 255, 0.55) var(--progress, 45%),
+    rgba(255, 255, 255, 0.12) var(--progress, 45%));
+  outline: none;
+  cursor: pointer;
+}
+
+.style-control input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #fff;
+  border: none;
+}
+
+.style-control input[type="color"] {
+  width: 30px;
+  height: 30px;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 50%;
+  padding: 0;
+  cursor: pointer;
+  background: none;
+}
+
+.style-control input[type="color"]::-webkit-color-swatch-wrapper {
+  padding: 2px;
+}
+
+.style-control input[type="color"]::-webkit-color-swatch {
+  border: none;
+  border-radius: 50%;
+}

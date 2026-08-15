@@ -1,7 +1,6 @@
 const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld('dreamApi', {
-  importFolder: () => ipcRenderer.invoke('dialog:openFolder'),
   loadSavedMusic: () => ipcRenderer.invoke('app:loadSavedMusic'),
   savePlaybackState: (state) => ipcRenderer.invoke('app:savePlaybackState', state),
   loadPlaybackState: () => ipcRenderer.invoke('app:loadPlaybackState'),
@@ -18,6 +17,12 @@ contextBridge.exposeInMainWorld('dreamApi', {
 
   getLyrics: (path) => ipcRenderer.invoke('app:getLyrics', path),
   updateDesktopLyrics: (text) => ipcRenderer.invoke('app:updateDesktopLyrics', text),
+
+  getSettings: () => ipcRenderer.invoke('settings:get'),
+  setLanguage: (lang) => ipcRenderer.invoke('settings:setLanguage', lang),
+  setLyricsStyle: (style) => ipcRenderer.invoke('settings:setLyricsStyle', style),
+  addFolder: () => ipcRenderer.invoke('folders:add'),
+  removeFolder: (folderPath) => ipcRenderer.invoke('folders:remove', folderPath),
 
   onWindowVisibilityChanged: (callback) => ipcRenderer.on('window-visibility-changed', (event, isVisible) => callback(isVisible)),
   onTrayPlayPause: (callback) => ipcRenderer.on('tray-play-pause', () => callback()),
