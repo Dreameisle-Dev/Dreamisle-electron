@@ -31,7 +31,7 @@
       padding: 10px 28px;
       border-radius: 999px;
       background: var(--capsule-bg, rgba(0, 0, 0, 0.45));
-      font-family: "Microsoft YaHei", "PingFang SC", "Segoe UI", sans-serif;
+      font-family: var(--capsule-font-family, "Microsoft YaHei", "PingFang SC", "Segoe UI", sans-serif);
       font-size: 26px;
       line-height: 1.4;
       white-space: nowrap;
@@ -85,6 +85,12 @@
       document.documentElement.style.setProperty('--capsule-bg', `rgba(0, 0, 0, ${(s.bgOpacity ?? 45) / 100})`);
       document.documentElement.style.setProperty('--capsule-opacity', String((s.textOpacity ?? 100) / 100));
       document.documentElement.style.setProperty('--capsule-color', s.textColor || '#ffffff');
+      // 自定义字体：为空时移除变量，回退到 .capsule 的默认字体栈
+      if (s.fontFamily) {
+        document.documentElement.style.setProperty('--capsule-font-family', `"${s.fontFamily}"`);
+      } else {
+        document.documentElement.style.removeProperty('--capsule-font-family');
+      }
     });
   </script>
 </body>

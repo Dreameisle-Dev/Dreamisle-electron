@@ -1295,6 +1295,117 @@ kbd {
   color: #fff;
 }
 
+/* 自定义字体下拉：结构同 lang-select，列表可滚动并带搜索框 */
+.font-select {
+  position: relative;
+}
+
+.font-select-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 9px 12px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #fff;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s;
+}
+
+.font-select-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.font-select.open .font-select-btn {
+  border-color: rgba(255, 255, 255, 0.35);
+}
+
+.font-select-btn svg {
+  flex-shrink: 0;
+  opacity: 0.6;
+  transition: transform 0.2s;
+}
+
+.font-select.open .font-select-btn svg {
+  transform: rotate(180deg);
+}
+
+.font-select-list {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  padding: 6px;
+  background: rgba(20, 20, 20, 0.4);
+  backdrop-filter: blur(30px) saturate(180%);
+  -webkit-backdrop-filter: blur(30px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  display: none;
+  z-index: 10;
+}
+
+.font-select.open .font-select-list {
+  display: block;
+}
+
+.font-select-search {
+  padding: 0 2px 6px;
+}
+
+.font-select-search input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 7px 10px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.06);
+  color: #fff;
+  font-size: 13px;
+  outline: none;
+}
+
+.font-select-search input:focus {
+  border-color: rgba(255, 255, 255, 0.35);
+}
+
+.font-select-search input::placeholder {
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.font-select-options {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-height: 260px;
+  overflow-y: auto;
+}
+
+.font-select-option {
+  padding: 8px 10px;
+  border-radius: 6px;
+  font-size: 15px;
+  color: rgba(255, 255, 255, 0.75);
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.font-select-option:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+}
+
+.font-select-option.selected {
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+}
+
 .folder-list {
   list-style: none;
   margin: 0 0 14px;

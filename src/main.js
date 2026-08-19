@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, dialog, Menu, Tray, nativeImage } from 'electron';
+import { app, BrowserWindow, ipcMain, dialog, Menu, Tray, nativeImage, session } from 'electron';
 import path from 'path';
 import { fileURLToPath, pathToFileURL } from 'url';
 import { parseFile } from 'music-metadata';
@@ -20,7 +20,7 @@ let tray = null;
 // 语言状态：默认跟随系统，用户可在设置中切换
 let currentLanguage = null;
 
-const DEFAULT_LYRICS_STYLE = { bgOpacity: 45, textOpacity: 100, textColor: '#ffffff' };
+const DEFAULT_LYRICS_STYLE = { bgOpacity: 45, textOpacity: 100, textColor: '#ffffff', fontFamily: '' };
 
 app.isQuitting = false;
 
@@ -48,6 +48,14 @@ function getLanguage() {
 
 function getLyricsStyle() {
   return { ...DEFAULT_LYRICS_STYLE, ...(store.get('settings.lyricsStyle') || {}) };
+}
+
+// 设置页"自定义字体"下拉需要读取系统字体列表（Local Font Access API）；
+// 只放行 local-fonts 权限，其余权限维持 Electron 默认拒绝
+function setupPermissions() {
+  const isLocalFonts = (permission) => permission === 'local-fonts';
+  session.defaultSession.setPermissionCheckHandler((webContents, permission) => isLocalFonts(permission));
+  session.defaultSession.setPermissionRequestHandler((webContents, permission, callback) => callback(isLocalFonts(permission)));
 }
 
 function clampPercent(value, fallback) {
@@ -147,6 +155,7 @@ function createTray() {
 app.whenReady().then(() => {
   migrateLegacyMusicFolder();
   getLanguage(); // 初始化语言（createTray 依赖 t()）
+  setupPermissions();
   createWindow();
   initLyricsModule(store);
   setLyricsStyle(getLyricsStyle()); // 同步已存歌词样式
@@ -342,6 +351,7 @@ ipcMain.handle('settings:setLyricsStyle', (event, style) => {
     bgOpacity: clampPercent(style && style.bgOpacity, DEFAULT_LYRICS_STYLE.bgOpacity),
     textOpacity: clampPercent(style && style.textOpacity, DEFAULT_LYRICS_STYLE.textOpacity),
     textColor: typeof (style && style.textColor) === 'string' ? style.textColor : DEFAULT_LYRICS_STYLE.textColor,
+    fontFamily: typeof (style && style.fontFamily) === 'string' ? style.fontFamily.trim() : DEFAULT_LYRICS_STYLE.fontFamily,
   };
   store.set('settings.lyricsStyle', next);
   setLyricsStyle(next);

@@ -29,7 +29,7 @@ export function setLyricsText(text) {
   }
 }
 
-let lastStyle = { bgOpacity: 45, textOpacity: 100, textColor: '#ffffff' };
+let lastStyle = { bgOpacity: 45, textOpacity: 100, textColor: '#ffffff', fontFamily: '' };
 let lastLang = 'zh-CN';
 
 export function setLyricsStyle(style) {

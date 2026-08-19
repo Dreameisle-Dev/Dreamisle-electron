@@ -61,6 +61,10 @@ const dict = {
     'settings.bgOpacity': '背景不透明度',
     'settings.textOpacity': '字体不透明度',
     'settings.textColor': '字体颜色',
+    'settings.fontFamily': '自定义字体',
+    'settings.fontDefault': '默认字体',
+    'settings.fontSearch': '搜索字体…',
+    'settings.fontLoadError': '读取系统字体失败',
     'settings.reset': '重置默认'
   },
   en: {
@@ -122,6 +126,10 @@ const dict = {
     'settings.bgOpacity': 'Background opacity',
     'settings.textOpacity': 'Text opacity',
     'settings.textColor': 'Text color',
+    'settings.fontFamily': 'Custom font',
+    'settings.fontDefault': 'Default font',
+    'settings.fontSearch': 'Search fonts…',
+    'settings.fontLoadError': 'Failed to load system fonts',
     'settings.reset': 'Reset defaults'
   }
 };

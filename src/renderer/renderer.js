@@ -50,8 +50,13 @@ const textColorInput = document.getElementById('textColor');
 const bgOpacityVal = document.getElementById('bgOpacityVal');
 const textOpacityVal = document.getElementById('textOpacityVal');
 const btnResetStyle = document.getElementById('btnResetStyle');
+const fontSelectWrap = document.getElementById('fontSelectWrap');
+const fontSelectBtn = document.getElementById('fontSelectBtn');
+const fontSelectValue = document.getElementById('fontSelectValue');
+const fontSearchInput = document.getElementById('fontSearch');
+const fontOptions = document.getElementById('fontOptions');
 
-const DEFAULT_LYRICS_STYLE = { bgOpacity: 45, textOpacity: 100, textColor: '#ffffff' };
+const DEFAULT_LYRICS_STYLE = { bgOpacity: 45, textOpacity: 100, textColor: '#ffffff', fontFamily: '' };
 let currentLyricsStyle = { ...DEFAULT_LYRICS_STYLE };
 
 // 小窗单行歌词元素
@@ -782,6 +787,9 @@ function syncLyricsStyleUi(style) {
   textOpacityVal.textContent = `${currentLyricsStyle.textOpacity}%`;
   bgOpacityInput.style.setProperty('--progress', `${currentLyricsStyle.bgOpacity}%`);
   textOpacityInput.style.setProperty('--progress', `${currentLyricsStyle.textOpacity}%`);
+  // 按钮上直接以所选字体渲染当前字体名，空值显示"默认字体"
+  fontSelectValue.textContent = currentLyricsStyle.fontFamily || t('settings.fontDefault');
+  fontSelectValue.style.fontFamily = currentLyricsStyle.fontFamily ? `"${currentLyricsStyle.fontFamily}"` : '';
 }
 
 function pushLyricsStyle() {
@@ -823,6 +831,75 @@ langSelectList.querySelectorAll('.lang-select-option').forEach((item) => {
     handleLanguageChange(item.dataset.value);
   });
 });
+
+// 系统字体列表：首次展开下拉时通过 Local Font Access API 读取并缓存
+let systemFonts = null;
+let fontsLoadFailed = false;
+
+async function ensureSystemFonts() {
+  if (systemFonts || fontsLoadFailed) return;
+  try {
+    if (typeof window.queryLocalFonts !== 'function') throw new Error('unsupported');
+    const all = await window.queryLocalFonts(); // 必须在用户手势内同步发起，由点击事件直接调用
+    const seen = new Set();
+    systemFonts = [];
+    for (const font of all) {
+      if (!seen.has(font.family)) {
+        seen.add(font.family);
+        systemFonts.push(font.family);
+      }
+    }
+    systemFonts.sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
+  } catch (err) {
+    fontsLoadFailed = true;
+    showSyncToast(t('settings.fontLoadError'));
+  }
+}
+
+function renderFontOptions(filter = '') {
+  fontOptions.innerHTML = '';
+  const query = filter.trim().toLowerCase();
+
+  const makeOption = (family, label, ownFont) => {
+    const li = document.createElement('li');
+    li.className = 'font-select-option';
+    if (ownFont) li.style.fontFamily = `"${family}"`;
+    li.textContent = label;
+    li.dataset.value = family;
+    if (family === (currentLyricsStyle.fontFamily || '')) li.classList.add('selected');
+    li.addEventListener('click', () => {
+      currentLyricsStyle.fontFamily = family;
+      fontSelectValue.textContent = label;
+      fontSelectValue.style.fontFamily = ownFont ? `"${family}"` : '';
+      fontSelectWrap.classList.remove('open');
+      pushLyricsStyle();
+    });
+    fontOptions.appendChild(li);
+  };
+
+  // 首项固定为默认字体，不参与搜索过滤
+  makeOption('', t('settings.fontDefault'), false);
+  for (const family of systemFonts) {
+    if (query && !family.toLowerCase().includes(query)) continue;
+    makeOption(family, family, true);
+  }
+}
+
+fontSelectBtn.addEventListener('click', async () => {
+  const willOpen = !fontSelectWrap.classList.contains('open');
+  fontSelectWrap.classList.toggle('open');
+  if (!willOpen) return;
+  await ensureSystemFonts(); // 读取失败时仅提示，不展开列表
+  if (fontsLoadFailed) {
+    fontSelectWrap.classList.remove('open');
+    return;
+  }
+  fontSearchInput.value = '';
+  renderFontOptions();
+  fontSearchInput.focus();
+});
+
+fontSearchInput.addEventListener('input', () => renderFontOptions(fontSearchInput.value));
 
 // 左侧导航切换设置分区（面板互斥显示）
 document.querySelectorAll('.settings-nav-item').forEach((item) => {

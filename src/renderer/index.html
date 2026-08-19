@@ -310,6 +310,25 @@
             </div>
             <div class="style-control">
               <div class="style-label-row">
+                <span data-i18n="settings.fontFamily">自定义字体</span>
+              </div>
+              <div class="font-select" id="fontSelectWrap">
+                <button type="button" class="font-select-btn" id="fontSelectBtn">
+                  <span id="fontSelectValue">默认字体</span>
+                  <svg width="10" height="6" viewBox="0 0 10 6" fill="none" stroke="currentColor" stroke-width="1.2">
+                    <path d="M1 1l4 4 4-4"></path>
+                  </svg>
+                </button>
+                <div class="font-select-list" id="fontSelectList">
+                  <div class="font-select-search">
+                    <input type="text" id="fontSearch" data-i18n-placeholder="settings.fontSearch" placeholder="搜索字体…">
+                  </div>
+                  <ul class="font-select-options" id="fontOptions"></ul>
+                </div>
+              </div>
+            </div>
+            <div class="style-control">
+              <div class="style-label-row">
                 <span data-i18n="settings.textColor">字体颜色</span>
                 <span class="style-row-actions">
                   <input type="color" id="textColor" value="#ffffff">
