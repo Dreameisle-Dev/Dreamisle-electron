@@ -37,6 +37,16 @@ contextBridge.exposeInMainWorld('dreamApi', {
   minimizeWindow: () => ipcRenderer.invoke('window:minimize'),
   maximizeWindow: () => ipcRenderer.invoke('window:maximize'),
   closeWindow: () => ipcRenderer.invoke('window:close'),
+  playlists: {
+    list: () => ipcRenderer.invoke('playlists:list'),
+    create: (name) => ipcRenderer.invoke('playlists:create', name),
+    rename: (id, name) => ipcRenderer.invoke('playlists:rename', id, name),
+    delete: (id) => ipcRenderer.invoke('playlists:delete', id),
+    addSong: (id, song) => ipcRenderer.invoke('playlists:addSong', id, song),
+    removeSong: (id, path) => ipcRenderer.invoke('playlists:removeSong', id, path),
+    reorder: (id, from, to) => ipcRenderer.invoke('playlists:reorder', id, from, to),
+    prune: (validPaths) => ipcRenderer.invoke('playlists:prune', validPaths),
+  },
   getPlatform: () => process.platform,
   getVersion: () => ipcRenderer.invoke('app:getVersion'),
 });

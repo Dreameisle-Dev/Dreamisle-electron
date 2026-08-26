@@ -65,3 +65,22 @@ export const helpVersionEl = document.getElementById('helpVersion');
 
 // 同步提示 toast
 export const syncToastEl = document.getElementById('syncToast');
+
+// 自定义歌单抽屉元素
+export const playlistsDrawer = document.getElementById('playlistsDrawer');
+export const playlistsListView = document.getElementById('playlistsListView');
+export const playlistsDetailView = document.getElementById('playlistsDetailView');
+export const playlistsListEl = document.getElementById('playlistsList');
+export const playlistsCountEl = document.getElementById('playlistsCount');
+export const btnNewPlaylist = document.getElementById('btnNewPlaylist');
+export const playlistsDetailName = document.getElementById('playlistsDetailName');
+export const playlistsRenameInput = document.getElementById('playlistsRenameInput');
+export const btnPlaylistsBack = document.getElementById('btnPlaylistsBack');
+export const btnRenamePlaylist = document.getElementById('btnRenamePlaylist');
+export const btnDeletePlaylist = document.getElementById('btnDeletePlaylist');
+export const playlistsSongListEl = document.getElementById('playlistsSongList');
+
+// 歌曲右键菜单元素
+export const contextMenu = document.getElementById('contextMenu');
+export const ctxAddToPlaylist = document.getElementById('ctxAddToPlaylist');
+export const ctxPlaylistOptions = document.getElementById('ctxPlaylistOptions');

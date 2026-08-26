@@ -23,6 +23,7 @@ import {
 } from './dom.js';
 import { showSyncToast } from './helpers.js';
 import { applyPlaylistFromMain } from './playlist.js';
+import { renderPlaylistsList } from './playlists.js';
 
 export function toggleSettings() {
   if (settingsOverlay.classList.contains('open')) closeSettings();
@@ -106,6 +107,7 @@ export async function handleLanguageChange(lang) {
   applyLang();
   await window.dreamApi.setLanguage(lang);
   refreshSettingsUi(); // 重建动态行（文件夹列表/移除按钮标题），跟随新语言
+  renderPlaylistsList(); // 歌单抽屉动态文案跟随语言
 }
 
 export function syncLyricsStyleUi(style) {

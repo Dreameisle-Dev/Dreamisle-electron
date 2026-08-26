@@ -1669,3 +1669,404 @@ kbd {
   border: none;
   border-radius: 50%;
 }
+
+/* ===== 自定义歌单抽屉(镜像右侧播放列表抽屉)===== */
+.playlists-drawer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: 320px;
+  background: rgba(20, 20, 20, 0.4);
+  backdrop-filter: blur(30px) saturate(180%);
+  -webkit-backdrop-filter: blur(30px) saturate(180%);
+  transform: translateX(-100%);
+  transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  padding: 35px 0 0 0;
+  border-right: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow:
+    10px 0 50px rgba(0, 0, 0, 0.5),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+}
+
+.playlists-drawer.open {
+  transform: translateX(0);
+}
+
+.playlists-list-view {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+.playlists-header {
+  padding: 0 28px 20px;
+  font-weight: 700;
+  font-size: 22px;
+  flex-shrink: 0;
+  letter-spacing: -0.5px;
+}
+
+.playlists-list {
+  list-style: none;
+  padding: 0 16px;
+  margin: 0;
+  flex: 1;
+  padding-top: 10px;
+  padding-bottom: 20px;
+  overflow-y: auto;
+}
+
+.playlists-list::-webkit-scrollbar,
+.playlists-song-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.playlists-list::-webkit-scrollbar-track,
+.playlists-song-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.playlists-list::-webkit-scrollbar-thumb,
+.playlists-song-list::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+}
+
+.playlists-list::-webkit-scrollbar-thumb:hover,
+.playlists-song-list::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.playlists-card {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.playlists-card:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.playlists-card.active {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.playlists-card.drag-over {
+  background: rgba(255, 255, 255, 0.16);
+  outline: 1px dashed rgba(255, 255, 255, 0.4);
+}
+
+.playlists-card.all-songs {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  margin-bottom: 6px;
+  border-radius: 0;
+}
+
+.playlists-card-name {
+  flex: 1;
+  font-size: 14px;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.playlists-card-count {
+  font-size: 12px;
+  opacity: 0.5;
+}
+
+.playlists-card-arrow {
+  opacity: 0;
+  flex-shrink: 0;
+  padding: 4px;
+  border-radius: 6px;
+  transition:
+    opacity 0.2s ease,
+    color 0.2s ease,
+    background-color 0.2s ease;
+}
+
+.playlists-card:hover .playlists-card-arrow {
+  opacity: 1;
+}
+
+.playlists-card-arrow:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.playlists-add-btn {
+  margin: 8px 16px 20px;
+  padding: 10px;
+  border-radius: 10px;
+  border: 1px dashed rgba(255, 255, 255, 0.2);
+  background: transparent;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 13px;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all 0.2s ease;
+  font-family: inherit;
+}
+
+.playlists-add-btn:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: #fff;
+}
+
+.playlists-empty {
+  padding: 40px 24px;
+  text-align: center;
+  font-size: 13px;
+  opacity: 0.5;
+  line-height: 1.6;
+}
+
+.playlists-detail-view {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+.playlists-detail-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 20px 16px;
+  flex-shrink: 0;
+}
+
+.playlists-back-btn {
+  background: rgba(255, 255, 255, 0.08);
+  border: none;
+  color: rgba(255, 255, 255, 0.8);
+  padding: 6px;
+  border-radius: 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease;
+}
+
+.playlists-back-btn:hover {
+  background: rgba(255, 255, 255, 0.14);
+  color: #fff;
+}
+
+.playlists-detail-name {
+  flex: 1;
+  font-weight: 700;
+  font-size: 18px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  letter-spacing: -0.3px;
+}
+
+.playlists-rename-input {
+  flex: 1;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #fff;
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-size: 16px;
+  outline: none;
+  font-family: inherit;
+}
+
+.playlists-detail-actions {
+  display: flex;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+.playlists-icon-btn {
+  background: transparent;
+  border: none;
+  color: rgba(255, 255, 255, 0.5);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 6px;
+  display: flex;
+}
+
+.playlists-icon-btn:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.playlists-icon-btn.confirm-danger {
+  color: #ff6b6b;
+  background: rgba(255, 107, 107, 0.15);
+}
+
+.playlists-song-list {
+  list-style: none;
+  margin: 0;
+  padding: 0 16px;
+  flex: 1;
+  overflow-y: auto;
+}
+
+.playlists-song-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.playlists-song-item:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.playlists-song-item.drag-over {
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.playlists-song-title {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.playlists-song-artist {
+  font-size: 12px;
+  opacity: 0.5;
+  max-width: 40%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.playlists-song-remove {
+  background: transparent;
+  border: none;
+  color: rgba(255, 255, 255, 0.35);
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 14px;
+  font-family: inherit;
+}
+
+.playlists-song-remove:hover {
+  color: #ff6b6b;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+@media (max-width: 600px) {
+  .playlists-drawer {
+    width: 100%;
+  }
+}
+
+body.mini-mode .playlists-drawer {
+  display: none !important;
+}
+
+/* ===== 歌曲右键菜单 ===== */
+.context-menu {
+  position: fixed;
+  z-index: 1000;
+  min-width: 180px;
+  background: rgba(20, 20, 20, 0.4);
+  backdrop-filter: blur(30px) saturate(180%);
+  -webkit-backdrop-filter: blur(30px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 6px;
+  display: none;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5);
+}
+
+.context-menu.open {
+  display: block;
+}
+
+.context-menu-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  border: none;
+  color: rgba(255, 255, 255, 0.85);
+  padding: 8px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  font-family: inherit;
+}
+
+.context-menu-item:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.context-menu-sub {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+/* ===== 歌单卡片管理按钮 ===== */
+.playlists-card-btn {
+  background: transparent;
+  border: none;
+  color: rgba(255, 255, 255, 0.4);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 6px;
+  opacity: 0;
+  transition:
+    opacity 0.2s ease,
+    color 0.2s ease,
+    background-color 0.2s ease;
+  flex-shrink: 0;
+  display: flex;
+}
+
+.playlists-card:hover .playlists-card-btn {
+  opacity: 1;
+}
+
+.playlists-card-btn:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.playlists-card-btn.confirm-danger {
+  color: #ff6b6b;
+  background: rgba(255, 107, 107, 0.15);
+  opacity: 1;
+}
+
+.playlists-card-rename-input {
+  flex: 1;
+  min-width: 0;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #fff;
+  border-radius: 8px;
+  padding: 4px 8px;
+  font-size: 13px;
+  outline: none;
+  font-family: inherit;
+}

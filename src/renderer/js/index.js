@@ -5,6 +5,7 @@ import {
   volumeHud,
   progressBar,
   playlistDrawer,
+  playlistsDrawer,
   searchInput,
   settingsOverlay,
   helpOverlayEl,
@@ -15,8 +16,16 @@ import {
   iconShuffle,
   btnPlay,
   btnMode,
+  contextMenu,
 } from './dom.js';
 import { initVirtualList, applyPlaylistFromMain, bindPlaylistEvents } from './playlist.js';
+import {
+  togglePlaylistsDrawer,
+  bindPlaylistsEvents,
+  loadPlaylists,
+  closeContextMenu,
+  prunePlaylistsFromLibrary,
+} from './playlists.js';
 import {
   playSong,
   initSongInfo,
@@ -81,6 +90,13 @@ async function applyFolderSync() {
   const result = await window.dreamApi.syncFolder();
   if (!result || (result.added === 0 && result.removed === 0)) return;
 
+  if (state.activeQueue.type === 'playlist') {
+    // 歌单队列中：只更新曲库缓存，不打断播放；随后清理歌单失效歌曲
+    state.librarySongs = [...result.playlist];
+    await prunePlaylistsFromLibrary();
+    return;
+  }
+
   applyPlaylistFromMain(result.playlist);
   if (result.added > 0) showSyncToast(t('sync.foundNew', { n: result.added }));
 }
@@ -91,6 +107,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   bindLyricsEvents();
   bindSettingsEvents();
   bindPlaylistEvents();
+  bindPlaylistsEvents();
 
   // 启动时应用已存语言并刷新界面文案
   const settings = await window.dreamApi.getSettings();
@@ -121,7 +138,14 @@ window.addEventListener('DOMContentLoaded', async () => {
 
   // 绑定键盘快捷键
   let altTimer = null;
+  let ctrlTimer = null;
   window.addEventListener('keydown', (e) => {
+    // 长按 Ctrl 计时期间按下任何其他键 → 取消计时(防 Ctrl+, / Ctrl+Alt+L 误触发)
+    if (e.code !== 'ControlLeft' && ctrlTimer) {
+      clearTimeout(ctrlTimer);
+      ctrlTimer = null;
+    }
+
     const isInputActive =
       document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA';
 
@@ -139,14 +163,24 @@ window.addEventListener('DOMContentLoaded', async () => {
       return;
     }
 
-    // Esc：先关设置浮层，再关帮助浮层（无论焦点位置）
+    // Esc：先关右键菜单，再关设置浮层，再关帮助浮层，最后关抽屉
     if (e.code === 'Escape') {
-      if (settingsOverlay.classList.contains('open')) {
+      if (contextMenu.classList.contains('open')) {
+        e.preventDefault();
+        closeContextMenu();
+      } else if (settingsOverlay.classList.contains('open')) {
         e.preventDefault();
         closeSettings();
       } else if (helpOverlayEl.classList.contains('open')) {
         e.preventDefault();
         closeHelp();
+      } else if (
+        playlistDrawer.classList.contains('open') ||
+        playlistsDrawer.classList.contains('open')
+      ) {
+        e.preventDefault();
+        playlistDrawer.classList.remove('open');
+        playlistsDrawer.classList.remove('open');
       }
       return;
     }
@@ -191,7 +225,19 @@ window.addEventListener('DOMContentLoaded', async () => {
 
       altTimer = setTimeout(() => {
         playlistDrawer.classList.toggle('open');
+        playlistsDrawer.classList.remove('open'); // 互斥：打开右侧关左侧
         altTimer = null;
+      }, 500);
+    }
+
+    // LeftCtrl：长按 0.5s 呼出/折叠歌单抽屉
+    if (e.code === 'ControlLeft') {
+      e.preventDefault();
+      if (e.repeat) return; // 屏蔽自动重复
+
+      ctrlTimer = setTimeout(() => {
+        togglePlaylistsDrawer();
+        ctrlTimer = null;
       }, 500);
     }
   });
@@ -203,6 +249,25 @@ window.addEventListener('DOMContentLoaded', async () => {
         clearTimeout(altTimer);
         altTimer = null;
       }
+    }
+    if (e.code === 'ControlLeft') {
+      e.preventDefault();
+      if (ctrlTimer) {
+        clearTimeout(ctrlTimer);
+        ctrlTimer = null;
+      }
+    }
+  });
+
+  // 窗口失焦时收不到 keyup：取消进行中的长按计时，防止抽屉意外弹出
+  window.addEventListener('blur', () => {
+    if (altTimer) {
+      clearTimeout(altTimer);
+      altTimer = null;
+    }
+    if (ctrlTimer) {
+      clearTimeout(ctrlTimer);
+      ctrlTimer = null;
     }
   });
 
@@ -223,6 +288,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   if (savedSongs && savedSongs.length > 0) {
     state.originalSongs = [...savedSongs]; // 备份原始数据
     state.songs = [...savedSongs];
+    state.librarySongs = [...savedSongs]; // 曲库缓存
     searchInput.value = '';
     initVirtualList();
 
@@ -261,7 +327,10 @@ window.addEventListener('DOMContentLoaded', async () => {
 
   setupIpcListeners();
   updateProgressStyle(0);
+  loadPlaylists().catch(() => {});
 
-  // 播放恢复完成后，后台同步文件夹新增/删除的歌曲
-  applyFolderSync().catch(() => {});
+  // 播放恢复完成后，后台同步文件夹新增/删除的歌曲；同步结束后再清理歌单失效歌曲
+  applyFolderSync()
+    .then(() => prunePlaylistsFromLibrary())
+    .catch(() => {});
 });

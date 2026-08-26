@@ -51,10 +51,14 @@ export function compareMixed(aStr, bStr) {
   }
 }
 
-export function showSyncToast(text) {
+export function showToast(text) {
   if (!syncToastEl) return;
   syncToastEl.innerText = text;
   syncToastEl.classList.add('visible');
   clearTimeout(state.syncToastTimer);
   state.syncToastTimer = setTimeout(() => syncToastEl.classList.remove('visible'), 3000);
+}
+
+export function showSyncToast(text) {
+  showToast(text);
 }

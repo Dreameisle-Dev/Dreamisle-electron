@@ -298,6 +298,102 @@
       <ul class="playlist-list" id="playlist"></ul>
     </div>
 
+    <!-- 自定义歌单抽屉 -->
+    <div class="playlists-drawer" id="playlistsDrawer">
+      <div class="playlists-list-view" id="playlistsListView">
+        <div class="playlists-header">
+          <span data-i18n="playlists.title">歌单</span>
+          <span id="playlistsCount" style="font-size: 12px; opacity: 0.5; margin-left: 10px"></span>
+        </div>
+        <ul class="playlists-list" id="playlistsList"></ul>
+        <button class="playlists-add-btn" id="btnNewPlaylist" data-i18n="playlists.new">
+          新建歌单
+        </button>
+      </div>
+      <div class="playlists-detail-view" id="playlistsDetailView" style="display: none">
+        <div class="playlists-detail-header">
+          <button
+            class="playlists-back-btn"
+            id="btnPlaylistsBack"
+            data-i18n-title="playlists.back"
+            title="返回"
+          >
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path d="M15 18l-6-6 6-6"></path>
+            </svg>
+          </button>
+          <span class="playlists-detail-name" id="playlistsDetailName"></span>
+          <input
+            type="text"
+            class="playlists-rename-input"
+            id="playlistsRenameInput"
+            style="display: none"
+            maxlength="30"
+          />
+          <span class="playlists-detail-actions">
+            <button
+              class="playlists-icon-btn"
+              id="btnRenamePlaylist"
+              data-i18n-title="playlists.rename"
+              title="重命名"
+            >
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"></path>
+              </svg>
+            </button>
+            <button
+              class="playlists-icon-btn"
+              id="btnDeletePlaylist"
+              data-i18n-title="playlists.delete"
+              title="删除"
+            >
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path d="M3 6h18"></path>
+                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"></path>
+                <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+              </svg>
+            </button>
+          </span>
+        </div>
+        <ul class="playlists-song-list" id="playlistsSongList"></ul>
+      </div>
+    </div>
+
+    <!-- 歌曲右键菜单 -->
+    <div class="context-menu" id="contextMenu">
+      <button class="context-menu-item" id="ctxAddToPlaylist" data-i18n="playlists.addTo">
+        添加到歌单
+      </button>
+      <ul class="context-menu-sub" id="ctxPlaylistOptions" style="display: none"></ul>
+    </div>
+
     <!-- 帮助浮层 -->
     <div class="help-overlay" id="helpOverlay">
       <div class="help-card">
@@ -346,6 +442,13 @@
             <span class="help-desc" data-i18n="help.playlistToggle">呼出 / 折叠播放列表</span
             ><span class="help-keys"
               ><kbd>Alt</kbd
+              ><span class="help-key-hint" data-i18n="help.holdHint">长按 0.5 秒</span></span
+            >
+          </div>
+          <div class="help-row">
+            <span class="help-desc" data-i18n="help.playlistsToggle">呼出 / 折叠歌单</span
+            ><span class="help-keys"
+              ><kbd>Ctrl</kbd
               ><span class="help-key-hint" data-i18n="help.holdHint">长按 0.5 秒</span></span
             >
           </div>

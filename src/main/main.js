@@ -3,6 +3,7 @@ import { migrateLegacyMusicFolder, getLanguage, getLyricsStyle } from './store.j
 import { createWindow, getMainWindow } from './window.js';
 import { createTray } from './tray.js';
 import { registerIpcHandlers } from './ipc.js';
+import { registerPlaylistsIpc } from './playlists.js';
 import {
   registerLyricsHotkey,
   disposeLyrics,
@@ -33,6 +34,7 @@ app.whenReady().then(() => {
   getLanguage(); // 初始化语言（createTray 依赖 t()）
   setupPermissions();
   registerIpcHandlers();
+  registerPlaylistsIpc();
   createWindow();
   createTray();
   setLyricsStyle(getLyricsStyle()); // 同步已存歌词样式

@@ -10,6 +10,15 @@ export const state = {
   currentIndex: -1,
   playMode: 0,
 
+  // 自定义歌单
+  activeQueue: { type: 'library' }, // { type: 'library' } | { type: 'playlist', id };会话级,不持久化
+  librarySongs: [], // 曲库缓存:activeQueue 为歌单时与播放队列解耦
+  playlists: [], // 歌单缓存副本(主进程为唯一数据源)
+  playlistsView: 'list', // 'list' | 'detail'
+  detailPlaylistId: null,
+  dragSong: null, // 从右侧列表拖出的歌曲
+  dragAutoOpenedDrawer: false, // 拖拽时自动展开的左抽屉需在 dragend 恢复原状
+
   // 播放进度
   isDragging: false,
   volumeTimeout: null,
