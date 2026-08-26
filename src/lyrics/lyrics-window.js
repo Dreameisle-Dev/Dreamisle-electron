@@ -1,6 +1,7 @@
 import { BrowserWindow, globalShortcut, screen } from 'electron';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { store } from '../main/store.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -8,15 +9,9 @@ const WINDOW_WIDTH = 760;
 const WINDOW_HEIGHT = 72;
 const BOTTOM_MARGIN = 80; // 默认位置距任务栏上方的间距
 
-let store = null;
 let lyricsWindow = null;
 let lastText = '';
 let saveBoundsTimer = null;
-
-// 由 main.js 在应用就绪后调用，复用其 electron-store 实例
-export function initLyricsModule(storeInstance) {
-  store = storeInstance;
-}
 
 export function isLyricsWindowVisible() {
   return lyricsWindow !== null && !lyricsWindow.isDestroyed();
@@ -97,7 +92,7 @@ function createLyricsWindow() {
     focusable: true, // 原生拖动需要可聚焦；点击抢焦点由下方 blur 回退处理
     show: false,
     webPreferences: {
-      preload: path.join(__dirname, 'lyrics-preload.js'),
+      preload: path.join(__dirname, '../preload/lyrics-preload.js'),
       contextIsolation: true,
       nodeIntegration: false,
       webSecurity: false,
@@ -165,4 +160,3 @@ export function disposeLyrics() {
   destroyLyricsWindow();
   globalShortcut.unregister('Control+Alt+L');
 }
-

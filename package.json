@@ -5,9 +5,10 @@
   "license": "MIT",
   "author": "Dreamisle-Dev",
   "type": "module",
-  "main": "src/main.js",
+  "main": "src/main/main.js",
   "scripts": {
     "start": "electron .",
+    "format": "prettier --write src/",
     "build:win": "electron-builder --win"
   },
   "build": {
@@ -26,6 +27,7 @@
   },
   "devDependencies": {
     "electron": "^40.0.0",
-    "electron-builder": "^26.4.0"
+    "electron-builder": "^26.4.0",
+    "prettier": "^3.9.6"
   }
 }

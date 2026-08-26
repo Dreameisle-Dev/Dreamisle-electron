@@ -11,9 +11,9 @@
 body {
   margin: 0;
   height: 100vh;
-  display: flex;         /* 开启上下排列布局 */
+  display: flex; /* 开启上下排列布局 */
   flex-direction: column; /* 主轴垂直 */
-  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif;
   overflow: hidden;
   background: #000;
   color: var(--text-main);
@@ -27,7 +27,7 @@ body {
   overflow: hidden;
   background: #000;
   pointer-events: none;
-  transform: translate3d(0, 0, 0); 
+  transform: translate3d(0, 0, 0);
 }
 
 /* 
@@ -51,8 +51,16 @@ body {
   transform: translate3d(0, 0, 0) scale(5);
 
   background:
-    radial-gradient(circle at 30% 35%, color-mix(in srgb, var(--bg-color-1) 70%, transparent), transparent 60%),
-    radial-gradient(circle at 70% 65%, color-mix(in srgb, var(--bg-color-2) 60%, transparent), transparent 60%),
+    radial-gradient(
+      circle at 30% 35%,
+      color-mix(in srgb, var(--bg-color-1) 70%, transparent),
+      transparent 60%
+    ),
+    radial-gradient(
+      circle at 70% 65%,
+      color-mix(in srgb, var(--bg-color-2) 60%, transparent),
+      transparent 60%
+    ),
     radial-gradient(circle at 50% 50%, var(--glow-tertiary), transparent 40%);
 }
 
@@ -191,7 +199,9 @@ body {
   height: 100%;
   object-fit: cover;
   border-radius: 16px;
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5), 0 0 100px var(--bg-color-1);
+  box-shadow:
+    0 10px 40px rgba(0, 0, 0, 0.5),
+    0 0 100px var(--bg-color-1);
   transition: transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
   -webkit-app-region: no-drag;
 }
@@ -202,7 +212,9 @@ body {
 
 .album-art-container.playing .cover-img {
   transform: scale(1.03);
-  box-shadow: 0 15px 45px rgba(0, 0, 0, 0.6), 0 0 120px var(--bg-color-1);
+  box-shadow:
+    0 15px 45px rgba(0, 0, 0, 0.6),
+    0 0 120px var(--bg-color-1);
 }
 
 @keyframes albumBreathe {
@@ -234,8 +246,24 @@ body {
   height: 70vh;
   max-height: 600px;
   position: relative;
-  mask-image: linear-gradient(to bottom, transparent 0%, rgba(0, 0, 0, 0.9) 8%, black 20%, black 80%, rgba(0, 0, 0, 0.9) 92%, transparent 100%);
-  -webkit-mask-image: linear-gradient(to bottom, transparent 0%, rgba(0, 0, 0, 0.9) 8%, black 20%, black 80%, rgba(0, 0, 0, 0.9) 92%, transparent 100%);
+  mask-image: linear-gradient(
+    to bottom,
+    transparent 0%,
+    rgba(0, 0, 0, 0.9) 8%,
+    black 20%,
+    black 80%,
+    rgba(0, 0, 0, 0.9) 92%,
+    transparent 100%
+  );
+  -webkit-mask-image: linear-gradient(
+    to bottom,
+    transparent 0%,
+    rgba(0, 0, 0, 0.9) 8%,
+    black 20%,
+    black 80%,
+    rgba(0, 0, 0, 0.9) 92%,
+    transparent 100%
+  );
   -webkit-app-region: no-drag;
 }
 
@@ -260,7 +288,10 @@ body {
   margin: 18px 0;
   font-weight: 500;
   cursor: pointer;
-  transition: transform 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94), color 0.4s ease, filter 0.4s ease;
+  transition:
+    transform 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+    color 0.4s ease,
+    filter 0.4s ease;
   transform: scale(0.95);
   transform-origin: center;
   filter: blur(1px);
@@ -278,7 +309,9 @@ body {
   font-weight: 600;
   transform: scale(1.25);
   filter: blur(0);
-  text-shadow: 0 2px 20px rgba(0, 0, 0, 0.3), 0 0 40px rgba(255, 255, 255, 0.15);
+  text-shadow:
+    0 2px 20px rgba(0, 0, 0, 0.3),
+    0 0 40px rgba(255, 255, 255, 0.15);
 }
 
 .lyric-line.placeholder {
@@ -301,7 +334,9 @@ body {
 }
 
 .song-info div {
-  transition: opacity 0.3s ease, transform 0.3s ease;
+  transition:
+    opacity 0.3s ease,
+    transform 0.3s ease;
   opacity: 1;
   transform: translateY(0);
 }
@@ -342,7 +377,9 @@ body {
   font-size: 16px;
   pointer-events: none;
   opacity: 0;
-  transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1), transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition:
+    opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+    transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   border: 1px solid rgba(255, 255, 255, 0.1);
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
   z-index: 5;
@@ -369,7 +406,9 @@ body {
   font-size: 14px;
   pointer-events: none;
   opacity: 0;
-  transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1), transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition:
+    opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+    transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   border: 1px solid rgba(255, 255, 255, 0.1);
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
   z-index: 20;
@@ -415,7 +454,12 @@ body {
 }
 
 .progress-bar::-webkit-slider-runnable-track {
-  background: linear-gradient(to right, rgba(255, 255, 255, 0.9) 0%, rgba(255, 255, 255, 0.6) var(--progress, 0%), rgba(255, 255, 255, 0.1) var(--progress, 0%));
+  background: linear-gradient(
+    to right,
+    rgba(255, 255, 255, 0.9) 0%,
+    rgba(255, 255, 255, 0.6) var(--progress, 0%),
+    rgba(255, 255, 255, 0.1) var(--progress, 0%)
+  );
   border-radius: 3px;
 }
 
@@ -425,7 +469,7 @@ body {
   margin-top: 10px;
   font-size: 12px;
   color: rgba(255, 255, 255, 0.5);
-  font-family: "SF Mono", monospace;
+  font-family: 'SF Mono', monospace;
   letter-spacing: 0.5px;
 }
 
@@ -479,13 +523,17 @@ body {
   background: rgba(255, 255, 255, 0.12);
   backdrop-filter: blur(10px);
   border: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  box-shadow:
+    0 4px 20px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
 }
 
 #btnPlay:hover {
   background: rgba(255, 255, 255, 0.2);
   transform: scale(1.08);
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+  box-shadow:
+    0 8px 30px rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.15);
 }
 
 #btnPlay svg {
@@ -562,7 +610,9 @@ body {
   flex-direction: column;
   padding: 35px 0 0 0;
   border-left: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow: -10px 0 50px rgba(0, 0, 0, 0.5), inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+  box-shadow:
+    -10px 0 50px rgba(0, 0, 0, 0.5),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.05);
 }
 
 .playlist-drawer.open {
@@ -600,7 +650,9 @@ body {
   font-size: 14px;
   outline: none;
   box-sizing: border-box;
-  transition: background-color 0.2s ease, box-shadow 0.2s ease;
+  transition:
+    background-color 0.2s ease,
+    box-shadow 0.2s ease;
   font-family: inherit;
 }
 
@@ -647,7 +699,9 @@ body {
   display: flex;
   flex-direction: column;
   box-sizing: border-box;
-  transition: background-color 0.2s ease, padding-left 0.2s ease;
+  transition:
+    background-color 0.2s ease,
+    padding-left 0.2s ease;
   position: absolute;
   left: 0;
   right: 0;
@@ -935,7 +989,9 @@ body.mini-mode .playlist-drawer {
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: background-color 0.2s ease, color 0.2s ease;
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease;
   outline: none;
 }
 
@@ -1020,7 +1076,9 @@ body.mini-mode .mini-lyrics {
   -webkit-backdrop-filter: blur(30px) saturate(180%);
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 16px;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5), inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+  box-shadow:
+    0 20px 60px rgba(0, 0, 0, 0.5),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.05);
   padding: 22px 28px 26px;
   box-sizing: border-box;
   transform: translateY(12px) scale(0.98);
@@ -1031,10 +1089,19 @@ body.mini-mode .mini-lyrics {
   transform: translateY(0) scale(1);
 }
 
-.help-card::-webkit-scrollbar { width: 6px; }
-.help-card::-webkit-scrollbar-track { background: transparent; }
-.help-card::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.1); border-radius: 3px; }
-.help-card::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.3); }
+.help-card::-webkit-scrollbar {
+  width: 6px;
+}
+.help-card::-webkit-scrollbar-track {
+  background: transparent;
+}
+.help-card::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+}
+.help-card::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
 
 .help-header {
   display: flex;
@@ -1069,7 +1136,9 @@ body.mini-mode .mini-lyrics {
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: background-color 0.2s ease, color 0.2s ease;
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease;
 }
 
 .help-close:hover {
@@ -1101,8 +1170,13 @@ body.mini-mode .mini-lyrics {
   font-size: 14px;
 }
 
-.help-desc { opacity: 0.85; }
-.help-desc-sub { font-size: 12px; opacity: 0.45; }
+.help-desc {
+  opacity: 0.85;
+}
+.help-desc-sub {
+  font-size: 12px;
+  opacity: 0.45;
+}
 
 .help-keys {
   display: flex;
@@ -1110,7 +1184,10 @@ body.mini-mode .mini-lyrics {
   gap: 8px;
 }
 
-.help-key-hint { font-size: 12px; opacity: 0.45; }
+.help-key-hint {
+  font-size: 12px;
+  opacity: 0.45;
+}
 
 kbd {
   padding: 3px 9px;
@@ -1122,7 +1199,9 @@ kbd {
   background: rgba(255, 255, 255, 0.08);
   border: 1px solid rgba(255, 255, 255, 0.14);
   border-bottom-width: 2px;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3), 0 0 12px var(--glow-primary); /* 辉光色随歌曲封面变化 */
+  box-shadow:
+    0 2px 6px rgba(0, 0, 0, 0.3),
+    0 0 12px var(--glow-primary); /* 辉光色随歌曲封面变化 */
 }
 
 /* ===== 设置浮层 ===== */
@@ -1235,7 +1314,9 @@ kbd {
   color: #fff;
   font-size: 14px;
   cursor: pointer;
-  transition: background 0.2s, border-color 0.2s;
+  transition:
+    background 0.2s,
+    border-color 0.2s;
 }
 
 .lang-select-btn:hover {
@@ -1313,7 +1394,9 @@ kbd {
   color: #fff;
   font-size: 14px;
   cursor: pointer;
-  transition: background 0.2s, border-color 0.2s;
+  transition:
+    background 0.2s,
+    border-color 0.2s;
 }
 
 .font-select-btn:hover {
@@ -1456,7 +1539,9 @@ kbd {
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: background 0.2s, color 0.2s;
+  transition:
+    background 0.2s,
+    color 0.2s;
 }
 
 .folder-remove:hover {
@@ -1479,7 +1564,9 @@ kbd {
   padding: 9px 0;
   cursor: pointer;
   font-size: 13px;
-  transition: background 0.2s, color 0.2s;
+  transition:
+    background 0.2s,
+    color 0.2s;
 }
 
 .settings-add-btn:hover {
@@ -1495,7 +1582,9 @@ kbd {
   padding: 6px 12px;
   cursor: pointer;
   font-size: 12px;
-  transition: background 0.2s, color 0.2s;
+  transition:
+    background 0.2s,
+    color 0.2s;
 }
 
 .settings-reset-btn:hover {
@@ -1536,21 +1625,23 @@ kbd {
   font-variant-numeric: tabular-nums;
 }
 
-.style-control input[type="range"] {
+.style-control input[type='range'] {
   width: 100%;
   -webkit-appearance: none;
   appearance: none;
   height: 4px;
   border-radius: 999px;
-  background: linear-gradient(to right,
+  background: linear-gradient(
+    to right,
     rgba(255, 255, 255, 0.8) 0%,
     rgba(255, 255, 255, 0.55) var(--progress, 45%),
-    rgba(255, 255, 255, 0.12) var(--progress, 45%));
+    rgba(255, 255, 255, 0.12) var(--progress, 45%)
+  );
   outline: none;
   cursor: pointer;
 }
 
-.style-control input[type="range"]::-webkit-slider-thumb {
+.style-control input[type='range']::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
   width: 14px;
@@ -1560,7 +1651,7 @@ kbd {
   border: none;
 }
 
-.style-control input[type="color"] {
+.style-control input[type='color'] {
   width: 30px;
   height: 30px;
   border: 1px solid rgba(255, 255, 255, 0.25);
@@ -1570,11 +1661,11 @@ kbd {
   background: none;
 }
 
-.style-control input[type="color"]::-webkit-color-swatch-wrapper {
+.style-control input[type='color']::-webkit-color-swatch-wrapper {
   padding: 2px;
 }
 
-.style-control input[type="color"]::-webkit-color-swatch {
+.style-control input[type='color']::-webkit-color-swatch {
   border: none;
   border-radius: 50%;
 }

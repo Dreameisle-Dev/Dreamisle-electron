@@ -24,17 +24,19 @@ contextBridge.exposeInMainWorld('dreamApi', {
   addFolder: () => ipcRenderer.invoke('folders:add'),
   removeFolder: (folderPath) => ipcRenderer.invoke('folders:remove', folderPath),
 
-  onWindowVisibilityChanged: (callback) => ipcRenderer.on('window-visibility-changed', (event, isVisible) => callback(isVisible)),
+  onWindowVisibilityChanged: (callback) =>
+    ipcRenderer.on('window-visibility-changed', (event, isVisible) => callback(isVisible)),
   onTrayPlayPause: (callback) => ipcRenderer.on('tray-play-pause', () => callback()),
   onTrayNext: (callback) => ipcRenderer.on('tray-next', () => callback()),
   onTrayPrev: (callback) => ipcRenderer.on('tray-prev', () => callback()),
 
   toggleMiniMode: () => ipcRenderer.invoke('app:toggleMiniMode'),
-  onWindowModeChanged: (callback) => ipcRenderer.on('window-mode-changed', (event, mode) => callback(mode)),
+  onWindowModeChanged: (callback) =>
+    ipcRenderer.on('window-mode-changed', (event, mode) => callback(mode)),
 
   minimizeWindow: () => ipcRenderer.invoke('window:minimize'),
   maximizeWindow: () => ipcRenderer.invoke('window:maximize'),
   closeWindow: () => ipcRenderer.invoke('window:close'),
   getPlatform: () => process.platform,
-  getVersion: () => ipcRenderer.invoke('app:getVersion')
+  getVersion: () => ipcRenderer.invoke('app:getVersion'),
 });

@@ -64,14 +64,19 @@ npm start
 ## 🔧 项目结构
 ```
 dreamisle/
-├── main.js
-├── preload.js
-└── renderer/
-    ├── index.html
-    ├── renderer.js
-    └── style/
-        └── index.css
+└── src/
+    ├── main/           # 主进程：入口、窗口、托盘、音乐库、IPC
+    ├── preload/        # 预加载桥接脚本
+    ├── lyrics/         # 桌面歌词窗口
+    ├── shared/         # 主/渲染进程共享模块（i18n）
+    ├── renderer/       # 渲染进程
+    │   ├── index.html
+    │   ├── js/         # 按职责拆分：入口/播放/列表/歌词/设置/主题
+    │   └── style/
+    └── assets/         # 应用图标
 ```
+
+代码格式化使用 Prettier（单引号、2 空格缩进、CRLF），执行 `npm run format` 可统一格式。
 
 ## 📄 License
 MIT

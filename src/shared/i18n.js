@@ -65,7 +65,7 @@ const dict = {
     'settings.fontDefault': '默认字体',
     'settings.fontSearch': '搜索字体…',
     'settings.fontLoadError': '读取系统字体失败',
-    'settings.reset': '重置默认'
+    'settings.reset': '重置默认',
   },
   en: {
     'app.waitingForMusic': 'Waiting for music...',
@@ -130,8 +130,8 @@ const dict = {
     'settings.fontDefault': 'Default font',
     'settings.fontSearch': 'Search fonts…',
     'settings.fontLoadError': 'Failed to load system fonts',
-    'settings.reset': 'Reset defaults'
-  }
+    'settings.reset': 'Reset defaults',
+  },
 };
 
 let currentLang = 'zh-CN';
