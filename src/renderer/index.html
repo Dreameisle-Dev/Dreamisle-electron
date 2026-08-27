@@ -453,6 +453,13 @@
             >
           </div>
           <div class="help-row">
+            <span class="help-desc" data-i18n="help.statsToggle">呼出 / 折叠播放统计</span
+            ><span class="help-keys"
+              ><kbd>Shift</kbd
+              ><span class="help-key-hint" data-i18n="help.holdHint">长按 0.5 秒</span></span
+            >
+          </div>
+          <div class="help-row">
             <span class="help-desc" data-i18n="help.miniMode">切换小窗模式</span><kbd>F5</kbd>
           </div>
           <div class="help-row">
@@ -665,6 +672,122 @@
               </div>
             </section>
           </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 播放统计浮层 -->
+    <div class="stats-overlay" id="statsOverlay">
+      <div class="stats-card">
+        <div class="stats-header">
+          <div class="help-logo">
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <line x1="12" y1="20" x2="12" y2="10"></line>
+              <line x1="18" y1="20" x2="18" y2="4"></line>
+              <line x1="6" y1="20" x2="6" y2="16"></line>
+            </svg>
+            <span data-i18n="stats.title">播放统计</span>
+          </div>
+          <button class="help-close" id="btnStatsClose" data-i18n-title="common.close" title="关闭">
+            <svg width="12" height="12" viewBox="0 0 10 10">
+              <line x1="1" y1="1" x2="9" y2="9" stroke="currentColor" stroke-width="1.2" />
+              <line x1="9" y1="1" x2="1" y2="9" stroke="currentColor" stroke-width="1.2" />
+            </svg>
+          </button>
+        </div>
+
+        <div class="stats-body">
+          <!-- 左栏 · 当前播放 -->
+          <section class="stats-live">
+            <div class="stats-vinyl" id="statsVinyl">
+              <div class="stats-vinyl-cover">
+                <svg
+                  id="statsVinylFallback"
+                  width="24"
+                  height="24"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="rgba(255,255,255,0.35)"
+                  stroke-width="1.5"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <path d="M9 18V5l12-2v13"></path>
+                  <circle cx="6" cy="18" r="3"></circle>
+                  <circle cx="18" cy="16" r="3"></circle>
+                </svg>
+                <img id="statsVinylCover" style="display: none" />
+              </div>
+            </div>
+            <div class="stats-live-meta">
+              <h2 class="stats-live-title" id="statsSongTitle">--</h2>
+              <p class="stats-live-artist" id="statsSongArtist">--</p>
+              <span class="stats-tier tier-other" id="statsTier">Other</span>
+            </div>
+            <div class="stats-spec-grid">
+              <div class="stats-spec">
+                <span class="stats-spec-k" data-i18n="stats.album">专辑</span>
+                <span class="stats-spec-v" id="statsAlbum">--</span>
+              </div>
+              <div class="stats-spec">
+                <span class="stats-spec-k" data-i18n="stats.bitrate">比特率</span>
+                <span class="stats-spec-v" id="statsBitrate">--</span>
+              </div>
+              <div class="stats-spec">
+                <span class="stats-spec-k" data-i18n="stats.sampleRate">采样率</span>
+                <span class="stats-spec-v" id="statsSampleRate">--</span>
+              </div>
+              <div class="stats-spec">
+                <span class="stats-spec-k" data-i18n="stats.bits">位深</span>
+                <span class="stats-spec-v" id="statsBits">--</span>
+              </div>
+            </div>
+            <div class="stats-count-row">
+              <div class="stats-count-card primary">
+                <span class="stats-count-value" id="statsFullPlays">0</span
+                ><span class="stats-count-unit" data-i18n="stats.timesUnit">次</span>
+                <span class="stats-count-label" data-i18n="stats.fullPlays">完整播放</span>
+              </div>
+              <div class="stats-count-card">
+                <span class="stats-count-value" id="statsLoopPlays">0</span
+                ><span class="stats-count-unit" data-i18n="stats.timesUnit">次</span>
+                <span class="stats-count-label" data-i18n="stats.loopPlays">单曲循环</span>
+              </div>
+            </div>
+          </section>
+
+          <!-- 右栏 · 排行 -->
+          <section class="stats-chart">
+            <div class="stats-chart-head">
+              <span class="stats-chart-title" data-i18n="stats.chartTitle"
+                >全部歌曲 · 播放次数</span
+              >
+            </div>
+            <div class="stats-summary">
+              <div class="stats-sum-card">
+                <b id="statsTotalPlays">0</b><span data-i18n="stats.totalPlays">总播放次数</span>
+              </div>
+              <div class="stats-sum-card">
+                <b id="statsRankedCount">0</b><span data-i18n="stats.rankedSongs">入榜歌曲</span>
+              </div>
+              <div class="stats-sum-card">
+                <b id="statsDailyAvg">0</b><span data-i18n="stats.dailyAvg">日均播放</span>
+              </div>
+            </div>
+            <ol class="stats-chart-list" id="statsChartList"></ol>
+            <p class="stats-empty" id="statsEmpty" hidden data-i18n="stats.empty">
+              暂无播放记录,完整听完一首歌后这里会出现排行
+            </p>
+          </section>
         </div>
       </div>
     </div>

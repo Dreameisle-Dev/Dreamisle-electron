@@ -21,8 +21,12 @@ import { formatTime } from './helpers.js';
 import { updateVirtualList } from './playlist.js';
 import { loadAndRenderLyrics, syncLyrics } from './lyrics.js';
 import { updateThemeColor, updateProgressStyle } from './theme.js';
+import { onSongChanged, onCoverReady } from './stats.js';
 
 audio.volume = 0.5;
+
+// 拖动进度条直接拖到末尾会触发 ended,此类不计入完整播放:记录最近一次 seek 时间用于过滤
+let lastSeekAt = 0;
 
 export function initSongInfo(index) {
   if (index < 0 || index >= state.songs.length) return;
@@ -36,6 +40,7 @@ export function initSongInfo(index) {
 
   updateCoverAndColor(song);
   loadAndRenderLyrics(song);
+  onSongChanged();
 }
 
 export function playSong(index) {
@@ -62,6 +67,7 @@ export function playSong(index) {
 
   updateCoverAndColor(song);
   loadAndRenderLyrics(song);
+  onSongChanged();
 
   saveStateOnChange();
 }
@@ -97,6 +103,9 @@ export async function updateCoverAndColor(song) {
     coverImg.style.display = 'block';
     defaultCover.style.display = 'none';
     updateThemeColor(coverUrl);
+    onCoverReady(coverUrl);
+  } else {
+    onCoverReady(null);
   }
 }
 
@@ -218,7 +227,19 @@ export function bindPlaybackEvents() {
     playSong(prev);
   });
 
-  audio.addEventListener('ended', () => playNext(true));
+  audio.addEventListener('seeking', () => {
+    lastSeekAt = Date.now();
+  });
+
+  audio.addEventListener('ended', () => {
+    // 完整播放计次;单曲循环模式下额外计一次循环重播(在切歌前捕获当前歌曲)
+    const finished = state.songs[state.currentIndex];
+    if (finished && Date.now() - lastSeekAt > 1000) {
+      window.dreamApi.recordPlay(finished.path, 'full').catch(() => {});
+      if (state.playMode === 1) window.dreamApi.recordPlay(finished.path, 'loop').catch(() => {});
+    }
+    playNext(true);
+  });
 
   setInterval(() => {
     if (state.songs.length > 0) savePlaybackState();

@@ -1,6 +1,7 @@
 import { ipcMain } from 'electron';
 import { store } from './store.js';
 import { t } from '../shared/i18n.js';
+import { mergeSongsByPath } from '../shared/song-metadata.js';
 
 const KEY = 'playlists';
 
@@ -69,7 +70,9 @@ function addSongToPlaylist(id, song) {
     return { ok: false, duplicate: false, playlist: pl || null };
   if (pl.songs.some((s) => s.path === song.path))
     return { ok: true, duplicate: true, playlist: pl };
+  // 保留渲染层传入的全部字段(含音质规格),核心字段做类型兜底
   pl.songs.push({
+    ...(song && typeof song === 'object' ? song : {}),
     path: song.path,
     title: typeof song.title === 'string' ? song.title : '',
     artist: typeof song.artist === 'string' ? song.artist : '',
@@ -110,6 +113,20 @@ function prunePlaylists(validPaths) {
   }
   if (pruned > 0) savePlaylists(playlists);
   return { pruned };
+}
+
+// 曲库元数据迁移后回填歌单快照:按 path 用曲库新数据替换旧歌曲对象
+export function refreshPlaylistsMetadata() {
+  const freshSongs = store.get('cachedPlaylist') || [];
+  const playlists = loadPlaylists();
+  let updated = 0;
+  for (const pl of playlists) {
+    const before = JSON.stringify(pl.songs);
+    pl.songs = mergeSongsByPath(pl.songs, freshSongs);
+    if (JSON.stringify(pl.songs) !== before) updated++;
+  }
+  if (updated > 0) savePlaylists(playlists);
+  return { updated };
 }
 
 export function registerPlaylistsIpc() {

@@ -84,3 +84,24 @@ export const playlistsSongListEl = document.getElementById('playlistsSongList');
 export const contextMenu = document.getElementById('contextMenu');
 export const ctxAddToPlaylist = document.getElementById('ctxAddToPlaylist');
 export const ctxPlaylistOptions = document.getElementById('ctxPlaylistOptions');
+
+// 播放统计浮层元素
+export const statsOverlay = document.getElementById('statsOverlay');
+export const btnStatsClose = document.getElementById('btnStatsClose');
+export const statsVinyl = document.getElementById('statsVinyl');
+export const statsVinylCover = document.getElementById('statsVinylCover');
+export const statsVinylFallback = document.getElementById('statsVinylFallback');
+export const statsSongTitle = document.getElementById('statsSongTitle');
+export const statsSongArtist = document.getElementById('statsSongArtist');
+export const statsTier = document.getElementById('statsTier');
+export const statsAlbum = document.getElementById('statsAlbum');
+export const statsBitrate = document.getElementById('statsBitrate');
+export const statsSampleRate = document.getElementById('statsSampleRate');
+export const statsBits = document.getElementById('statsBits');
+export const statsFullPlays = document.getElementById('statsFullPlays');
+export const statsLoopPlays = document.getElementById('statsLoopPlays');
+export const statsTotalPlays = document.getElementById('statsTotalPlays');
+export const statsRankedCount = document.getElementById('statsRankedCount');
+export const statsDailyAvg = document.getElementById('statsDailyAvg');
+export const statsChartList = document.getElementById('statsChartList');
+export const statsEmptyEl = document.getElementById('statsEmpty');

@@ -5,6 +5,11 @@ import fs from 'fs/promises';
 
 const AUDIO_EXTENSIONS = ['.mp3', '.flac', '.wav', '.ogg', '.m4a'];
 
+// 旧版缓存只有 path/url/title/artist,判断是否需要迁移重扫补充音质规格字段
+export function hasLegacyMetadata(playlist) {
+  return playlist.length > 0 && playlist.some((s) => s.album === undefined);
+}
+
 async function scanDirectory(dirPath) {
   let results = [];
   try {
@@ -27,11 +32,17 @@ async function scanDirectory(dirPath) {
 export async function parseAudioFile(filePath) {
   try {
     const metadata = await parseFile(filePath, { skipCovers: true, skipPostHeaders: true });
+    const format = metadata.format || {};
     return {
       path: filePath,
       url: pathToFileURL(filePath).href,
       title: metadata.common.title || path.basename(filePath),
       artist: metadata.common.artist || 'Unknown',
+      album: metadata.common.album || null,
+      bitrate: format.bitrate || null,
+      sampleRate: format.sampleRate || null,
+      bitsPerSample: format.bitsPerSample || null,
+      codec: format.codec || null,
     };
   } catch (e) {
     return {
@@ -39,6 +50,11 @@ export async function parseAudioFile(filePath) {
       url: pathToFileURL(filePath).href,
       title: path.basename(filePath),
       artist: 'Unknown',
+      album: null,
+      bitrate: null,
+      sampleRate: null,
+      bitsPerSample: null,
+      codec: null,
     };
   }
 }

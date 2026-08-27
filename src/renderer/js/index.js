@@ -36,6 +36,7 @@ import {
 } from './playback.js';
 import { bindLyricsEvents } from './lyrics.js';
 import { toggleSettings, closeSettings, bindSettingsEvents } from './settings.js';
+import { toggleStats, closeStats, isStatsOpen, bindStatsEvents } from './stats.js';
 import { initMouseFollow, updateProgressStyle } from './theme.js';
 import { showSyncToast } from './helpers.js';
 import { resolveRestoredIndex } from './playback-restore.js';
@@ -108,6 +109,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   bindSettingsEvents();
   bindPlaylistEvents();
   bindPlaylistsEvents();
+  bindStatsEvents();
 
   // 启动时应用已存语言并刷新界面文案
   const settings = await window.dreamApi.getSettings();
@@ -139,11 +141,17 @@ window.addEventListener('DOMContentLoaded', async () => {
   // 绑定键盘快捷键
   let altTimer = null;
   let ctrlTimer = null;
+  let shiftTimer = null;
   window.addEventListener('keydown', (e) => {
     // 长按 Ctrl 计时期间按下任何其他键 → 取消计时(防 Ctrl+, / Ctrl+Alt+L 误触发)
     if (e.code !== 'ControlLeft' && ctrlTimer) {
       clearTimeout(ctrlTimer);
       ctrlTimer = null;
+    }
+    // 长按 Shift 计时期间按下任何其他键 → 取消计时
+    if (e.code !== 'ShiftLeft' && shiftTimer) {
+      clearTimeout(shiftTimer);
+      shiftTimer = null;
     }
 
     const isInputActive =
@@ -174,6 +182,9 @@ window.addEventListener('DOMContentLoaded', async () => {
       } else if (helpOverlayEl.classList.contains('open')) {
         e.preventDefault();
         closeHelp();
+      } else if (isStatsOpen()) {
+        e.preventDefault();
+        closeStats();
       } else if (
         playlistDrawer.classList.contains('open') ||
         playlistsDrawer.classList.contains('open')
@@ -226,6 +237,7 @@ window.addEventListener('DOMContentLoaded', async () => {
       altTimer = setTimeout(() => {
         playlistDrawer.classList.toggle('open');
         playlistsDrawer.classList.remove('open'); // 互斥：打开右侧关左侧
+        closeStats(); // 互斥：打开抽屉关统计浮层
         altTimer = null;
       }, 500);
     }
@@ -237,7 +249,19 @@ window.addEventListener('DOMContentLoaded', async () => {
 
       ctrlTimer = setTimeout(() => {
         togglePlaylistsDrawer();
+        closeStats(); // 互斥：打开抽屉关统计浮层
         ctrlTimer = null;
+      }, 500);
+    }
+
+    // LeftShift：长按 0.5s 呼出/折叠播放统计
+    if (e.code === 'ShiftLeft') {
+      e.preventDefault();
+      if (e.repeat) return; // 屏蔽自动重复
+
+      shiftTimer = setTimeout(() => {
+        toggleStats();
+        shiftTimer = null;
       }, 500);
     }
   });
@@ -257,6 +281,13 @@ window.addEventListener('DOMContentLoaded', async () => {
         ctrlTimer = null;
       }
     }
+    if (e.code === 'ShiftLeft') {
+      e.preventDefault();
+      if (shiftTimer) {
+        clearTimeout(shiftTimer);
+        shiftTimer = null;
+      }
+    }
   });
 
   // 窗口失焦时收不到 keyup：取消进行中的长按计时，防止抽屉意外弹出
@@ -268,6 +299,10 @@ window.addEventListener('DOMContentLoaded', async () => {
     if (ctrlTimer) {
       clearTimeout(ctrlTimer);
       ctrlTimer = null;
+    }
+    if (shiftTimer) {
+      clearTimeout(shiftTimer);
+      shiftTimer = null;
     }
   });
 

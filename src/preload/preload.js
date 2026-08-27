@@ -49,4 +49,6 @@ contextBridge.exposeInMainWorld('dreamApi', {
   },
   getPlatform: () => process.platform,
   getVersion: () => ipcRenderer.invoke('app:getVersion'),
+  getStats: () => ipcRenderer.invoke('stats:get'),
+  recordPlay: (path, kind) => ipcRenderer.invoke('stats:recordPlay', path, kind),
 });

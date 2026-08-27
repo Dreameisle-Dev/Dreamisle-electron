@@ -17,13 +17,23 @@ import {
   readLyrics,
   diffPlaylistPaths,
   applySyncToPlaylist,
+  hasLegacyMetadata,
 } from './music-library.js';
 import { toggleMiniMode, minimizeWindow, maximizeWindow, closeWindow } from './window.js';
 import { rebuildTrayMenu } from './tray.js';
 import { setLyricsText, setLyricsStyle, setLyricsLang } from '../lyrics/lyrics-window.js';
+import { emptyStats, recordPlay, pruneStats } from '../shared/stats.js';
+import { refreshPlaylistsMetadata } from './playlists.js';
 
 // 手动导入时递增，使进行中的自动同步结果作废
 let syncGeneration = 0;
+
+// 统计中清理已不在音乐库中的歌曲记录
+function pruneStatsForLibrary(validPaths) {
+  const raw = store.get('stats');
+  if (!raw || !raw.plays) return;
+  store.set('stats', pruneStats(raw, new Set(validPaths)));
+}
 
 // 注册全部渲染进程 ↔ 主进程 IPC 通道；频道名与 preload API 一一对应
 export function registerIpcHandlers() {
@@ -51,24 +61,27 @@ export function registerIpcHandlers() {
     store.set('musicFolders', next);
     const playlist = next.length > 0 ? await scanAllFolders(next) : [];
     store.set('cachedPlaylist', playlist);
+    pruneStatsForLibrary(playlist.map((s) => s.path));
     return { playlist };
   });
 
   ipcMain.handle('app:loadSavedMusic', async () => {
-    // 优先从本地 Store 获取已缓存的列表
+    // 优先从本地 Store 获取已缓存的列表;旧版缓存(缺音质规格字段)需重扫迁移一次
     const cached = store.get('cachedPlaylist');
-    if (cached && cached.length > 0) {
+    if (cached && cached.length > 0 && !hasLegacyMetadata(cached)) {
+      refreshPlaylistsMetadata(); // 歌单快照可能仍是旧数据(曲库已迁移),启动时尝试回填
       return cached;
     }
 
     const folders = getMusicFolders();
-    if (folders.length === 0) return [];
+    if (folders.length === 0) return cached || [];
     try {
       const playlist = await scanAllFolders(folders);
       store.set('cachedPlaylist', playlist);
+      refreshPlaylistsMetadata(); // 曲库迁移后同步回填歌单快照
       return playlist;
     } catch (e) {
-      return [];
+      return cached || [];
     }
   });
 
@@ -95,6 +108,7 @@ export function registerIpcHandlers() {
 
     const playlist = applySyncToPlaylist(cached, newEntries, removed);
     store.set('cachedPlaylist', playlist);
+    if (removed.length > 0) pruneStatsForLibrary(playlist.map((s) => s.path));
     return { added: added.length, removed: removed.length, playlist };
   });
 
@@ -182,4 +196,17 @@ export function registerIpcHandlers() {
 
   // 获取应用版本号
   ipcMain.handle('app:getVersion', () => app.getVersion());
+
+  ipcMain.handle('stats:get', () => {
+    const stats = store.get('stats');
+    return stats && stats.plays ? stats : emptyStats();
+  });
+
+  ipcMain.handle('stats:recordPlay', (event, path, kind) => {
+    if (typeof path !== 'string' || (kind !== 'full' && kind !== 'loop')) return null;
+    const raw = store.get('stats');
+    const next = recordPlay(raw && raw.plays ? raw : emptyStats(), path, kind, Date.now());
+    store.set('stats', next);
+    return next.plays[path];
+  });
 }
