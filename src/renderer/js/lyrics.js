@@ -87,6 +87,12 @@ export function renderLyricsToDom() {
       state.lyricDoms.push(p);
     });
     lyricsScroll.appendChild(fragment);
+
+    // 重渲染后恢复当前播放行的高亮(翻译开关切换会触发重渲染,currentLineIndex 未变)
+    if (!isStatic && state.currentLineIndex !== -1 && state.lyricDoms[state.currentLineIndex]) {
+      state.lyricDoms[state.currentLineIndex].classList.add('active');
+      setupLineMarquee(state.lyricDoms[state.currentLineIndex]);
+    }
   } else {
     lyricsScroll.innerHTML = `<p class="lyric-line placeholder">Dreamisle<br><br>${t('lyrics.noLyrics')}</p>`;
   }
