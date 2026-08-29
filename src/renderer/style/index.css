@@ -304,6 +304,16 @@ body {
   filter: blur(0);
 }
 
+/* 歌词翻译:原文下方小字,随父级整体缩放高亮 */
+.lyric-line .lyric-translation {
+  display: inline-block;
+  font-size: 0.72em;
+  opacity: 0.65;
+  font-weight: 400;
+  line-height: 1.5;
+  margin-top: 6px;
+}
+
 .lyric-line.active {
   color: #fff;
   font-weight: 600;

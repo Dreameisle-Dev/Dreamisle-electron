@@ -3,68 +3,8 @@ import { state } from './state.js';
 import { audio, lyricsContainer, lyricsScroll, miniLyricsEl } from './dom.js';
 import { escapeHtml } from './helpers.js';
 import { updatePlayButton } from './playback.js';
-
-export function parseLrc(lrcText) {
-  if (!lrcText || typeof lrcText !== 'string') return [];
-  const lines = lrcText.split(/\r\n|\r|\n/);
-
-  const timeExp = /\[(\d{1,2}):(\d{1,2})(?:[.,](\d{1,3}))?\]/g;
-  let hasTimestamps = false;
-  const result = [];
-
-  for (const line of lines) {
-    const trimmedLine = line.trim();
-    if (!trimmedLine) continue;
-
-    const matches = [...trimmedLine.matchAll(timeExp)];
-
-    if (matches.length > 0) {
-      hasTimestamps = true;
-      const text = trimmedLine.replace(/\[\d{1,2}:\d{1,2}(?:[.,]\d{1,3})?\]/g, '').trim();
-
-      if (text) {
-        for (const match of matches) {
-          const min = parseInt(match[1]);
-          const sec = parseInt(match[2]);
-          const ms = match[3] ? parseFloat('0.' + match[3]) : 0;
-          const time = min * 60 + sec + ms;
-          result.push({ time, text });
-        }
-      }
-    }
-  }
-
-  if (!hasTimestamps && lines.length > 0) {
-    return lines
-      .map((line) => line.trim())
-      .filter((line) => line.length > 0 && !/^\[.*?\]$/.test(line))
-      .map((text) => ({ time: 0, text, isStatic: true }));
-  }
-
-  result.sort((a, b) => a.time - b.time);
-  return result;
-}
-
-export function groupTranslations(lyricsArray) {
-  if (!lyricsArray || lyricsArray.length === 0 || lyricsArray[0].isStatic) return lyricsArray;
-
-  const tempMap = new Map();
-  for (const item of lyricsArray) {
-    const timeKey = item.time.toFixed(2);
-    if (tempMap.has(timeKey)) {
-      tempMap.set(timeKey, tempMap.get(timeKey) + '\n' + item.text);
-    } else {
-      tempMap.set(timeKey, item.text);
-    }
-  }
-
-  const result = Array.from(tempMap.entries()).map(([time, text]) => ({
-    time: parseFloat(time),
-    text,
-  }));
-  result.sort((a, b) => a.time - b.time);
-  return result;
-}
+import universalLyricParser from '../../shared/universal-lyric-parser.js';
+import { parseLyricsText, parseSyncLyrics } from '../../shared/lyrics-parse.js';
 
 // 清空歌词状态：切换歌曲 / 空库复位时调用
 export function resetLyrics() {
@@ -89,29 +29,20 @@ export async function loadAndRenderLyrics(song) {
   if (lrcData) {
     if (typeof lrcData === 'object' && lrcData !== null) {
       if (Array.isArray(lrcData.syncText) && lrcData.syncText.length > 0) {
-        state.currentLyrics = lrcData.syncText.map((item) => ({
-          time: item.timestamp / 1000,
-          text: item.text || '',
-        }));
-        state.currentLyrics.sort((a, b) => a.time - b.time);
+        // 富格式歌词源:统一转 LRC 文本走解析器,使内嵌同步歌词同样支持行内双语拆分
+        state.currentLyrics = parseSyncLyrics(lrcData.syncText).lines;
       } else if (typeof lrcData.text === 'string') {
-        state.currentLyrics = parseLrc(lrcData.text);
+        state.currentLyrics = parseLyricsText(lrcData.text).lines;
       } else if (lrcData.type === 'Buffer') {
         try {
-          state.currentLyrics = parseLrc(new TextDecoder().decode(new Uint8Array(lrcData.data)));
+          state.currentLyrics = parseLyricsText(
+            new TextDecoder().decode(new Uint8Array(lrcData.data))
+          ).lines;
         } catch (e) {}
       }
     } else if (typeof lrcData === 'string') {
-      state.currentLyrics = parseLrc(lrcData);
+      state.currentLyrics = parseLyricsText(lrcData).lines;
     }
-  }
-
-  if (state.currentLyrics && state.currentLyrics.length > 0) {
-    state.currentLyrics = groupTranslations(state.currentLyrics);
-    // 统一过滤掉空白行，防止在不同歌词来源下，渲染列表与数据列表因空白行产生索引错位
-    state.currentLyrics = state.currentLyrics.filter(
-      (line) => line.text && line.text.trim() !== ''
-    );
   }
 
   renderLyricsToDom();
@@ -131,16 +62,16 @@ export function renderLyricsToDom() {
       p.className = 'lyric-line';
       p.dataset.index = index;
 
-      const textParts = line.text.split('\n').map(escapeHtml);
-      if (textParts.length > 1) {
-        p.innerHTML = `${textParts[0]}<br><span style="font-size: 0.8em; opacity: 0.75; margin-top: 6px; display: inline-block; font-weight: 400;">${textParts.slice(1).join('<br>')}</span>`;
-      } else {
-        p.innerText = line.text;
-      }
+      // 原文 + 翻译(原文下方小字);原文缺失时翻译顶替为主文本
+      const mainText = line.text || line.translation || '';
+      const translation = line.text && line.translation ? line.translation : null;
+      p.innerHTML = `${escapeHtml(mainText)}${
+        translation ? `<br><span class="lyric-translation">${escapeHtml(translation)}</span>` : ''
+      }`;
 
       if (!isStatic) {
         p.onclick = () => {
-          audio.currentTime = line.time;
+          audio.currentTime = line.time / 1000;
           if (audio.paused) {
             audio.play();
             updatePlayButton(true);
@@ -171,11 +102,8 @@ export function syncLyrics(currentTime) {
     return;
   }
 
-  let activeIndex = -1;
-  for (let i = 0; i < state.currentLyrics.length; i++) {
-    if (currentTime >= state.currentLyrics[i].time) activeIndex = i;
-    else break;
-  }
+  // 二分定位当前行(歌词时间为毫秒)
+  const activeIndex = universalLyricParser.getCurrentIndex(state.currentLyrics, currentTime * 1000);
 
   if (activeIndex === state.currentLineIndex) return;
 
@@ -194,9 +122,10 @@ export function syncLyrics(currentTime) {
     }
 
     if (miniLyricsEl && state.currentLyrics[activeIndex]) {
+      // 小窗与桌面歌词只显示原文,不含翻译
       const text = state.currentLyrics[activeIndex].text || '';
-      miniLyricsEl.innerText = text.replace(/\n/g, ' / ');
-      pushDesktopLyrics(miniLyricsEl.innerText);
+      miniLyricsEl.innerText = text;
+      pushDesktopLyrics(text);
     }
   } else {
     if (miniLyricsEl) miniLyricsEl.innerText = '';
