@@ -53,6 +53,10 @@ export function renderLyricsToDom() {
   lyricsScroll.innerHTML = '';
   state.lyricDoms = [];
 
+  // 当前歌词没有任何翻译行时,隐藏翻译开关按钮
+  const hasAnyTranslation = (state.currentLyrics || []).some((l) => l.translation);
+  btnLyricTranslation.style.display = hasAnyTranslation ? 'flex' : 'none';
+
   if (state.currentLyrics && state.currentLyrics.length > 0) {
     const fragment = document.createDocumentFragment();
     const isStatic = state.currentLyrics[0].isStatic;
