@@ -38,6 +38,14 @@ export function getLyricsStyle() {
   return { ...DEFAULT_LYRICS_STYLE, ...(store.get('settings.lyricsStyle') || {}) };
 }
 
+export function getLyricsTranslation() {
+  return store.get('settings.lyricsTranslation') !== false; // 默认开启
+}
+
+export function setLyricsTranslation(visible) {
+  store.set('settings.lyricsTranslation', !!visible);
+}
+
 export function clampPercent(value, fallback) {
   if (value === null || value === undefined) return fallback;
   const n = Number(value);

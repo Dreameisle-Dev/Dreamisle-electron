@@ -1,6 +1,6 @@
 import { t } from '../../shared/i18n.js';
 import { state } from './state.js';
-import { audio, lyricsContainer, lyricsScroll, miniLyricsEl } from './dom.js';
+import { audio, lyricsContainer, lyricsScroll, miniLyricsEl, btnLyricTranslation } from './dom.js';
 import { escapeHtml } from './helpers.js';
 import { updatePlayButton } from './playback.js';
 import universalLyricParser from '../../shared/universal-lyric-parser.js';
@@ -62,9 +62,10 @@ export function renderLyricsToDom() {
       p.className = 'lyric-line';
       p.dataset.index = index;
 
-      // 原文 + 翻译(原文下方小字);原文缺失时翻译顶替为主文本
+      // 原文 + 翻译(原文下方小字,可开关);原文缺失时翻译顶替为主文本
       const mainText = line.text || line.translation || '';
-      const translation = line.text && line.translation ? line.translation : null;
+      const translation =
+        state.showLyricsTranslation && line.text && line.translation ? line.translation : null;
       p.innerHTML = `<span class="lyric-text">${escapeHtml(mainText)}</span>${
         translation ? `<br><span class="lyric-translation">${escapeHtml(translation)}</span>` : ''
       }`;
@@ -134,6 +135,21 @@ export function syncLyrics(currentTime) {
   }
 }
 
+// 翻译开关:更新按钮激活态与标题,重渲染歌词
+export function setLyricsTranslationVisible(visible) {
+  state.showLyricsTranslation = !!visible;
+  btnLyricTranslation.classList.toggle('active', state.showLyricsTranslation);
+  btnLyricTranslation.title = t(
+    state.showLyricsTranslation ? 'lyrics.translationHide' : 'lyrics.translationShow'
+  );
+  renderLyricsToDom();
+}
+
+export function toggleLyricsTranslation() {
+  setLyricsTranslationVisible(!state.showLyricsTranslation);
+  window.dreamApi.setLyricsTranslation(state.showLyricsTranslation).catch(() => {});
+}
+
 // 激活行长文本水平滚动:原文/翻译各自检测溢出,设置滚动距离与时长
 function setupLineMarquee(lineEl) {
   const spans = [
@@ -161,6 +177,8 @@ export function pushDesktopLyrics(text) {
 }
 
 export function bindLyricsEvents() {
+  if (btnLyricTranslation) btnLyricTranslation.onclick = toggleLyricsTranslation;
+
   lyricsScroll.addEventListener('wheel', () => {
     state.isUserScrolling = true;
     clearTimeout(state.userScrollTimeout);

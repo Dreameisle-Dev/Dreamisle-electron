@@ -30,6 +30,7 @@ export const state = {
   lastDesktopText: null, // 去重：仅在实际变化时向主进程推送桌面歌词
   isUserScrolling: false,
   userScrollTimeout: null,
+  showLyricsTranslation: true, // 歌词翻译开关(启动时由设置初始化)
 
   // 封面
   currentCoverBlobUrl: null,

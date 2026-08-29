@@ -34,7 +34,7 @@ import {
   saveStateOnChange,
   bindPlaybackEvents,
 } from './playback.js';
-import { bindLyricsEvents } from './lyrics.js';
+import { bindLyricsEvents, setLyricsTranslationVisible } from './lyrics.js';
 import { toggleSettings, closeSettings, bindSettingsEvents } from './settings.js';
 import { toggleStats, closeStats, isStatsOpen, bindStatsEvents } from './stats.js';
 import { initMouseFollow, updateProgressStyle } from './theme.js';
@@ -116,6 +116,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   setLang(settings.language);
   applyLang();
   volumeHud.innerText = t('hud.volume', { n: Math.round(audio.volume * 100) });
+  setLyricsTranslationVisible(settings.lyricsTranslation !== false);
 
   initMouseFollow();
 

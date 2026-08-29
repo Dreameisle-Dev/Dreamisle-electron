@@ -5,6 +5,8 @@ import {
   getMusicFolders,
   getLanguage,
   getLyricsStyle,
+  getLyricsTranslation,
+  setLyricsTranslation,
   applyLanguage,
   clampPercent,
   DEFAULT_LYRICS_STYLE,
@@ -143,6 +145,7 @@ export function registerIpcHandlers() {
     return {
       language: getLanguage(),
       lyricsStyle: getLyricsStyle(),
+      lyricsTranslation: getLyricsTranslation(),
       musicFolders: folders,
     };
   });
@@ -152,6 +155,11 @@ export function registerIpcHandlers() {
     applyLanguage(lang);
     rebuildTrayMenu();
     setLyricsLang(lang);
+    return true;
+  });
+
+  ipcMain.handle('settings:setLyricsTranslation', (event, visible) => {
+    setLyricsTranslation(visible);
     return true;
   });
 

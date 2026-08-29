@@ -11,6 +11,7 @@ export const coverImg = document.getElementById('coverImg');
 export const defaultCover = document.getElementById('defaultCover');
 export const lyricsContainer = document.getElementById('lyricsContainer');
 export const lyricsScroll = document.getElementById('lyricsScroll');
+export const btnLyricTranslation = document.getElementById('btnLyricTranslation');
 export const volumeHud = document.getElementById('volumeHud');
 
 export const titleEl = document.getElementById('songTitle');
