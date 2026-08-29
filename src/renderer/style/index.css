@@ -304,14 +304,41 @@ body {
   filter: blur(0);
 }
 
-/* 歌词翻译:原文下方小字,随父级整体缩放高亮 */
+/* 歌词翻译:原文下方小字,紧贴原文,随父级整体缩放高亮 */
 .lyric-line .lyric-translation {
-  display: inline-block;
+  display: block;
   font-size: 0.72em;
   opacity: 0.65;
   font-weight: 400;
-  line-height: 1.5;
-  margin-top: 6px;
+  line-height: 1.35;
+  margin-top: 2px;
+}
+
+/* 激活行:单行显示,超宽时行内水平往返滚动 */
+.lyric-line.active {
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.lyric-line.active .lyric-text,
+.lyric-line.active .lyric-translation {
+  display: inline-block;
+}
+
+.lyric-line.active .lyric-text.overflowing,
+.lyric-line.active .lyric-translation.overflowing {
+  animation: lyric-marquee var(--marquee-duration, 8s) ease-in-out infinite alternate;
+}
+
+@keyframes lyric-marquee {
+  0%,
+  12% {
+    transform: translateX(0);
+  }
+  88%,
+  100% {
+    transform: translateX(var(--marquee-shift, -100px));
+  }
 }
 
 .lyric-line.active {

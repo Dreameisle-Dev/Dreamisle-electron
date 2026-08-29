@@ -65,7 +65,7 @@ export function renderLyricsToDom() {
       // 原文 + 翻译(原文下方小字);原文缺失时翻译顶替为主文本
       const mainText = line.text || line.translation || '';
       const translation = line.text && line.translation ? line.translation : null;
-      p.innerHTML = `${escapeHtml(mainText)}${
+      p.innerHTML = `<span class="lyric-text">${escapeHtml(mainText)}</span>${
         translation ? `<br><span class="lyric-translation">${escapeHtml(translation)}</span>` : ''
       }`;
 
@@ -116,6 +116,7 @@ export function syncLyrics(currentTime) {
   if (activeIndex !== -1 && state.lyricDoms[activeIndex]) {
     const targetLine = state.lyricDoms[activeIndex];
     targetLine.classList.add('active');
+    setupLineMarquee(targetLine); // 激活行长文本水平滚动
     if (!state.isUserScrolling) {
       lyricsScroll.scrollTop =
         targetLine.offsetTop - lyricsContainer.clientHeight / 2 + targetLine.clientHeight / 2;
@@ -130,6 +131,25 @@ export function syncLyrics(currentTime) {
   } else {
     if (miniLyricsEl) miniLyricsEl.innerText = '';
     pushDesktopLyrics('');
+  }
+}
+
+// 激活行长文本水平滚动:原文/翻译各自检测溢出,设置滚动距离与时长
+function setupLineMarquee(lineEl) {
+  const spans = [
+    lineEl.querySelector('.lyric-text'),
+    lineEl.querySelector('.lyric-translation'),
+  ].filter(Boolean);
+
+  for (const el of spans) {
+    const overflow = el.scrollWidth - lineEl.clientWidth;
+    if (overflow > 0) {
+      el.classList.add('overflowing');
+      el.style.setProperty('--marquee-shift', `-${overflow}px`);
+      el.style.setProperty('--marquee-duration', `${Math.max(4, overflow / 40)}s`);
+    } else {
+      el.classList.remove('overflowing');
+    }
   }
 }
 
@@ -152,5 +172,12 @@ export function bindLyricsEvents() {
           activeLine.offsetTop - lyricsContainer.clientHeight / 2 + activeLine.clientHeight / 2;
       }
     }, 3000);
+  });
+
+  // 窗口尺寸变化时重测激活行溢出(滚动距离与容器宽度相关)
+  window.addEventListener('resize', () => {
+    if (state.currentLineIndex !== -1 && state.lyricDoms[state.currentLineIndex]) {
+      setupLineMarquee(state.lyricDoms[state.currentLineIndex]);
+    }
   });
 }
