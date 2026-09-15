@@ -1,4 +1,4 @@
-import { app, ipcMain, dialog } from 'electron';
+import { app, ipcMain, dialog, nativeTheme } from 'electron';
 import fs from 'fs/promises';
 import {
   store,
@@ -7,6 +7,8 @@ import {
   getLyricsStyle,
   getLyricsTranslation,
   setLyricsTranslation,
+  getThemeMode,
+  setThemeMode,
   applyLanguage,
   clampPercent,
   DEFAULT_LYRICS_STYLE,
@@ -146,8 +148,17 @@ export function registerIpcHandlers() {
       language: getLanguage(),
       lyricsStyle: getLyricsStyle(),
       lyricsTranslation: getLyricsTranslation(),
+      themeMode: getThemeMode(),
       musicFolders: folders,
     };
+  });
+
+  // 主题模式同时下发给 Chromium：themeSource 一变，渲染进程里的
+  // prefers-color-scheme 就跟着变，light-dark() 与噪点透明度的媒体查询才会对。
+  ipcMain.handle('settings:setThemeMode', (event, mode) => {
+    const next = setThemeMode(mode);
+    nativeTheme.themeSource = next;
+    return next;
   });
 
   ipcMain.handle('settings:setLanguage', (event, lang) => {

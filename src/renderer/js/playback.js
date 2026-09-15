@@ -5,10 +5,10 @@ import {
   coverContainer,
   coverImg,
   defaultCover,
+  barThumb,
   volumeHud,
   titleEl,
   artistEl,
-  progressBar,
   currentTimeEl,
   totalTimeEl,
   btnPlay,
@@ -51,14 +51,8 @@ export function playSong(index) {
   audio.src = song.url;
   audio.play();
 
-  const infoContainer = document.querySelector('.song-info');
-  infoContainer.classList.add('changing');
-
-  setTimeout(() => {
-    titleEl.innerText = song.title;
-    artistEl.innerText = song.artist;
-    infoContainer.classList.remove('changing');
-  }, 300);
+  titleEl.innerText = song.title;
+  artistEl.innerText = song.artist;
 
   updatePlayButton(true);
 
@@ -102,9 +96,11 @@ export async function updateCoverAndColor(song) {
     coverImg.src = coverUrl;
     coverImg.style.display = 'block';
     defaultCover.style.display = 'none';
+    if (barThumb) barThumb.src = coverUrl;
     updateThemeColor(coverUrl);
     onCoverReady(coverUrl);
   } else {
+    if (barThumb) barThumb.removeAttribute('src');
     onCoverReady(null);
   }
 }
@@ -183,7 +179,6 @@ export function bindPlaybackEvents() {
   audio.addEventListener('timeupdate', () => {
     if (!state.isDragging && audio.duration) {
       const p = (audio.currentTime / audio.duration) * 100;
-      progressBar.value = p;
       updateProgressStyle(p);
       currentTimeEl.innerText = formatTime(audio.currentTime);
       totalTimeEl.innerText = formatTime(audio.duration);
@@ -191,20 +186,20 @@ export function bindPlaybackEvents() {
     }
   });
 
-  progressBar.addEventListener('input', () => {
-    state.isDragging = true;
-    updateProgressStyle(progressBar.value);
-    currentTimeEl.innerText = formatTime((progressBar.value / 100) * audio.duration);
-  });
-
-  progressBar.addEventListener('change', () => {
-    state.isDragging = false;
-    if (audio.duration) {
-      const seekTime = (progressBar.value / 100) * audio.duration;
-      audio.currentTime = seekTime;
-      syncLyrics(seekTime);
-    }
-  });
+  // 进度可视化不是 range input，seek 由点击位置的比例直接算出。
+  // 原来的 input/change 两个监听器（拖拽预览 + 提交）因此一并去掉。
+  const vizWrap = document.getElementById('vizWrap');
+  if (vizWrap) {
+    vizWrap.addEventListener('click', (e) => {
+      if (!audio.duration) return;
+      const r = vizWrap.getBoundingClientRect();
+      const ratio = Math.min(1, Math.max(0, (e.clientX - r.left) / r.width));
+      audio.currentTime = ratio * audio.duration;
+      updateProgressStyle(ratio * 100);
+      currentTimeEl.innerText = formatTime(audio.currentTime);
+      syncLyrics(audio.currentTime);
+    });
+  }
 
   btnPlay.addEventListener('click', () => {
     if (audio.paused) {

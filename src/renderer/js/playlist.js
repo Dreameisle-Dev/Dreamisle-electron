@@ -79,7 +79,13 @@ export function updateVirtualList() {
     li.draggable = true;
     li.dataset.path = songInfo.path;
 
-    li.innerHTML = `<div class="item-title">${songInfo.title}</div><div class="item-artist">${songInfo.artist}</div>`;
+    // i 是过滤后列表里的位置，直接当序号用，不需要新数据
+    li.innerHTML =
+      `<span class="item-index">${i + 1}</span>` +
+      `<div class="item-meta">` +
+      `<div class="item-title">${songInfo.title}</div>` +
+      `<div class="item-artist">${songInfo.artist}</div>` +
+      `</div>`;
     li.onclick = (e) => {
       if (e.detail === 0) return; // 拖放后合成的 click(detail 0),不是真实点击
       playSong(songInfo.originalIndex);

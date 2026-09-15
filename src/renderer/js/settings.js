@@ -20,10 +20,22 @@ import {
   fontSelectValue,
   fontSearchInput,
   fontOptions,
+  themeSeg,
 } from './dom.js';
 import { showSyncToast } from './helpers.js';
 import { applyPlaylistFromMain } from './playlist.js';
 import { renderPlaylistsList } from './playlists.js';
+import { applyThemeMode } from './theme.js';
+
+// 主题分段控件的选中态。'system'/'light'/'dark'，非法值按 system 处理。
+function syncThemeSeg(mode) {
+  const active = mode === 'light' || mode === 'dark' ? mode : 'system';
+  themeSeg.querySelectorAll('button').forEach((b) => {
+    b.classList.toggle('active', b.dataset.mode === active);
+  });
+}
+
+export { syncThemeSeg };
 
 export function toggleSettings() {
   if (settingsOverlay.classList.contains('open')) closeSettings();
@@ -50,6 +62,7 @@ export async function refreshSettingsUi() {
   });
   renderFolderList(settings.musicFolders || []);
   syncLyricsStyleUi(settings.lyricsStyle || DEFAULT_LYRICS_STYLE);
+  syncThemeSeg(settings.themeMode);
 }
 
 export function renderFolderList(folders) {
@@ -181,6 +194,15 @@ export function renderFontOptions(filter = '') {
 }
 
 export function bindSettingsEvents() {
+  themeSeg.querySelectorAll('button').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const mode = btn.dataset.mode;
+      syncThemeSeg(mode);
+      applyThemeMode(mode);
+      window.dreamApi.setThemeMode(mode).catch(() => {});
+    });
+  });
+
   bgOpacityInput.addEventListener('input', () => {
     state.currentLyricsStyle.bgOpacity = Number(bgOpacityInput.value);
     bgOpacityVal.textContent = `${state.currentLyricsStyle.bgOpacity}%`;

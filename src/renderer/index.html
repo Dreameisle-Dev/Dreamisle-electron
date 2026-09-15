@@ -1,4 +1,7 @@
 <!doctype html>
+<!-- 主题不在这里定死：主进程建窗口前先设好 nativeTheme.themeSource，
+     渲染进程启动时再按已存设置挂 .theme-light / .theme-dark（见 theme.js 的 applyThemeMode）。
+     都不挂就是跟随系统。 -->
 <html lang="zh-CN">
   <head>
     <meta charset="UTF-8" />
@@ -8,6 +11,7 @@
       content="default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob: file:;"
     />
     <title>Dreamisle</title>
+    <link rel="stylesheet" href="./style/tokens.css" />
     <link rel="stylesheet" href="./style/index.css" />
   </head>
 
@@ -63,76 +67,83 @@
       </div>
     </div>
 
-    <!-- 环境背景 -->
+    <!-- 环境背景：光场 / 遮罩 / 噪点 三层 -->
     <div class="ambient-bg">
       <div class="light-field"></div>
+      <div class="bg-veil"></div>
       <div class="noise-overlay"></div>
-      <div class="vignette"></div>
     </div>
 
     <div class="app-container">
-      <!-- 左侧：主界面 -->
-      <div class="left-panel">
-        <!-- 封面区域 -->
-        <div class="album-art-container" id="coverContainer">
-          <img id="coverImg" class="cover-img" src="" style="display: none" />
-          <div id="defaultCover" class="default-cover">
-            <svg
-              width="80"
-              height="80"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="rgba(255,255,255,0.1)"
-              stroke-width="1"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            >
-              <path d="M9 18V5l12-2v13"></path>
-              <circle cx="6" cy="18" r="3"></circle>
-              <circle cx="18" cy="16" r="3"></circle>
-            </svg>
-          </div>
-          <div id="volumeHud" class="volume-hud">VOL 50%</div>
-        </div>
-
-        <!-- 歌曲信息 -->
-        <div class="song-info">
-          <div class="song-title" id="songTitle">Dreamisle</div>
-          <div class="artist-name" id="artistName" data-i18n="app.waitingForMusic">
-            Waiting for music...
-          </div>
-        </div>
-
-        <!-- 进度条 -->
-        <div class="progress-container">
-          <input
-            type="range"
-            id="progressBar"
-            class="progress-bar"
-            value="0"
-            min="0"
-            max="100"
-            step="0.1"
-          />
-          <div class="time-labels">
-            <span id="currentTime">0:00</span>
-            <span id="totalTime">0:00</span>
-          </div>
-        </div>
-
-        <!-- 底部控制按钮 -->
-        <div class="buttons">
-          <!-- 模式切换 -->
-          <button
-            class="btn secondary-btn"
-            id="btnMode"
-            title="播放模式"
-            data-i18n-title="btn.playMode"
+      <!-- 黑胶：从上方和右侧出框，窗口外不渲染（父级 overflow:hidden）。
+           注意旋转加在 .album-art-container 上而不是 .cover-disc —— 圆标和中心孔
+           是盘面的兄弟节点，只转盘面会变成「盘在转但封面钉住」。 -->
+      <div class="album-art-container" id="coverContainer">
+        <div class="cover-disc"></div>
+        <img id="coverImg" class="cover-img" src="" style="display: none" />
+        <div id="defaultCover" class="default-cover">
+          <svg
+            width="80"
+            height="80"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="rgba(255,255,255,0.1)"
+            stroke-width="1"
+            stroke-linecap="round"
+            stroke-linejoin="round"
           >
+            <path d="M9 18V5l12-2v13"></path>
+            <circle cx="6" cy="18" r="3"></circle>
+            <circle cx="18" cy="16" r="3"></circle>
+          </svg>
+        </div>
+        <div class="disc-hole"></div>
+        <div id="volumeHud" class="volume-hud">VOL 50%</div>
+      </div>
+
+      <!-- 小窗单行歌词（只显示原文，不含翻译，与桌面歌词一致） -->
+      <div class="mini-lyrics" id="miniLyrics"></div>
+
+      <!-- 歌词区域：绝对定位在窗口左侧（不再占右半屏，右侧让给黑胶） -->
+      <div class="lyrics-container" id="lyricsContainer">
+        <div class="lyrics-scroll" id="lyricsScroll">
+          <p class="lyric-line placeholder" data-i18n="lyrics.noLyricsShort">暂无歌词</p>
+        </div>
+        <button
+          class="lyric-translation-toggle active"
+          id="btnLyricTranslation"
+          data-i18n-title="lyrics.translationHide"
+          title="关闭歌词翻译"
+        >
+          译
+        </button>
+      </div>
+
+      <!-- 传输条：进度可视化（已播放段是频谱）+ 歌曲信息 + 控制键。高度固定 130px。 -->
+      <div class="player-bar">
+        <!-- 小窗模式专用：主区那条频谱在小窗里退化成这根细线 -->
+        <div class="mini-progress"><i></i></div>
+
+        <span class="bar-time left" id="currentTime">0:00</span>
+        <span class="bar-time right" id="totalTime">0:00</span>
+
+        <div class="viz-wrap" id="vizWrap">
+          <div class="viz-rest"></div>
+          <div class="viz-bars" id="vizBars"></div>
+          <div class="viz-head" id="vizHead"></div>
+        </div>
+
+        <img id="barThumb" class="bar-thumb" src="" alt="" />
+        <div class="bar-title" id="barTitle">Dreamisle</div>
+        <div class="bar-artist" id="barArtist" data-i18n="app.waitingForMusic">Waiting for music...</div>
+
+        <div class="bar-controls">
+          <!-- 模式切换 -->
+          <button class="ctrl-sm" id="btnMode" title="播放模式" data-i18n-title="btn.playMode">
             <svg
               id="iconLoop"
-              width="24"
-              height="24"
+              width="22"
+              height="22"
               viewBox="0 0 24 24"
               fill="none"
               stroke="currentColor"
@@ -148,8 +159,8 @@
             <svg
               id="iconOne"
               style="display: none"
-              width="24"
-              height="24"
+              width="22"
+              height="22"
               viewBox="0 0 24 24"
               fill="none"
               stroke="currentColor"
@@ -166,8 +177,8 @@
             <svg
               id="iconShuffle"
               style="display: none"
-              width="24"
-              height="24"
+              width="22"
+              height="22"
               viewBox="0 0 24 24"
               fill="none"
               stroke="currentColor"
@@ -184,22 +195,22 @@
           </button>
 
           <!-- 上一首 -->
-          <button class="btn" id="btnPrev">
-            <svg width="32" height="32" viewBox="0 0 24 24" fill="currentColor">
+          <button class="ctrl-sm" id="btnPrev">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor">
               <path d="M6 6h2v12H6zm3.5 6l8.5 6V6z" />
             </svg>
           </button>
 
           <!-- 播放/暂停 -->
-          <button class="btn" id="btnPlay">
-            <svg id="iconPlay" width="42" height="42" viewBox="0 0 24 24" fill="currentColor">
+          <button class="ctrl-play" id="btnPlay">
+            <svg id="iconPlay" width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
               <path d="M8 5v14l11-7z" />
             </svg>
             <svg
               id="iconPause"
               style="display: none"
-              width="42"
-              height="42"
+              width="24"
+              height="24"
               viewBox="0 0 24 24"
               fill="currentColor"
             >
@@ -208,22 +219,22 @@
           </button>
 
           <!-- 下一首 -->
-          <button class="btn" id="btnNext">
-            <svg width="32" height="32" viewBox="0 0 24 24" fill="currentColor">
+          <button class="ctrl-sm" id="btnNext">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor">
               <path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z" />
             </svg>
           </button>
 
-          <!-- 列表开关 -->
+          <!-- 列表开关（放在右侧独立分组，与控制键拉开距离） -->
           <button
-            class="btn secondary-btn"
+            class="ctrl-sm"
             id="btnPlaylist"
             title="播放列表"
             data-i18n-title="btn.playlist"
           >
             <svg
-              width="24"
-              height="24"
+              width="22"
+              height="22"
               viewBox="0 0 24 24"
               fill="none"
               stroke="currentColor"
@@ -238,26 +249,6 @@
               <line x1="3" y1="12" x2="3.01" y2="12"></line>
               <line x1="3" y1="18" x2="3.01" y2="18"></line>
             </svg>
-          </button>
-        </div>
-
-        <!-- 小窗单行歌词 -->
-        <div class="mini-lyrics" id="miniLyrics"></div>
-      </div>
-
-      <!-- 右侧：歌词区域 -->
-      <div class="right-panel" id="lyricsPanel">
-        <div class="lyrics-container" id="lyricsContainer">
-          <div class="lyrics-scroll" id="lyricsScroll">
-            <p class="lyric-line placeholder" data-i18n="lyrics.noLyricsShort">暂无歌词</p>
-          </div>
-          <button
-            class="lyric-translation-toggle active"
-            id="btnLyricTranslation"
-            data-i18n-title="lyrics.translationHide"
-            title="关闭歌词翻译"
-          >
-            译
           </button>
         </div>
       </div>
@@ -404,7 +395,7 @@
 
     <!-- 帮助浮层 -->
     <div class="help-overlay" id="helpOverlay">
-      <div class="help-card">
+      <div class="help-card help-card-help">
         <div class="help-header">
           <div class="help-logo">
             <svg
@@ -430,7 +421,8 @@
           </button>
         </div>
 
-        <p class="help-intro" data-i18n="help.intro">一款离线音乐播放器</p>
+        <div class="help-body">
+          <p class="help-intro" data-i18n="help.intro">一款离线音乐播放器</p>
 
         <div class="help-section">
           <h3 data-i18n="help.shortcuts">键盘快捷键</h3>
@@ -497,6 +489,7 @@
             ><span class="help-desc-sub" data-i18n="help.showHideHint">双击托盘图标</span>
           </div>
         </div>
+        </div>
       </div>
     </div>
 
@@ -534,7 +527,23 @@
 
         <div class="settings-body">
           <nav class="settings-nav">
-            <button class="settings-nav-item active" data-section="language">
+            <button class="settings-nav-item active" data-section="appearance">
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.5"
+                stroke-linecap="round"
+              >
+                <circle cx="12" cy="12" r="9"></circle>
+                <path d="M12 3v18"></path>
+                <path d="M12 12a9 9 0 0 0 0-9z" fill="currentColor" stroke="none"></path>
+              </svg>
+              <span data-i18n="settings.appearance">外观</span>
+            </button>
+            <button class="settings-nav-item" data-section="language">
               <svg
                 width="14"
                 height="14"
@@ -581,7 +590,19 @@
             </button>
           </nav>
           <div class="settings-content">
-            <section class="settings-panel active" data-panel="language">
+            <section class="settings-panel active" data-panel="appearance">
+              <p class="settings-desc" data-i18n="settings.themeDesc">
+                界面配色。选「跟随系统」时会按系统外观自动切换。
+              </p>
+              <div class="theme-seg" id="themeSeg">
+                <button type="button" data-mode="system" data-i18n="settings.themeSystem">
+                  跟随系统
+                </button>
+                <button type="button" data-mode="light" data-i18n="settings.themeLight">浅色</button>
+                <button type="button" data-mode="dark" data-i18n="settings.themeDark">暗色</button>
+              </div>
+            </section>
+            <section class="settings-panel" data-panel="language">
               <p class="settings-desc" data-i18n="settings.languageDesc">
                 界面与托盘菜单的显示语言
               </p>

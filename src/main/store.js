@@ -34,6 +34,18 @@ export function applyLanguage(lang) {
   store.set('settings.language', lang);
 }
 
+// 主题模式：'system' | 'light' | 'dark'。取值非法一律回落到跟随系统。
+export function getThemeMode() {
+  const stored = store.get('settings.themeMode');
+  return stored === 'light' || stored === 'dark' ? stored : 'system';
+}
+
+export function setThemeMode(mode) {
+  const next = mode === 'light' || mode === 'dark' ? mode : 'system';
+  store.set('settings.themeMode', next);
+  return next;
+}
+
 export function getLyricsStyle() {
   return { ...DEFAULT_LYRICS_STYLE, ...(store.get('settings.lyricsStyle') || {}) };
 }

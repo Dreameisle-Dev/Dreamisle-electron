@@ -1,5 +1,5 @@
-import { app, session } from 'electron';
-import { migrateLegacyMusicFolder, getLanguage, getLyricsStyle } from './store.js';
+import { app, session, nativeTheme } from 'electron';
+import { migrateLegacyMusicFolder, getLanguage, getLyricsStyle, getThemeMode } from './store.js';
 import { createWindow, getMainWindow } from './window.js';
 import { createTray } from './tray.js';
 import { registerIpcHandlers } from './ipc.js';
@@ -32,6 +32,8 @@ function setupPermissions() {
 app.whenReady().then(() => {
   migrateLegacyMusicFolder();
   getLanguage(); // 初始化语言（createTray 依赖 t()）
+  // 建窗口前先定下主题来源，否则会先以系统色绘制一帧再翻转
+  nativeTheme.themeSource = getThemeMode();
   setupPermissions();
   registerIpcHandlers();
   registerPlaylistsIpc();

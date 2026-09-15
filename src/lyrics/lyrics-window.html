@@ -32,6 +32,11 @@
         padding: 10px 28px;
         border-radius: 999px;
         background: var(--capsule-bg, rgba(0, 0, 0, 0.45));
+        /* 毛玻璃 + 一圈极淡的发丝边：桌面背景深浅不定，纯色药丸会糊在壁纸上 */
+        backdrop-filter: blur(18px) saturate(150%);
+        -webkit-backdrop-filter: blur(18px) saturate(150%);
+        border: 1px solid rgba(255, 255, 255, 0.09);
+        box-sizing: border-box;
         font-family: var(
           --capsule-font-family,
           'Microsoft YaHei',
@@ -40,6 +45,8 @@
           sans-serif
         );
         font-size: 26px;
+        font-weight: 600;
+        letter-spacing: 0.01em;
         line-height: 1.4;
         white-space: nowrap;
         overflow: hidden;
@@ -55,6 +62,9 @@
 
       .capsule.placeholder {
         background: transparent; /* 占位符自身无背景：不受背景透明度设置影响 */
+        border-color: transparent;
+        backdrop-filter: none;
+        -webkit-backdrop-filter: none;
       }
 
       .capsule.placeholder span {

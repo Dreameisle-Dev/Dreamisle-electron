@@ -70,8 +70,10 @@ export function renderLyricsToDom() {
       const mainText = line.text || line.translation || '';
       const translation =
         state.showLyricsTranslation && line.text && line.translation ? line.translation : null;
+      // 原文与译文是两个独立 span（原来中间夹了 <br>）。样式上靠 flex 列 +
+      // 5px 间距把它们贴成一对，不需要换行符。
       p.innerHTML = `<span class="lyric-text">${escapeHtml(mainText)}</span>${
-        translation ? `<br><span class="lyric-translation">${escapeHtml(translation)}</span>` : ''
+        translation ? `<span class="lyric-translation">${escapeHtml(translation)}</span>` : ''
       }`;
 
       if (!isStatic) {
@@ -119,7 +121,11 @@ export function syncLyrics(currentTime) {
   if (activeIndex === state.currentLineIndex) return;
 
   if (state.currentLineIndex !== -1 && state.lyricDoms[state.currentLineIndex]) {
-    state.lyricDoms[state.currentLineIndex].classList.remove('active');
+    const prev = state.lyricDoms[state.currentLineIndex];
+    prev.classList.remove('active');
+    // 必须一并清掉滚动动画：只移除 active 的话，凡是当过当前行的歌词都会
+    // 永久保留 overflowing 的水平偏移，表现为左侧文字被裁掉。
+    clearLineMarquee(prev);
   }
 
   state.currentLineIndex = activeIndex;
@@ -158,6 +164,17 @@ export function setLyricsTranslationVisible(visible) {
 export function toggleLyricsTranslation() {
   setLyricsTranslationVisible(!state.showLyricsTranslation);
   window.dreamApi.setLyricsTranslation(state.showLyricsTranslation).catch(() => {});
+}
+
+// 清除一行的水平滚动状态（换行时对旧行调用，否则它会一直偏移）
+function clearLineMarquee(lineEl) {
+  if (!lineEl) return;
+  for (const el of [
+    lineEl.querySelector('.lyric-text'),
+    lineEl.querySelector('.lyric-translation'),
+  ]) {
+    if (el) el.classList.remove('overflowing');
+  }
 }
 
 // 激活行长文本水平滚动:原文/翻译各自检测溢出,设置滚动距离与时长

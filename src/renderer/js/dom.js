@@ -14,12 +14,16 @@ export const lyricsScroll = document.getElementById('lyricsScroll');
 export const btnLyricTranslation = document.getElementById('btnLyricTranslation');
 export const volumeHud = document.getElementById('volumeHud');
 
-export const titleEl = document.getElementById('songTitle');
-export const artistEl = document.getElementById('artistName');
-export const progressBar = document.getElementById('progressBar');
+// 歌名/歌手现在在底部传输条里。playback.js 用的是这些变量名而不是元素 id，
+// 所以改名只需要动这里。
+export const titleEl = document.getElementById('barTitle');
+export const artistEl = document.getElementById('barArtist');
+export const barThumb = document.getElementById('barThumb');
 export const currentTimeEl = document.getElementById('currentTime');
 export const totalTimeEl = document.getElementById('totalTime');
 export const canvas = document.getElementById('colorCanvas');
+// progressBar 已移除：进度不再是 <input type=range>，
+// 改由 .viz-bars 的宽度 + .viz-head 的位置表达，驱动逻辑在 theme.js 的 updateProgressStyle。
 
 export const btnPlay = document.getElementById('btnPlay');
 export const btnMode = document.getElementById('btnMode');
@@ -85,6 +89,9 @@ export const playlistsSongListEl = document.getElementById('playlistsSongList');
 export const contextMenu = document.getElementById('contextMenu');
 export const ctxAddToPlaylist = document.getElementById('ctxAddToPlaylist');
 export const ctxPlaylistOptions = document.getElementById('ctxPlaylistOptions');
+
+// 外观 · 主题选择
+export const themeSeg = document.getElementById('themeSeg');
 
 // 播放统计浮层元素
 export const statsOverlay = document.getElementById('statsOverlay');

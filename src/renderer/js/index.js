@@ -3,7 +3,6 @@ import { state } from './state.js';
 import {
   audio,
   volumeHud,
-  progressBar,
   playlistDrawer,
   playlistsDrawer,
   searchInput,
@@ -37,7 +36,8 @@ import {
 import { bindLyricsEvents, setLyricsTranslationVisible } from './lyrics.js';
 import { toggleSettings, closeSettings, bindSettingsEvents } from './settings.js';
 import { toggleStats, closeStats, isStatsOpen, bindStatsEvents } from './stats.js';
-import { initMouseFollow, updateProgressStyle } from './theme.js';
+import { initMouseFollow, updateProgressStyle, applyThemeMode } from './theme.js';
+import { initVisualizer } from './visualizer.js';
 import { showSyncToast } from './helpers.js';
 import { resolveRestoredIndex } from './playback-restore.js';
 
@@ -113,12 +113,17 @@ window.addEventListener('DOMContentLoaded', async () => {
 
   // 启动时应用已存语言并刷新界面文案
   const settings = await window.dreamApi.getSettings();
+  applyThemeMode(settings.themeMode || 'system');
   setLang(settings.language);
   applyLang();
   volumeHud.innerText = t('hud.volume', { n: Math.round(audio.volume * 100) });
   setLyricsTranslationVisible(settings.lyricsTranslation !== false);
 
   initMouseFollow();
+
+  // 频谱：把传输条已播放段变成实时频谱。必须在音频开始播放前建立
+  // AudioContext 链路，否则 createMediaElementSource 之后再接会丢失首帧。
+  initVisualizer(audio, document.getElementById('vizBars'));
 
   // 检测当前系统并添加类标识
   const platform = window.dreamApi.getPlatform();
@@ -316,7 +321,8 @@ window.addEventListener('DOMContentLoaded', async () => {
       state.isMiniMode = false;
       document.body.classList.remove('mini-mode');
     }
-    updateProgressStyle(progressBar.value);
+    // 进度可视化在两种模式下结构不同（主区频谱 / 小窗细线），重新套一次
+    updateProgressStyle(audio.duration ? (audio.currentTime / audio.duration) * 100 : 0);
   });
 
   const savedSongs = await window.dreamApi.loadSavedMusic();

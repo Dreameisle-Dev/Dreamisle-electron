@@ -53,12 +53,8 @@ export function renderPlaylistsList() {
   // 固定"全部歌曲"项:切回完整曲库队列
   const allSongs = document.createElement('li');
   allSongs.className = `playlists-card all-songs${state.activeQueue.type === 'library' ? ' active' : ''}`;
+  // 左侧图标已移除：每个卡片都是同一个通用图标，纯装饰、零信息。
   allSongs.innerHTML = `
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M9 18V5l12-2v13"></path>
-      <circle cx="6" cy="18" r="3"></circle>
-      <circle cx="18" cy="16" r="3"></circle>
-    </svg>
     <span class="playlists-card-name">${escapeHtml(t('playlists.allSongs'))}</span>
     <span class="playlists-card-count">${t('playlist.count', { n: state.librarySongs.length })}</span>`;
   allSongs.onclick = () => {
@@ -72,9 +68,6 @@ export function renderPlaylistsList() {
     li.className = `playlists-card${state.activeQueue.type === 'playlist' && state.activeQueue.id === pl.id ? ' active' : ''}`;
     li.dataset.playlistId = pl.id;
     li.innerHTML = `
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M3 6h18"></path><path d="M3 12h18"></path><path d="M3 18h18"></path>
-      </svg>
       <span class="playlists-card-name">${escapeHtml(pl.name)}</span>
       <span class="playlists-card-count">${t('playlist.count', { n: pl.songs.length })}</span>
       <button class="playlists-card-btn" data-role="rename-playlist" title="${escapeHtml(t('playlists.rename'))}">
@@ -153,9 +146,12 @@ function renderDetailSongs() {
     li.className = 'playlists-song-item';
     li.draggable = true;
     li.dataset.index = index;
+    // 标题占满一行、歌手在下一行，与队列行同构
     li.innerHTML = `
-      <span class="playlists-song-title">${escapeHtml(song.title)}</span>
-      <span class="playlists-song-artist">${escapeHtml(song.artist)}</span>
+      <div class="item-meta">
+        <div class="playlists-song-title">${escapeHtml(song.title)}</div>
+        <div class="playlists-song-artist">${escapeHtml(song.artist)}</div>
+      </div>
       <button class="playlists-song-remove" title="${escapeHtml(t('playlists.remove'))}">✕</button>`;
     li.addEventListener('dragstart', () => {
       dragFrom = Number(li.dataset.index);
@@ -206,19 +202,34 @@ function closePlaylistDetail() {
 
 // ===== 右键菜单 =====
 let contextSong = null;
+let contextAnchor = { x: 0, y: 0 };
 
 export function closeContextMenu() {
   contextMenu.classList.remove('open');
   contextSong = null;
 }
 
+// 菜单高度不是常量：展开「添加到歌单」后条目数 = 歌单数 + 1，歌单一多菜单会变很高。
+// 所以按实测尺寸贴边，而不是用写死的 300px 之类。
+const MENU_EDGE = 8;
+
+function placeContextMenu() {
+  const w = contextMenu.offsetWidth;
+  const h = contextMenu.offsetHeight;
+  const maxX = Math.max(MENU_EDGE, window.innerWidth - w - MENU_EDGE);
+  const maxY = Math.max(MENU_EDGE, window.innerHeight - h - MENU_EDGE);
+  contextMenu.style.left = `${Math.max(MENU_EDGE, Math.min(contextAnchor.x, maxX))}px`;
+  contextMenu.style.top = `${Math.max(MENU_EDGE, Math.min(contextAnchor.y, maxY))}px`;
+}
+
 function openContextMenu(x, y, song) {
   contextSong = song;
+  contextAnchor = { x, y };
   ctxAddToPlaylist.style.display = 'block';
   ctxPlaylistOptions.style.display = 'none';
-  contextMenu.style.left = `${Math.min(x, window.innerWidth - 200)}px`;
-  contextMenu.style.top = `${Math.min(y, window.innerHeight - 300)}px`;
+  // 先挂 open 再量：opacity/transform 不参与布局，量到的就是最终尺寸
   contextMenu.classList.add('open');
+  placeContextMenu();
 }
 
 function openAddToPlaylistSubmenu() {
@@ -240,6 +251,10 @@ function openAddToPlaylistSubmenu() {
     ctxPlaylistOptions.appendChild(li);
   }
 
+  const liSep = document.createElement('li');
+  liSep.className = 'sep';
+  ctxPlaylistOptions.appendChild(liSep);
+
   const liNew = document.createElement('li');
   const btnNew = document.createElement('button');
   btnNew.className = 'context-menu-item';
@@ -254,6 +269,9 @@ function openAddToPlaylistSubmenu() {
   };
   liNew.appendChild(btnNew);
   ctxPlaylistOptions.appendChild(liNew);
+
+  // 展开后菜单变高，重新贴一次边，否则贴底弹出的菜单会伸到窗口外
+  placeContextMenu();
 }
 
 // 添加歌曲到歌单:调用主进程,成功后同步缓存并 toast
