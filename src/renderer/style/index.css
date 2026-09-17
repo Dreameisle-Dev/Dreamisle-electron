@@ -227,7 +227,7 @@ body {
   /* safe center：内容溢出时退回 start。普通 center 会让溢出的 flex 列两端都够不着，
      滚不到第一行。 */
   justify-content: safe center;
-  gap: calc(22 * var(--u));
+  gap: calc(26 * var(--u));
   overflow-y: auto;
   scrollbar-width: none;
   scroll-behavior: smooth;
@@ -237,8 +237,12 @@ body {
   display: none;
 }
 
-/* 一行 = 原文 + 可选译文。内部间距 5，行间 22：
-   靠间距差把「原文+译文」读成一个整体，而不是四行松散的文字。 */
+/* 一行 = 原文 + 可选译文。内部间距 5，行间 26：
+   靠间距差把「原文+译文」读成一个整体，而不是四行松散的文字。
+
+   非当前行模糊、当前行清晰 —— 分层靠「清晰度」而不是只靠颜色，
+   一眼就能锁定正在唱的那句。模糊值不随 --u 缩放：它是视觉柔化，
+   跟着窗口放大只会糊成一团。 */
 .lyric-line {
   margin: 0;
   padding: 0;
@@ -252,33 +256,42 @@ body {
   cursor: pointer;
   white-space: nowrap;
   overflow: hidden;
-  transition: color 0.3s ease;
+  filter: blur(1.2px);
+  transition:
+    color 0.3s ease,
+    filter 0.3s ease;
 }
 
 .lyric-text {
   display: inline-block;
-  font-size: calc(36 * var(--u));
+  font-size: calc(28 * var(--u));
   line-height: 1.28;
   color: var(--ink2);
 }
 
 .lyric-translation {
   display: inline-block;
-  font-size: calc(24 * var(--u));
+  font-size: calc(19 * var(--u));
   line-height: 1.3;
   color: var(--ink4);
 }
 
-/* 当前行：靠字号和颜色分层，不用 transform 缩放（会破坏左对齐基线），也不加 text-shadow */
+/* 当前行：靠字号和颜色分层，不用 transform 缩放（会破坏左对齐基线），也不加 text-shadow。
+   原版是中心缩放，这里是左对齐，缩放会让每行文字左右横跳，所以改用字号差。 */
 .lyric-line.active .lyric-text {
-  font-size: calc(48 * var(--u));
+  font-size: calc(36 * var(--u));
   font-weight: 600;
   color: var(--ink1);
 }
 
 .lyric-line.active .lyric-translation {
-  font-size: calc(28 * var(--u));
+  font-size: calc(23 * var(--u));
   color: var(--ink3);
+}
+
+.lyric-line.active,
+.lyric-line:hover {
+  filter: blur(0);
 }
 
 .lyric-line:hover .lyric-text {
@@ -302,9 +315,11 @@ body {
   }
 }
 
+/* 「暂无歌词」这类占位文案不是歌词，不该跟着模糊 */
 .lyric-line.placeholder {
-  font-size: calc(24 * var(--u));
+  font-size: calc(19 * var(--u));
   color: var(--ink3);
+  filter: blur(0);
 }
 
 /* 「译」开关：整个界面最右侧，右边距与传输条上的 3:40 对齐（同为 26px）。
