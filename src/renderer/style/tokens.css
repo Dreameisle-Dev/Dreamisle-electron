@@ -12,16 +12,31 @@
      例外：传输条高度、描边、圆角、浮层宽高用固定 px。 */
   --u: calc(100vw / 1800);
 
-  /* —— 文字 —— */
-  --ink1: light-dark(#17121d, #ffffff);
-  /* 浅色侧从 0.54 提到 0.62：非当前歌词还要再过一层 blur，
-     基础不透明度太低的话糊完就真看不清了 */
-  --ink2: light-dark(rgba(23, 18, 29, 0.62), rgba(255, 255, 255, 0.72));
-  --ink3: light-dark(rgba(23, 18, 29, 0.62), rgba(255, 255, 255, 0.6));
-  --ink4: light-dark(rgba(23, 18, 29, 0.46), rgba(255, 255, 255, 0.6));
+  /* —— 文字 ——
+     浅色侧用 #2e2739（L* ≈ 17）而不是原来的 #17121d（L* ≈ 8.5）：
+     近黑色压在近白底上是最大对比，刺眼且没有层次。换成带主题紫的深墨，
+     仍然是高对比，但不再是「纯黑文字」。
+     四档墨色的不透明度必须拉开：原来浅色侧 ink2 和 ink3 都是 0.62，
+     次要文字和更次要文字糊成一档，层级直接没了。 */
+  --ink1: light-dark(#2e2739, #ffffff);
+  /* 非当前歌词还要再过一层 blur，ink2 不能低 —— 糊完就真看不清了 */
+  --ink2: light-dark(rgba(46, 39, 57, 0.68), rgba(255, 255, 255, 0.72));
+  --ink3: light-dark(rgba(46, 39, 57, 0.56), rgba(255, 255, 255, 0.6));
+  --ink4: light-dark(rgba(46, 39, 57, 0.44), rgba(255, 255, 255, 0.6));
 
-  /* —— 底色与遮罩 —— */
-  --base: light-dark(#efe9f1, #301c34);
+  /* —— 歌词专用墨色 ——
+     和 UI 的 --ink 分开：面板底是可控的白，软一点没关系；歌词压在不固定的
+     氛围色上，还要再叠一层 blur，对比度余量最小 —— 浅色侧必须回到纯黑。
+     深色侧取值和上面的 --ink 完全一致，深色模式不受影响。 */
+  --lyric-1: light-dark(#000000, #ffffff);
+  --lyric-2: light-dark(rgba(0, 0, 0, 0.7), rgba(255, 255, 255, 0.72));
+  --lyric-3: light-dark(rgba(0, 0, 0, 0.66), rgba(255, 255, 255, 0.6));
+  --lyric-4: light-dark(rgba(0, 0, 0, 0.5), rgba(255, 255, 255, 0.6));
+
+  /* —— 底色与遮罩 ——
+     底色压深一档（#efe9f1 → #e7e0ec）：原来的底色和白色面板几乎同亮度，
+     面板浮不起来，整屏糊成一片白。 */
+  --base: light-dark(#e7e0ec, #301c34);
   --veil1: light-dark(rgba(255, 255, 255, 0.24), rgba(22, 11, 26, 0.36));
   --veil2: light-dark(rgba(250, 247, 252, 0.4), rgba(11, 6, 15, 0.64));
 
@@ -35,51 +50,71 @@
   --c3: light-dark(rgba(246, 176, 134, 0.6), rgba(202, 128, 96, 0.72));
   --c4: light-dark(rgba(206, 120, 216, 0.56), rgba(168, 72, 180, 0.66));
 
-  /* —— 面 —— */
-  --bar-bg: light-dark(rgba(255, 255, 255, 0.62), rgba(17, 12, 23, 0.66));
-  --bar-border: light-dark(rgba(23, 18, 29, 0.1), rgba(255, 255, 255, 0.1));
-  --panel-bg: light-dark(rgba(255, 255, 255, 0.87), rgba(16, 11, 22, 0.86));
-  --panel-border: light-dark(rgba(23, 18, 29, 0.1), rgba(255, 255, 255, 0.11));
-  --modal-bg: light-dark(rgba(255, 255, 255, 0.92), rgba(20, 14, 26, 0.9));
-  --modal-border: light-dark(rgba(23, 18, 29, 0.1), rgba(255, 255, 255, 0.12));
-  --hair: light-dark(rgba(23, 18, 29, 0.08), rgba(255, 255, 255, 0.08));
-  --card-bg: light-dark(rgba(23, 18, 29, 0.04), rgba(255, 255, 255, 0.05));
-  --field-bg: light-dark(rgba(23, 18, 29, 0.06), rgba(255, 255, 255, 0.08));
-  --menu-bg: light-dark(rgba(255, 255, 255, 0.96), rgba(24, 17, 30, 0.94));
+  /* —— 面 ——
+     浅色侧的面原来是不透的白（面板 0.87、浮层 0.92），盖在同样接近白的底色上
+     = 白板盖白底：深色模式那套「半透玻璃 + 氛围色透上来」在浅色下完全失效。
+     降到 0.66 / 0.72 让氛围色透上来，代价是面板上的对比度略降，靠 --ink 加深补回。 */
+  /* 传输条要读作「同一片色场压深了一道」，不是另一块材料。
+     白色 alpha 就是这个压深量：暗色侧只把亮度压下去约 7 个 L*，
+     浅色侧原来用 0.58 的白，在中调的粉/绿氛围上会跳约 18 个 L*（2.5 倍），
+     于是条和背景裂成两块。降到 0.34 让两边压深幅度接近。 */
+  --bar-bg: light-dark(rgba(255, 255, 255, 0.18), rgba(17, 12, 23, 0.66));
+  --bar-border: light-dark(rgba(46, 39, 57, 0.05), rgba(255, 255, 255, 0.1));
+  --panel-bg: light-dark(rgba(255, 255, 255, 0.66), rgba(16, 11, 22, 0.86));
+  --panel-border: light-dark(rgba(46, 39, 57, 0.14), rgba(255, 255, 255, 0.11));
+  /* 浮层比抽屉实一点（0.72 → 0.78）：抽屉底下只有氛围色，浮层底下是整个 UI，
+     太透会把内容和背景混在一起，读起来像渲染坏了 */
+  --modal-bg: light-dark(rgba(253, 251, 255, 0.78), rgba(20, 14, 26, 0.9));
+  --modal-border: light-dark(rgba(46, 39, 57, 0.14), rgba(255, 255, 255, 0.12));
+  --hair: light-dark(rgba(46, 39, 57, 0.1), rgba(255, 255, 255, 0.08));
+  --card-bg: light-dark(rgba(46, 39, 57, 0.06), rgba(255, 255, 255, 0.05));
+  --field-bg: light-dark(rgba(46, 39, 57, 0.08), rgba(255, 255, 255, 0.08));
+  /* 菜单悬在任意内容之上，比其他面保持得更实一些 */
+  --menu-bg: light-dark(rgba(255, 255, 255, 0.9), rgba(24, 17, 30, 0.94));
   --backdrop: light-dark(rgba(40, 28, 45, 0.35), rgba(8, 5, 12, 0.55));
 
   /* —— 行状态 —— */
-  --row-hover: light-dark(rgba(23, 18, 29, 0.05), rgba(255, 255, 255, 0.07));
-  --row-on: light-dark(rgba(23, 18, 29, 0.08), rgba(255, 255, 255, 0.12));
-  --nav-on: light-dark(rgba(23, 18, 29, 0.07), rgba(255, 255, 255, 0.1));
+  --row-hover: light-dark(rgba(46, 39, 57, 0.06), rgba(255, 255, 255, 0.07));
+  --row-on: light-dark(rgba(46, 39, 57, 0.1), rgba(255, 255, 255, 0.12));
+  --nav-on: light-dark(rgba(46, 39, 57, 0.08), rgba(255, 255, 255, 0.1));
 
   /* —— 控件 —— */
   --accent: light-dark(#d2455f, #ff8ea0);
-  --track: light-dark(rgba(23, 18, 29, 0.14), rgba(255, 255, 255, 0.14));
-  --seg-bg: light-dark(rgba(23, 18, 29, 0.05), rgba(255, 255, 255, 0.06));
-  --seg-on-bg: light-dark(#17121d, #ffffff);
+  --track: light-dark(rgba(46, 39, 57, 0.14), rgba(255, 255, 255, 0.14));
+  --seg-bg: light-dark(rgba(46, 39, 57, 0.06), rgba(255, 255, 255, 0.06));
+  /* 选中态原来和 ink1 是同一个 #17121d —— 浅色模式下整个 UI 的主色就是近黑 */
+  --seg-on-bg: light-dark(#2e2739, #ffffff);
   --seg-on-ink: light-dark(#ffffff, #2a1c2e);
-  --play-bg: light-dark(#17121d, #ffffff);
+  --play-bg: light-dark(#2e2739, #ffffff);
   --play-ink: light-dark(#ffffff, #2a1c2e);
-  --kbd-bg: light-dark(rgba(23, 18, 29, 0.07), rgba(255, 255, 255, 0.1));
-  --kbd-bd: light-dark(rgba(23, 18, 29, 0.12), rgba(255, 255, 255, 0.16));
-  --scroll: light-dark(rgba(23, 18, 29, 0.18), rgba(255, 255, 255, 0.16));
-  --chrome: light-dark(rgba(23, 18, 29, 0.62), rgba(255, 255, 255, 0.68));
+  --kbd-bg: light-dark(rgba(46, 39, 57, 0.08), rgba(255, 255, 255, 0.1));
+  --kbd-bd: light-dark(rgba(46, 39, 57, 0.14), rgba(255, 255, 255, 0.16));
+  --scroll: light-dark(rgba(46, 39, 57, 0.18), rgba(255, 255, 255, 0.16));
+  --chrome: light-dark(rgba(46, 39, 57, 0.62), rgba(255, 255, 255, 0.68));
+
+  /* —— 阴影 ——
+     light-dark() 只接受 <color>，包不了整个 box-shadow 值，所以只令牌化颜色，
+     几何值留在各条规则里。
+     浅色底上的阴影要「软 + 带主题紫」，不能用深色模式那套 rgba(0,0,0,.6)：
+     那在近白底上是一圈脏灰晕。 */
+  --shade-1: light-dark(rgba(46, 39, 57, 0.1), rgba(0, 0, 0, 0.3));
+  --shade-2: light-dark(rgba(46, 39, 57, 0.16), rgba(0, 0, 0, 0.45));
+  --shade-3: light-dark(rgba(46, 39, 57, 0.2), rgba(0, 0, 0, 0.6));
 
   /* 滑块：原版是白色渐变填充（浅色下压深），不是强调色。
      真实控件是原生 input[type=range]，填充要按 --progress 位置在 CSS 里拼，
      所以这里给的是两档 alpha 的颜色，不是现成渐变。 */
-  --rng-fill-1: light-dark(rgba(23, 18, 29, 0.72), rgba(255, 255, 255, 0.8));
-  --rng-fill-2: light-dark(rgba(23, 18, 29, 0.46), rgba(255, 255, 255, 0.55));
-  --rng-track: light-dark(rgba(23, 18, 29, 0.12), rgba(255, 255, 255, 0.12));
+  --rng-fill-1: light-dark(rgba(46, 39, 57, 0.72), rgba(255, 255, 255, 0.8));
+  --rng-fill-2: light-dark(rgba(46, 39, 57, 0.46), rgba(255, 255, 255, 0.55));
+  --rng-track: light-dark(rgba(46, 39, 57, 0.12), rgba(255, 255, 255, 0.12));
   --rng-thumb: light-dark(#ffffff, #ffffff);
 
   /* 排行条形图填充：白/黑渐变，与强调色无关。
      渐变是 <image> 不是 <color>，所以 light-dark 要放进色标里，不能包整个渐变。 */
   --bar-fill: linear-gradient(
     90deg,
-    light-dark(rgba(23, 18, 29, 0.78), rgba(255, 255, 255, 0.9)),
-    light-dark(rgba(23, 18, 29, 0.42), rgba(255, 255, 255, 0.5))
+    light-dark(rgba(46, 39, 57, 0.78), rgba(255, 255, 255, 0.9)),
+    light-dark(rgba(46, 39, 57, 0.42), rgba(255, 255, 255, 0.5))
   );
 
   /* —— 黑胶 —— */

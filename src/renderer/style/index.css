@@ -371,14 +371,14 @@ body {
   display: inline-block;
   font-size: calc(28 * var(--u));
   line-height: 1.28;
-  color: var(--ink2);
+  color: var(--lyric-2);
 }
 
 .lyric-translation {
   display: inline-block;
   font-size: calc(19 * var(--u));
   line-height: 1.3;
-  color: var(--ink4);
+  color: var(--lyric-4);
 }
 
 /* 当前行：靠字号和颜色分层，不用 transform 缩放（会破坏左对齐基线），也不加 text-shadow。
@@ -386,12 +386,12 @@ body {
 .lyric-line.active .lyric-text {
   font-size: calc(36 * var(--u));
   font-weight: 600;
-  color: var(--ink1);
+  color: var(--lyric-1);
 }
 
 .lyric-line.active .lyric-translation {
   font-size: calc(23 * var(--u));
-  color: var(--ink3);
+  color: var(--lyric-3);
 }
 
 .lyric-line.active,
@@ -400,7 +400,7 @@ body {
 }
 
 .lyric-line:hover .lyric-text {
-  color: var(--ink1);
+  color: var(--lyric-1);
 }
 
 /* 超宽行水平往返滚动。原文/译文各自检测溢出，由 JS 写入 --marquee-shift / --marquee-duration */
@@ -423,7 +423,7 @@ body {
 /* 「暂无歌词」这类占位文案不是歌词，不该跟着模糊 */
 .lyric-line.placeholder {
   font-size: calc(19 * var(--u));
-  color: var(--ink3);
+  color: var(--lyric-3);
   filter: blur(0);
 }
 
@@ -674,7 +674,7 @@ body {
     opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1),
     transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   border: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 10px 40px var(--shade-1);
   z-index: 5;
   letter-spacing: 1px;
 }
@@ -699,7 +699,7 @@ body {
   backdrop-filter: blur(48px) saturate(150%);
   -webkit-backdrop-filter: blur(48px) saturate(150%);
   border-left: 1px solid var(--panel-border);
-  box-shadow: -24px 0 60px -10px rgba(0, 0, 0, 0.45);
+  box-shadow: -24px 0 60px -10px var(--shade-2);
   transform: translateX(100%);
   transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
 }
@@ -1084,8 +1084,8 @@ body.mini-mode .mini-lyrics {
   align-items: center;
   justify-content: center;
   background: var(--backdrop);
-  backdrop-filter: blur(6px);
-  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.25s ease;
@@ -1108,7 +1108,7 @@ body.mini-mode .mini-lyrics {
   -webkit-backdrop-filter: blur(40px) saturate(150%);
   border: 1px solid var(--modal-border);
   border-radius: 20px;
-  box-shadow: 0 30px 80px -20px rgba(0, 0, 0, 0.6);
+  box-shadow: 0 30px 80px -20px var(--shade-3);
   transform: scale(0.96);
   opacity: 0;
   transition:
@@ -1411,7 +1411,7 @@ kbd {
   border-radius: 12px;
   background: var(--menu-bg);
   border: 1px solid var(--modal-border);
-  box-shadow: 0 18px 44px -10px rgba(0, 0, 0, 0.6);
+  box-shadow: 0 18px 44px -10px var(--shade-2);
   display: none;
 }
 
@@ -1612,7 +1612,7 @@ kbd {
   border: none;
   border-radius: 50%;
   background: var(--rng-thumb);
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 1px 4px var(--shade-1);
 }
 
 .style-control input[type='color'] {
@@ -1651,7 +1651,7 @@ kbd {
   backdrop-filter: blur(48px) saturate(150%);
   -webkit-backdrop-filter: blur(48px) saturate(150%);
   border-left: 1px solid var(--panel-border);
-  box-shadow: -24px 0 60px -10px rgba(0, 0, 0, 0.45);
+  box-shadow: -24px 0 60px -10px var(--shade-2);
   transform: translateX(100%);
   transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
 }
@@ -2019,7 +2019,7 @@ body.mini-mode .playlists-drawer {
   backdrop-filter: blur(30px) saturate(150%);
   -webkit-backdrop-filter: blur(30px) saturate(150%);
   border: 1px solid var(--modal-border);
-  box-shadow: 0 18px 44px -10px rgba(0, 0, 0, 0.6);
+  box-shadow: 0 18px 44px -10px var(--shade-2);
   opacity: 0;
   pointer-events: none;
   transform: scale(0.97);
@@ -2097,8 +2097,8 @@ body.mini-mode .playlists-drawer {
   align-items: center;
   justify-content: center;
   background: var(--backdrop);
-  backdrop-filter: blur(6px);
-  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.25s ease;
@@ -2122,7 +2122,7 @@ body.mini-mode .playlists-drawer {
   -webkit-backdrop-filter: blur(40px) saturate(150%);
   border: 1px solid var(--modal-border);
   border-radius: 20px;
-  box-shadow: 0 30px 80px -20px rgba(0, 0, 0, 0.6);
+  box-shadow: 0 30px 80px -20px var(--shade-3);
   transform: scale(0.96);
   opacity: 0;
   transition:
