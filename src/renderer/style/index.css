@@ -29,31 +29,130 @@ body {
   position: absolute;
   top: 50%;
   left: 50%;
-  width: 1100px;
-  height: 1100px;
-  margin: -550px 0 0 -550px;
+  /* 尺寸跟着视口走，不用固定 px：色斑要飘出屏幕外才不会露边，
+     写死 1400px 的话 2560 宽的窗口四角就是空的。vmax 保证任何窗口比例下
+     容器都大于视口，四个斑的构图也按比例缩放，不随窗口大小变形。 */
+  width: 150vmax;
+  height: 150vmax;
+  margin: -75vmax 0 0 -75vmax;
   pointer-events: none;
-  filter: blur(52px) saturate(150%);
-  background:
-    radial-gradient(circle at 28% 30%, var(--c1) 0%, rgb(from var(--c1) r g b / 0) 56%),
-    radial-gradient(circle at 70% 58%, var(--c2) 0%, rgb(from var(--c2) r g b / 0) 56%),
-    radial-gradient(circle at 46% 86%, var(--c3) 0%, rgb(from var(--c3) r g b / 0) 54%),
-    radial-gradient(circle at 86% 18%, var(--c4) 0%, rgb(from var(--c4) r g b / 0) 52%);
   translate: var(--mx, 0px) var(--my, 0px);
   transition: translate 0.7s cubic-bezier(0.22, 1, 0.36, 1);
-  will-change: transform;
-  animation: ambientDrift 46s linear infinite;
 }
 
-@keyframes ambientDrift {
-  0% {
-    transform: rotate(0deg) scale(2.6);
-  }
-  50% {
-    transform: rotate(180deg) scale(2.9);
-  }
+/* ── 四个色斑，各自一个元素 ──
+   原来是同一个元素的四层 background，所以只能整块一起 rotate：四个斑的相对位置
+   永远锁死，转起来像一整块盘子在转，不是四个斑在飘。拆成四个元素才各走各的。
+
+   模糊挂在每个色斑自己身上，不是挂父级：父级加 filter 会把整块合成结果每帧
+   重新栅格化（1400² 面积 + 70px 半径），而挂在子元素上、配合 will-change，
+   栅格化一次之后动 transform 是免费的。 */
+.blob {
+  position: absolute;
+  width: 88%;
+  height: 88%;
+  border-radius: 50%;
+  filter: blur(70px) saturate(178%);
+  will-change: transform;
+  background: radial-gradient(
+    circle closest-side,
+    var(--bc) 0%,
+    rgb(from var(--bc) r g b / 0) 76%
+  );
+}
+
+.blob-a {
+  --bc: var(--c1);
+  left: -16%;
+  top: -20%;
+  animation: blobDriftA 18s ease-in-out infinite;
+}
+.blob-b {
+  --bc: var(--c2);
+  left: 30%;
+  top: -8%;
+  animation: blobDriftB 13s ease-in-out infinite;
+}
+.blob-c {
+  --bc: var(--c3);
+  left: -6%;
+  top: 26%;
+  animation: blobDriftC 23s ease-in-out infinite;
+}
+.blob-d {
+  --bc: var(--c4);
+  left: 34%;
+  top: 34%;
+  animation: blobDriftD 15s ease-in-out infinite;
+}
+
+/* 四条路径的周期互质（18/13/23/15 秒），且每段用 ease-in-out 而不是 linear，
+   所以它们既不会同步，也不会看起来在循环。线段本身是不对称的 —— 这正是
+   「不规则」的来源：如果四段位移对称，看久了还是会露出周期。 */
+@keyframes blobDriftA {
+  0%,
   100% {
-    transform: rotate(360deg) scale(2.6);
+    transform: translate(0, 0) scale(1);
+  }
+  21% {
+    transform: translate(19%, -13%) scale(1.16);
+  }
+  45% {
+    transform: translate(-9%, 15%) scale(0.88);
+  }
+  68% {
+    transform: translate(12%, 22%) scale(1.09);
+  }
+  86% {
+    transform: translate(-6%, 6%) scale(0.95);
+  }
+}
+@keyframes blobDriftB {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1.05);
+  }
+  27% {
+    transform: translate(-22%, 17%) scale(0.9);
+  }
+  52% {
+    transform: translate(16%, 9%) scale(1.18);
+  }
+  74% {
+    transform: translate(-11%, -18%) scale(1);
+  }
+}
+@keyframes blobDriftC {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(0.96);
+  }
+  18% {
+    transform: translate(14%, 20%) scale(1.12);
+  }
+  41% {
+    transform: translate(24%, -12%) scale(1.02);
+  }
+  63% {
+    transform: translate(-8%, -20%) scale(0.87);
+  }
+  82% {
+    transform: translate(-20%, 8%) scale(1.1);
+  }
+}
+@keyframes blobDriftD {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1.1);
+  }
+  24% {
+    transform: translate(-16%, -22%) scale(0.92);
+  }
+  49% {
+    transform: translate(21%, 14%) scale(1.15);
+  }
+  71% {
+    transform: translate(-14%, 19%) scale(0.98);
   }
 }
 
