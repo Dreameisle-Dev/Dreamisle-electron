@@ -93,7 +93,13 @@ body {
    旋转加在容器上而不是 .cover-disc —— 圆标和中心孔是盘面的兄弟节点。 */
 .album-art-container {
   position: absolute;
-  left: calc(1040 * var(--u));
+  /* left 是让「圆标到窗口上边」= 「圆标到窗口右边」解出来的，不是随手填的数：
+       上边距 = 32(标题栏固定高) + top*u + (1000-448)/2*u
+       右边距 = 100vw - left*u - (1000+448)/2*u
+     两式相等、top 取 -260 时，left = (100vw-32)/u - 740，1200 宽下即 1012。
+     标题栏是固定 px 而其余都乘 --u，所以这只在 1200 宽下严格相等；
+     1800 宽时差 16u（约 1%），肉眼看不出来。 */
+  left: calc(1012 * var(--u));
   top: calc(-260 * var(--u));
   width: calc(1000 * var(--u));
   height: calc(1000 * var(--u));
