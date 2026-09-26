@@ -12,6 +12,7 @@ import {
 } from '../lyrics/lyrics-window.js';
 
 app.isQuitting = false;
+app.setAppUserModelId('org.dreamisle-dev.dreamisle');
 
 // 开启显卡栅格化和零拷贝以提升渲染性能
 app.commandLine.appendSwitch('enable-gpu-rasterization');

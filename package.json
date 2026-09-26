@@ -13,7 +13,8 @@
   },
   "build": {
     "win": {
-      "icon": "src/assets/app_icon.ico"
+      "icon": "src/assets/app_icon.ico",
+      "appId": "org.dreamisle-dev.dreamisle"
     },
     "nsis": {
       "oneClick": false,

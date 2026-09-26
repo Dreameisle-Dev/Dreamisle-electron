@@ -28,6 +28,45 @@ audio.volume = 0.5;
 // 拖动进度条直接拖到末尾会触发 ended,此类不计入完整播放:记录最近一次 seek 时间用于过滤
 let lastSeekAt = 0;
 
+// ══ 系统媒体控制（Windows SMTC / 键盘媒体键）══
+// Electron 默认就开着 Chromium 的 MediaSessionService，媒体会话一直在注册 ——
+// 但我们从没往里喂过数据，所以系统浮层上只有一个叫 "Dreamisle" 的空壳：
+// 没歌名、没歌手、没封面、没进度。下面把这三样接上去。
+//
+// 不要再用 globalShortcut 注册媒体键：那边注册了会和这条管道抢，表现为浮层不出现。
+// 要加媒体键行为，加在这里的 setActionHandler 里。
+const mediaSession = navigator.mediaSession || null;
+
+function setMediaMetadata(song, coverUrl) {
+  if (!mediaSession || !song) return;
+  mediaSession.metadata = new MediaMetadata({
+    title: song.title || '',
+    artist: song.artist || '',
+    album: song.album || '',
+    // 封面是 blob: URL —— Chromium 自己解码成位图交给系统，不用落地成文件
+    artwork: coverUrl ? [{ src: coverUrl, sizes: '512x512' }] : [],
+  });
+}
+
+function setPlaybackState(isPlaying) {
+  if (!mediaSession) return;
+  mediaSession.playbackState = isPlaying ? 'playing' : 'paused';
+}
+
+// 系统浮层的进度条。position 必须落在 [0, duration] 内，否则 setPositionState 会抛 ——
+// 切歌瞬间 currentTime 和 duration 会短暂对不上，所以每次都夹一下。
+function setPositionState() {
+  if (!mediaSession || !mediaSession.setPositionState) return;
+  if (!audio.duration || !Number.isFinite(audio.duration)) return;
+  try {
+    mediaSession.setPositionState({
+      duration: audio.duration,
+      playbackRate: audio.playbackRate,
+      position: Math.min(Math.max(audio.currentTime, 0), audio.duration),
+    });
+  } catch (e) {}
+}
+
 export function initSongInfo(index) {
   if (index < 0 || index >= state.songs.length) return;
   state.currentIndex = index;
@@ -36,6 +75,7 @@ export function initSongInfo(index) {
 
   titleEl.innerText = song.title;
   artistEl.innerText = song.artist;
+  setMediaMetadata(song); // 封面等 updateCoverAndColor 拿到后再补
   updateVirtualList();
 
   updateCoverAndColor(song);
@@ -53,6 +93,7 @@ export function playSong(index) {
 
   titleEl.innerText = song.title;
   artistEl.innerText = song.artist;
+  setMediaMetadata(song); // 封面等 updateCoverAndColor 拿到后再补
 
   updatePlayButton(true);
 
@@ -98,6 +139,7 @@ export async function updateCoverAndColor(song) {
     defaultCover.style.display = 'none';
     if (barThumb) barThumb.src = coverUrl;
     updateThemeColor(coverUrl);
+    setMediaMetadata(song, coverUrl); // 系统浮层的封面
     onCoverReady(coverUrl);
   } else {
     if (barThumb) barThumb.removeAttribute('src');
@@ -133,6 +175,54 @@ export function updatePlayButton(isPlaying) {
   }
 }
 
+// 上一首。按钮和系统媒体键共用一份逻辑，避免两处各写一遍走岔。
+export function playPrev() {
+  if (state.songs.length === 0) return;
+  let prev = state.currentIndex - 1;
+  if (state.playMode === 2) prev = Math.floor(Math.random() * state.songs.length);
+  else if (prev < 0) prev = state.songs.length - 1;
+  playSong(prev);
+}
+
+// 系统媒体键 / 系统浮层上的按钮，全部走应用自己的播放逻辑
+function registerMediaSessionHandlers() {
+  if (!mediaSession) return;
+  const on = (action, handler) => {
+    try {
+      mediaSession.setActionHandler(action, handler);
+    } catch (e) {
+      // 个别 action 在旧 Chromium 上不存在，忽略即可
+    }
+  };
+
+  on('play', () => {
+    if (audio.paused) {
+      if (state.currentIndex === -1 && state.songs.length) playSong(0);
+      else audio.play();
+      updatePlayButton(true);
+    }
+  });
+  on('pause', () => {
+    audio.pause();
+    updatePlayButton(false);
+  });
+  on('previoustrack', () => playPrev());
+  on('nexttrack', () => playNext(false));
+  on('seekto', (d) => {
+    if (typeof d.seekTime !== 'number' || !audio.duration) return;
+    audio.currentTime = Math.min(Math.max(d.seekTime, 0), audio.duration);
+    updateProgressStyle((audio.currentTime / audio.duration) * 100);
+    currentTimeEl.innerText = formatTime(audio.currentTime);
+    syncLyrics(audio.currentTime);
+  });
+  on('seekbackward', (d) => {
+    audio.currentTime = Math.max(0, audio.currentTime - (d.seekOffset || 10));
+  });
+  on('seekforward', (d) => {
+    audio.currentTime = Math.min(audio.duration || 0, audio.currentTime + (d.seekOffset || 10));
+  });
+}
+
 // 空库复位（如移除最后一个文件夹）：停止播放并复位界面与封面状态
 export function resetToEmptyLibrary() {
   audio.pause();
@@ -146,6 +236,10 @@ export function resetToEmptyLibrary() {
   coverImg.style.display = 'none';
   defaultCover.style.display = 'flex';
   updateThemeColor(null);
+  if (mediaSession) {
+    mediaSession.metadata = null;
+    mediaSession.playbackState = 'none';
+  }
 }
 
 export async function savePlaybackState() {
@@ -183,6 +277,7 @@ export function bindPlaybackEvents() {
       currentTimeEl.innerText = formatTime(audio.currentTime);
       totalTimeEl.innerText = formatTime(audio.duration);
       syncLyrics(audio.currentTime);
+      setPositionState();
     }
   });
 
@@ -215,12 +310,12 @@ export function bindPlaybackEvents() {
   coverContainer.addEventListener('wheel', handleVolumeWheel);
 
   document.getElementById('btnNext').addEventListener('click', () => playNext(false));
-  document.getElementById('btnPrev').addEventListener('click', () => {
-    let prev = state.currentIndex - 1;
-    if (state.playMode === 2) prev = Math.floor(Math.random() * state.songs.length);
-    else if (prev < 0) prev = state.songs.length - 1;
-    playSong(prev);
-  });
+  document.getElementById('btnPrev').addEventListener('click', () => playPrev());
+
+  // 系统媒体控制：按钮回调 + 播放状态同步
+  registerMediaSessionHandlers();
+  audio.addEventListener('play', () => setPlaybackState(true));
+  audio.addEventListener('pause', () => setPlaybackState(false));
 
   audio.addEventListener('seeking', () => {
     lastSeekAt = Date.now();
