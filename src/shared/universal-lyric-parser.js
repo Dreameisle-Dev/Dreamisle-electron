@@ -5,6 +5,8 @@ class universalLyricParser {
   static META_TEXT_REGEX =
     /^(作词|作曲|编曲|制作|混音|吉他|贝斯|鼓|键盘|录音|母带|和声|监制|企划|发行|Lyricist|Composer|Arranger|Producer|Vocals|Mixed|Mastered)\s*[:：]/i;
   static BRACKET_REGEX = /^(.+?)\s*[（\(\[\{【]([\p{L}\p{N}\s\p{P}]+?)[）\)\]\}】]$/u;
+  // 汉字 / 假名 / 谚文：用来判断括号内外是不是「换了文字体系」
+  static HAN_KANA_HANGUL_REGEX = /[\p{sc=Han}\p{sc=Hiragana}\p{sc=Katakana}\p{sc=Hangul}]/u;
   static WEST_TO_EAST_REGEX =
     /^([\p{sc=Latin}\p{sc=Cyrillic}\p{sc=Greek}\p{N}\p{P}\s]+?)\s+([\p{sc=Han}\p{sc=Hiragana}\p{sc=Katakana}\p{sc=Hangul}].+)$/u;
   static EAST_TO_WEST_REGEX =
@@ -194,7 +196,18 @@ class universalLyricParser {
 
     const bracketMatch = text.match(this.BRACKET_REGEX);
     if (bracketMatch) {
-      return { original: bracketMatch[1].trim(), translation: bracketMatch[2].trim() };
+      const main = bracketMatch[1].trim();
+      const inner = bracketMatch[2].trim();
+      // 括号内容只有「换了文字体系」才算译文，和上面几条空格拆分正则同一套判据：
+      //   `Believer (信徒)`              原文拉丁 + 括号汉字 → 是译文
+      //   `爱错 - 王力宏 (Leehom Wang)`  原文已是汉字，括号只是罗马音/别名 → 不是译文
+      //   `Something (Live)`             两边都是拉丁，只是版本说明 → 不是译文
+      // 只按「有括号」就配对的话，纯中文歌的标题行会被判出一条假译文，
+      // 于是整首中文歌都会亮出「译」按钮。
+      if (this.HAN_KANA_HANGUL_REGEX.test(inner) && !this.HAN_KANA_HANGUL_REGEX.test(main)) {
+        return { original: main, translation: inner };
+      }
+      return { original: text };
     }
 
     if (enableSpaceSplit) {
