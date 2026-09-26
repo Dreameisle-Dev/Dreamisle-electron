@@ -37,6 +37,7 @@ import { bindLyricsEvents, setLyricsTranslationVisible } from './lyrics.js';
 import { toggleSettings, closeSettings, bindSettingsEvents } from './settings.js';
 import { toggleStats, closeStats, isStatsOpen, bindStatsEvents } from './stats.js';
 import { initMouseFollow, updateProgressStyle, applyThemeMode } from './theme.js';
+import { initAutoHide, setAutoHideEnabled } from './autohide.js';
 import { initVisualizer } from './visualizer.js';
 import { showSyncToast } from './helpers.js';
 import { resolveRestoredIndex } from './playback-restore.js';
@@ -120,6 +121,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   setLyricsTranslationVisible(settings.lyricsTranslation !== false);
 
   initMouseFollow();
+  initAutoHide();
 
   // 频谱：把传输条已播放段变成实时频谱。必须在音频开始播放前建立
   // AudioContext 链路，否则 createMediaElementSource 之后再接会丢失首帧。
@@ -321,6 +323,8 @@ window.addEventListener('DOMContentLoaded', async () => {
       state.isMiniMode = false;
       document.body.classList.remove('mini-mode');
     }
+    // 进小窗时条可能正收着，强制露出来；出小窗恢复自动隐藏
+    setAutoHideEnabled(!state.isMiniMode);
     // 进度可视化在两种模式下结构不同（主区频谱 / 小窗细线），重新套一次
     updateProgressStyle(audio.duration ? (audio.currentTime / audio.duration) * 100 : 0);
   });

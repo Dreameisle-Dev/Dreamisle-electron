@@ -323,6 +323,19 @@ body {
   z-index: 4;
   overflow: hidden;
   -webkit-app-region: no-drag;
+  /* 跟着传输栏一起挪，两边时长/曲线一致才不会一个先到一个后到 */
+  transition: top 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* 传输栏收起后补成上下等距。
+   bottom:160px 本来是为了躲开 130px 的条，条一收这 160px 就成了白留的空白，
+   而 top 还在 34u（约 23px）—— 上 23 / 下 160，整块歌词贴在顶上。
+   把 top 提到和 bottom 相同，歌词落到窗口的垂直中线上。
+
+   128 而不是 160：容器是相对 .app-container 定位的，而 .app-container 从标题栏
+   下方开始（32px），所以窗口坐标下的上边距 = 32 + top。要它等于 160，top 得取 128。 */
+body.bar-hidden .lyrics-container {
+  top: calc(160px - 32px);
 }
 
 .lyrics-scroll {
@@ -451,7 +464,9 @@ body {
   z-index: 8;
   transition:
     background-color 0.2s ease,
-    color 0.2s ease;
+    color 0.2s ease,
+    transform 0.22s cubic-bezier(0.4, 0, 0.2, 1),
+    opacity 0.22s ease;
 }
 
 .lyric-translation-toggle:hover {
@@ -477,6 +492,43 @@ body {
   background: var(--bar-bg);
   border-top: 1px solid var(--bar-border);
   backdrop-filter: blur(30px) saturate(150%);
+  transition:
+    transform 0.22s cubic-bezier(0.4, 0, 0.2, 1),
+    opacity 0.22s ease;
+}
+
+/* 自动隐藏：整条往下滑出视口。用 translateY 而不是改 height ——
+   改 height 会触发内部控件重排，滑出过程中按钮会抖。 */
+body.bar-hidden .player-bar {
+  transform: translateY(100%);
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* 常驻提示线（3px）。只在条收起时出现：条在的时候它自己就是线索。
+   位置贴窗口最下沿 —— 条就是从这里滑走的。 */
+.bar-hint {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 3px;
+  z-index: 9;
+  pointer-events: none;
+  background: var(--bar-border);
+  opacity: 0;
+  transition: opacity 0.22s ease;
+}
+
+body.bar-hidden .bar-hint {
+  opacity: 1;
+}
+
+/* 「译」按钮贴着条的上面，条走了它得跟着走，不然会孤零零浮在那 */
+body.bar-hidden .lyric-translation-toggle {
+  transform: translateY(130px);
+  opacity: 0;
+  pointer-events: none;
 }
 
 .bar-time {
