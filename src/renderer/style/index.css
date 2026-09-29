@@ -735,6 +735,49 @@ body.bar-hidden .lyric-translation-toggle {
   transform: translate(-50%, -50%) scale(1.05);
 }
 
+/* 全局轻提示（已添加到歌单 / 发现新歌 / 字体读取失败…）
+   必须 fixed 脱离文档流：body 是 flex column，留在流内会永久占掉底部一行，
+   把 .app-container 顶上去（这正是一直以来的表现）。
+   隐藏用 visibility 而不是只靠 opacity —— opacity:0 的元素仍留在无障碍树里，
+   而且还能被 Tab 聚焦、被划选。visibility 会把两者一起关掉。 */
+.sync-toast {
+  position: fixed;
+  left: 50%;
+  bottom: 154px; /* 传输条 130px + 24px 间距 */
+  transform: translate(-50%, 8px);
+  z-index: 300; /* 要盖过抽屉(30)和设置浮层(100)——提示大多从这两处触发 */
+  max-width: min(560px, calc(100vw - 64px));
+  padding: 10px 20px;
+  border-radius: 20px;
+  background: var(--menu-bg);
+  backdrop-filter: blur(24px) saturate(160%);
+  -webkit-backdrop-filter: blur(24px) saturate(160%);
+  border: 1px solid var(--modal-border);
+  box-shadow: 0 12px 40px var(--shade-2);
+  color: var(--ink1);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+  /* visibility 是离散动画：淡出时它会撑到过渡结束才翻转成 hidden，
+     所以视觉上仍是完整淡出，不会提前消失 */
+  transition:
+    opacity 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+    transform 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+    visibility 0.25s;
+}
+
+.sync-toast.visible {
+  opacity: 1;
+  visibility: visible;
+  transform: translate(-50%, 0);
+}
+
 /* ══ 播放列表抽屉（正在播放）══
    固定 400px 宽的面板：内部全部用固定 px，不跟 --u 缩放。
    模糊要给够（48px）：背后的黑胶边缘会透过玻璃形成一道硬边污迹。 */

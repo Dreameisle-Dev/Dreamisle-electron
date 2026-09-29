@@ -51,6 +51,16 @@ export function compareMixed(aStr, bStr) {
   }
 }
 
+// 淡出结束后清空文本，避免旧提示长期滞留在 DOM 里。
+// 用 transitionend 而不是再加一个定时器：清早了会把淡出中的胶囊清成空壳。
+// 万一过渡被禁用（如 prefers-reduced-motion）这里不触发也没关系 ——
+// visibility:hidden 已经保证它不可见、不可聚焦、不在无障碍树里。
+syncToastEl?.addEventListener('transitionend', (e) => {
+  if (e.propertyName === 'opacity' && !syncToastEl.classList.contains('visible')) {
+    syncToastEl.innerText = '';
+  }
+});
+
 export function showToast(text) {
   if (!syncToastEl) return;
   syncToastEl.innerText = text;
