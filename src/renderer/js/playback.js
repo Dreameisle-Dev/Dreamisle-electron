@@ -28,13 +28,8 @@ audio.volume = 0.5;
 // 拖动进度条直接拖到末尾会触发 ended,此类不计入完整播放:记录最近一次 seek 时间用于过滤
 let lastSeekAt = 0;
 
-// ══ 系统媒体控制（Windows SMTC / 键盘媒体键）══
-// Electron 默认就开着 Chromium 的 MediaSessionService，媒体会话一直在注册 ——
-// 但我们从没往里喂过数据，所以系统浮层上只有一个叫 "Dreamisle" 的空壳：
-// 没歌名、没歌手、没封面、没进度。下面把这三样接上去。
-//
-// 不要再用 globalShortcut 注册媒体键：那边注册了会和这条管道抢，表现为浮层不出现。
-// 要加媒体键行为，加在这里的 setActionHandler 里。
+// 系统媒体控制（Windows SMTC / 媒体键）。媒体键行为加在下面的 setActionHandler 里，
+// 不要另用 globalShortcut 注册 —— 会和这条管道抢，表现为系统浮层不出现。
 const mediaSession = navigator.mediaSession || null;
 
 function setMediaMetadata(song, coverUrl) {

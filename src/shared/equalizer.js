@@ -1,7 +1,5 @@
 // 均衡器的纯逻辑：频段表、预设曲线、存储数据校验、自动前级。
-//
-// 这里不碰 DOM、不碰 Web Audio —— 音频图在 renderer/js/equalizer.js。
-// 拆开是为了这一层能脱离 Electron 单独跑测试（equalizer.test.js）。
+// 不碰 DOM、不碰 Web Audio —— 音频图在 renderer/js/equalizer.js。
 
 // ISO 标准十段，1 倍频程间隔
 export const EQ_BANDS = [31, 62, 125, 250, 500, 1000, 2000, 4000, 8000, 16000];

@@ -201,10 +201,9 @@ export function applySort(mode, btnEl) {
   initVirtualList(searchInput.value.trim());
 }
 
-// 套用当前激活的排序按钮。
-// 任何「列表要重新出现」的路径（启动、换队列）都得走这里：
-// 直接调 initVirtualList 会按 state.songs 的物理顺序渲染，
-// 而按钮高亮仍是「歌名」——列表顺序和按钮说法对不上，字母索引也会跟着错位。
+// 套用当前激活的排序按钮。任何「列表重新出现」的路径（启动、换队列）都必须走这里：
+// 直接调 initVirtualList 是按 state.songs 的物理顺序渲染，而按钮高亮仍是「歌名」——
+// 列表顺序和按钮说法对不上，字母索引也会跟着错位。
 export function applyActiveSort() {
   const activeSortBtn = [btnSortTitle, btnSortArtist, btnSortRandom].find(
     (btn) => btn && btn.classList.contains('active')

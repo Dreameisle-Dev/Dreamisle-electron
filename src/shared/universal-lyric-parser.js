@@ -18,12 +18,7 @@ class universalLyricParser {
   static WEST_TO_OTHER_SCRIPTS_REGEX =
     /^([\p{sc=Latin}\p{sc=Han}\p{N}\p{P}\s]+?)\s+([\p{sc=Arabic}\p{sc=Thai}\p{sc=Devanagari}\p{sc=Hebrew}].+)$/u;
 
-  /**
-   * 解析 LRC 歌词文本
-   * @param {string} lrcContent 原始歌词文本
-   * @param {number} [timeToleranceMs=50] 模糊时间戳容差（毫秒）
-   * @returns {{ metadata: Object, lines: Array<{ time: number, text: string, translation?: string }> }}
-   */
+  /** 解析 LRC 文本 → { metadata, lines }。timeToleranceMs 是模糊时间戳容差（毫秒）。 */
   static parse(lrcContent, timeToleranceMs = 50) {
     if (!lrcContent || typeof lrcContent !== 'string') {
       return { metadata: {}, lines: [] };
@@ -133,10 +128,7 @@ class universalLyricParser {
     };
   }
 
-  /**
-   * 全曲预检逻辑：测试文本是否符合任一已知语种跳变模型
-   * @private
-   */
+  /** 全曲预检：文本是否符合任一已知的语种跳变模型 */
   static _checkGlobalInlineSpaceFeature(texts) {
     let validLines = 0;
     let matchedLines = 0;
@@ -160,10 +152,7 @@ class universalLyricParser {
     return validLines > 0 && matchedLines / validLines >= 0.3;
   }
 
-  /**
-   * 单行拆分调度器
-   * @private
-   */
+  /** 单行拆分调度器 */
   static _splitInline(text, enableSpaceSplit) {
     if (!text) return { original: '' };
 
@@ -198,12 +187,8 @@ class universalLyricParser {
     if (bracketMatch) {
       const main = bracketMatch[1].trim();
       const inner = bracketMatch[2].trim();
-      // 括号内容只有「换了文字体系」才算译文，和上面几条空格拆分正则同一套判据：
-      //   `Believer (信徒)`              原文拉丁 + 括号汉字 → 是译文
-      //   `爱错 - 王力宏 (Leehom Wang)`  原文已是汉字，括号只是罗马音/别名 → 不是译文
-      //   `Something (Live)`             两边都是拉丁，只是版本说明 → 不是译文
-      // 只按「有括号」就配对的话，纯中文歌的标题行会被判出一条假译文，
-      // 于是整首中文歌都会亮出「译」按钮。
+      // 括号内容只有「换了文字体系」才算译文（`Believer (信徒)` 是，`爱错 (Leehom Wang)`、
+      // `Something (Live)` 不是）。只按「有括号」就配对的话，纯中文歌会被判出假译文。
       if (this.HAN_KANA_HANGUL_REGEX.test(inner) && !this.HAN_KANA_HANGUL_REGEX.test(main)) {
         return { original: main, translation: inner };
       }
@@ -230,12 +215,7 @@ class universalLyricParser {
     return { original: text };
   }
 
-  /**
-   * 播放器高亮辅助函数（二分查找当前播放歌词）
-   * @param {Array<{ time: number }>} lines 解析后的歌词数组
-   * @param {number} currentTimeMs 当前音频播放时间（毫秒）
-   * @returns {number} 当前歌词行的索引（未开始返回 -1）
-   */
+  /** 二分查找当前播放行，返回索引（未开始返回 -1） */
   static getCurrentIndex(lines, currentTimeMs) {
     if (!lines || lines.length === 0) return -1;
     if (currentTimeMs < lines[0].time) return -1;

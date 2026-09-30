@@ -1,23 +1,6 @@
-// 均衡器：Web Audio 图 + 设置面板里的十段推子。
-//
-//   <audio> → MediaElementSource → Biquad ×10 → 前级 Gain → destination
-//
-// 三条不能破的约束：
-//
-// 1. createMediaElementSource 对同一个元素只能调一次，而且调过之后元素的声音
-//    **永久**只从这张图出去（拆不掉）。所以整张图是惰性的：只有用户真启用均衡器
-//    时才建。关闭状态下完全不碰音频链路，行为与没有这个功能时一致。
-//
-// 2. 建图失败要能全身而退。唯一有实际失败风险的是 createMediaElementSource，
-//    所以先把「滤波器串 → 前级 → destination」搭完（这一串不会失败），
-//    最后一步才创建 source 接进去 —— 在 source 之前抛异常，元素还没被碰过。
-//
-// 3. AudioContext 一旦停在 suspended，整条链路静音（包括「关闭均衡器」时，
-//    因为那时音频已经改从图里走了）。所以建图后立刻 resume，并把 resume
-//    挂到 audio 的 play 事件上反复兜底。
-//
-// 「关闭开关」不等于拆图，而是十个滤波器全 0dB + 前级 0dB，数学上等同直通。
-// 因此关闭状态下拖推子也必须立刻出声 —— applyToGraph 里 effective 取的就是这个语义。
+// 均衡器：<audio> → MediaElementSource → Biquad ×10 → 前级 Gain → destination。
+// 图是惰性建的 —— createMediaElementSource 每个元素只能调一次且拆不掉，所以关着时索性不建，
+// 用户真启用才接管音频链路。AudioContext 停在 suspended 会整体静音，建图后与每次 play 都要 resume。
 
 import { t } from '../../shared/i18n.js';
 import {
@@ -50,7 +33,6 @@ let graphFailed = false; // 建图失败过就永不再试，避免反复弹提�
 let faderInputs = [];
 let faderValues = [];
 
-// ── 音频图 ──────────────────────────────────────────────
 
 function resumeGraph() {
   if (ctx && ctx.state !== 'running') ctx.resume().catch(() => {});
@@ -117,7 +99,6 @@ function applyToGraph() {
   resumeGraph();
 }
 
-// ── 状态与持久化 ────────────────────────────────────────
 
 // 每次改动都写主进程。写的是 electron-store 的 JSON，和小节里的歌词样式滑块同款。
 function commit() {
@@ -152,7 +133,6 @@ function resetEq() {
   commit();
 }
 
-// ── 界面 ────────────────────────────────────────────────
 
 // +12 / 0 / −6：正数带符号，减号用 U+2212（和刻度、音量显示的排版一致）
 function formatDb(value) {
@@ -249,7 +229,6 @@ export function syncEqUi() {
   })} · ${t('settings.eqPreampHint')}`;
 }
 
-// ── 对外入口 ────────────────────────────────────────────
 
 export function initEqualizer(rawEq) {
   state.equalizer = normalizeEq(rawEq);

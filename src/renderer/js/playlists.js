@@ -200,7 +200,6 @@ function closePlaylistDetail() {
   renderPlaylistsList(); // 同步歌曲数等变化
 }
 
-// ===== 右键菜单 =====
 let contextSong = null;
 let contextAnchor = { x: 0, y: 0 };
 

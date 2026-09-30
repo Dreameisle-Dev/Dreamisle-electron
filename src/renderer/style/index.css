@@ -21,10 +21,9 @@ body {
   transform: translate3d(0, 0, 0);
 }
 
-/* 光场：1100×1100 方形，scale(2.6) 后旋转，所以看不到旋转的边界。
-   色斑淡出用相对颜色语法 rgb(from C r g b / 0) —— 得到「同色的零透明」。
-   直接写 transparent 会淡向透明黑（CSS 里 transparent = rgba(0,0,0,0)），
-   每个色斑边缘都会多一圈脏边，四个叠起来整体发闷。 */
+/* 光场：1100×1100 方形，scale(2.6) 后旋转，看不到旋转边界。
+   色斑淡出用 rgb(from C r g b / 0) 而非 transparent —— 后者等于 rgba(0,0,0,0)，
+   会淡向透明黑，每个斑边缘多一圈脏边、四个叠起来整体发闷。 */
 .light-field {
   position: absolute;
   top: 50%;
@@ -40,13 +39,8 @@ body {
   transition: translate 0.7s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-/* ── 四个色斑，各自一个元素 ──
-   原来是同一个元素的四层 background，所以只能整块一起 rotate：四个斑的相对位置
-   永远锁死，转起来像一整块盘子在转，不是四个斑在飘。拆成四个元素才各走各的。
-
-   模糊挂在每个色斑自己身上，不是挂父级：父级加 filter 会把整块合成结果每帧
-   重新栅格化（1400² 面积 + 70px 半径），而挂在子元素上、配合 will-change，
-   栅格化一次之后动 transform 是免费的。 */
+/* 四个色斑各占一个元素：同一元素的多层 background 只能整块一起 rotate，转起来像一整块盘子。
+   模糊挂在每个色斑自己身上而不是父级 —— 父级加 filter 会把整块合成结果每帧重新栅格化。 */
 .blob {
   position: absolute;
   width: 88%;
@@ -185,19 +179,12 @@ body {
 }
 
 
-/* ══ 黑胶 ══
-   从上方和右侧出框，窗口外不渲染（.app-container 有 overflow:hidden）。
-   位置与尺寸全部乘 --u（设计单位）：它是方形，宽高同源，
-   所以在 1200×700 和 1800×1050 下相对位置一致。
+/* 黑胶：从上方和右侧出框，位置与尺寸全乘 --u（方形、宽高同源，两种窗口比例下相对位置一致）。
    旋转加在容器上而不是 .cover-disc —— 圆标和中心孔是盘面的兄弟节点。 */
 .album-art-container {
   position: absolute;
-  /* left 是让「圆标到窗口上边」= 「圆标到窗口右边」解出来的，不是随手填的数：
-       上边距 = 32(标题栏固定高) + top*u + (1000-448)/2*u
-       右边距 = 100vw - left*u - (1000+448)/2*u
-     两式相等、top 取 -260 时，left = (100vw-32)/u - 740，1200 宽下即 1012。
-     标题栏是固定 px 而其余都乘 --u，所以这只在 1200 宽下严格相等；
-     1800 宽时差 16u（约 1%），肉眼看不出来。 */
+  /* left 是解出来的、不是随手填的数：让「圆标到窗口上边」= 「圆标到窗口右边」，
+   top 取 -260 时 left = (100vw-32)/u - 740（1200 宽下即 1012）。改 top 必须重解。 */
   left: calc(1012 * var(--u));
   top: calc(-260 * var(--u));
   width: calc(1000 * var(--u));
@@ -309,11 +296,9 @@ body {
   background: #0c0912;
 }
 
-/* ══ 歌词区 ══
-   绝对定位在窗口左侧，不再占右半屏。
-   所有 px 是设计单位（基准 1800×1050），乘 --u 缩放到实际窗口。 */
-/* 高度用 bottom 锚定而不是固定值：传输条高 130px 是**固定**的、不随 --u 缩放，
-   而设计稿里的 852 设计单位是按条高也缩放算的。用 bottom 避开这个基准冲突。 */
+/* 歌词区：绝对定位在窗口左侧（不再占右半屏），px 全是设计单位。
+   高度用 bottom 锚定而不是固定值 —— 传输条 130px 固定、不随 --u 缩放，而设计稿里的 852
+   是按条高也缩放算的，用 bottom 避开这个基准冲突。 */
 .lyrics-container {
   position: absolute;
   left: calc(92 * var(--u));
@@ -327,13 +312,8 @@ body {
   transition: top 0.22s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* 传输栏收起后补成上下等距。
-   bottom:160px 本来是为了躲开 130px 的条，条一收这 160px 就成了白留的空白，
-   而 top 还在 34u（约 23px）—— 上 23 / 下 160，整块歌词贴在顶上。
-   把 top 提到和 bottom 相同，歌词落到窗口的垂直中线上。
-
-   128 而不是 160：容器是相对 .app-container 定位的，而 .app-container 从标题栏
-   下方开始（32px），所以窗口坐标下的上边距 = 32 + top。要它等于 160，top 得取 128。 */
+/* top 取 128 是为了让歌词垂直居中：容器相对 .app-container 定位，而它从标题栏下方
+   开始（32px），窗口坐标下的上边距 = 32 + top；要它等于 bottom 的 160，top 只能是 128。 */
 body.bar-hidden .lyrics-container {
   top: calc(160px - 32px);
 }
@@ -355,12 +335,8 @@ body.bar-hidden .lyrics-container {
   display: none;
 }
 
-/* 一行 = 原文 + 可选译文。内部间距 5，行间 26：
-   靠间距差把「原文+译文」读成一个整体，而不是四行松散的文字。
-
-   非当前行模糊、当前行清晰 —— 分层靠「清晰度」而不是只靠颜色，
-   一眼就能锁定正在唱的那句。模糊值不随 --u 缩放：它是视觉柔化，
-   跟着窗口放大只会糊成一团。 */
+/* 一行 = 原文 + 可选译文：内部间距 5、行间 26，靠间距差把「原文+译文」读成一个整体。
+   非当前行模糊、当前行清晰 —— 分层靠清晰度而非只靠颜色；模糊值不随 --u 缩放。 */
 .lyric-line {
   margin: 0;
   padding: 0;
@@ -479,9 +455,7 @@ body.bar-hidden .lyrics-container {
   border-color: transparent;
 }
 
-/* ══ 传输条 ══
-   高度固定 130px，不乘 --u：控件区不该随窗口大小缩放。
-   条内的位置与字号用设计单位。 */
+/* 传输条：高度固定 130px、不乘 --u（控件区不随窗口缩放），条内位置与字号用设计单位。 */
 .player-bar {
   position: absolute;
   left: 0;
@@ -597,10 +571,8 @@ body.bar-hidden .lyric-translation-toggle {
   box-shadow: 0 0 10px rgba(255, 255, 255, 0.9);
 }
 
-/* 条内的歌曲信息。
-   这里全部用固定 px，不乘 --u。传输条是固定 130px 高的控件区，
-   内部间距跟着设计单位缩放的话，缩略图的 left 会缩、但 width 写死，
-   窗口一窄标题就落进缩略图里（实测 73+56=129 > 标题 left 121）。 */
+/* 条内歌曲信息全部用固定 px，不乘 --u：内部间距若跟着缩放，缩略图 left 会缩而 width
+   写死，窗口一窄标题就落进缩略图里。 */
 .bar-thumb {
   position: absolute;
   left: 26px;
@@ -735,11 +707,9 @@ body.bar-hidden .lyric-translation-toggle {
   transform: translate(-50%, -50%) scale(1.05);
 }
 
-/* 全局轻提示（已添加到歌单 / 发现新歌 / 字体读取失败…）
-   必须 fixed 脱离文档流：body 是 flex column，留在流内会永久占掉底部一行，
-   把 .app-container 顶上去（这正是一直以来的表现）。
-   隐藏用 visibility 而不是只靠 opacity —— opacity:0 的元素仍留在无障碍树里，
-   而且还能被 Tab 聚焦、被划选。visibility 会把两者一起关掉。 */
+/* 全局轻提示必须 fixed 脱离文档流：body 是 flex column，留在流内会永久占掉底部一行、
+   把 .app-container 顶上去。隐藏用 visibility 而非只靠 opacity —— opacity:0 的元素还在
+   无障碍树里，且能被 Tab 聚焦、被划选。 */
 .sync-toast {
   position: fixed;
   left: 50%;
@@ -778,9 +748,8 @@ body.bar-hidden .lyric-translation-toggle {
   transform: translate(-50%, 0);
 }
 
-/* ══ 播放列表抽屉（正在播放）══
-   固定 400px 宽的面板：内部全部用固定 px，不跟 --u 缩放。
-   模糊要给够（48px）：背后的黑胶边缘会透过玻璃形成一道硬边污迹。 */
+/* 播放列表抽屉：固定 400px 宽，内部全用固定 px，不跟 --u 缩放。
+   模糊要给够（48px）：背后黑胶的边缘会透过玻璃形成一道硬边污迹。 */
 .playlist-drawer {
   position: absolute;
   top: 0;
@@ -967,10 +936,9 @@ body.bar-hidden .lyric-translation-toggle {
   border-radius: 3px;
 }
 
-/* ⚠️ 行高 62px 是硬约束：state.js 里 ITEM_HEIGHT = 62，
-   虚拟列表靠 translateY(i*62) 定位、#playlistSpacer 高度 = length*62。
-   改这里必须同步改那个常量和 spacer 公式，否则整个列表错位。
-   top 由 JS 内联设置（10px），这里不写 top。 */
+/* ⚠️ 行高 62px 是硬约束：state.js 的 ITEM_HEIGHT = 62，虚拟列表靠 translateY(i*62) 定位、
+   spacer 高度 = length*62。改这里必须同步改常量和公式，否则整个列表错位。
+   （top 由 JS 内联设置，这里不写。） */
 .playlist-item {
   position: absolute;
   left: 0;
@@ -1048,12 +1016,8 @@ body.bar-hidden .lyric-translation-toggle {
 
 
 
-/* ══ 小窗模式 ══
-   窗口固定 300×340（见 main/window.js）。只留四样东西：
-   唱片 / 当前歌词 / 控制键 / 底部细进度线。
-   歌词只有原文，与桌面歌词一致（见 lyrics.js 的 syncLyrics）。
-
-   主界面专属元素一律收掉：歌词列、频谱、两端时间、封面小图、歌名歌手、模式键、歌单键。 */
+/* 小窗模式：窗口固定 300×340（见 main/window.js），只留唱片 / 当前歌词 / 控制键 / 底部细进度线，
+   歌词只有原文。主界面专属元素（歌词列、频谱、两端时间、封面小图、歌名歌手、模式键）全收掉。 */
 body.mini-mode .lyrics-container,
 body.mini-mode .viz-wrap,
 body.mini-mode .bar-time,
@@ -1223,8 +1187,7 @@ body.mini-mode .mini-lyrics {
   -webkit-app-region: no-drag;
 }
 
-/* ══ 浮层外壳（设置 / 帮助共用）══
-   居中显示，不再是原来的「从顶部滑入 + margin-top 48px」。 */
+/* 浮层外壳（设置 / 帮助共用）：居中显示。 */
 .help-overlay {
   position: fixed;
   inset: 0;
@@ -1319,8 +1282,7 @@ body.mini-mode .mini-lyrics {
   background: var(--row-on);
 }
 
-/* ── 帮助浮层正文（单列）──
-   行高与分节标题沿用原版参数，不做双列。 */
+/* 帮助浮层正文：单列，行高与分节标题沿用原版参数。 */
 .help-card-help {
   width: min(580px, calc(100vw - 48px));
 }
@@ -1388,7 +1350,6 @@ kbd {
   border-bottom-width: 2px;
 }
 
-/* ══ 设置浮层 ══ */
 .settings-card {
   height: 620px;
 }
@@ -1478,7 +1439,6 @@ kbd {
   margin: 0 0 18px;
 }
 
-/* ── 主题选择（分段控件，与抽屉里的排序同款）── */
 .theme-seg {
   display: flex;
   gap: 4px;
@@ -1512,7 +1472,6 @@ kbd {
   font-weight: 600;
 }
 
-/* ── 语言 / 字体下拉（共用一套外观）── */
 .lang-select,
 .font-select {
   position: relative;
@@ -1619,7 +1578,6 @@ kbd {
   scrollbar-width: thin;
 }
 
-/* ── 音乐文件夹 ── */
 .folder-list {
   list-style: none;
   margin: 0 0 12px;
@@ -1709,7 +1667,6 @@ kbd {
   cursor: pointer;
 }
 
-/* ── 桌面歌词样式控件 ── */
 .style-control {
   margin-bottom: 20px;
 }
@@ -1783,9 +1740,8 @@ kbd {
   border-radius: 6px;
 }
 
-/* ── 均衡器面板 ──
-   十段竖式推子。内容区宽只有约 314px（卡片 560 − 导航 194 − 左右内边距 52），
-   摊到 10 段每段约 31px：20px 的推子本体加 10px 字号的数值/频率标签刚够。 */
+/* 均衡器面板：十段竖式推子。内容区宽约 654px（卡片 900 − 导航 194 − 左右内边距 52），
+   摊到 10 段每段 62px 富余：20px 的推子本体加 10px 字号的数值/频率标签。 */
 
 .eq-enable-row {
   margin-bottom: 18px;
@@ -1908,10 +1864,8 @@ kbd {
   font-weight: 600;
 }
 
-/* 竖式推子：Chromium 的现代写法是给 input 加 writing-mode（124+ 支持，
-   Electron 40 的 Chromium 远高于此）。vertical-lr 的 inline 轴自上而下、
-   最小值在上，再用 direction: rtl 翻过来才是「上大下小」的均衡器方向。
-   顺带白拿方向键操作与原生无障碍。 */
+/* 竖式推子用原生 input[type=range] + writing-mode（Chromium 124+）：vertical-lr 的 inline
+   轴自上而下、最小值在上，再用 direction: rtl 翻成「上大下小」。顺带白拿键盘与无障碍。 */
 .eq-fader {
   writing-mode: vertical-lr;
   direction: rtl;
@@ -1980,10 +1934,8 @@ kbd {
 
 
 
-/* ===== 自定义歌单抽屉(镜像右侧播放列表抽屉)===== */
-/* ══ 歌单抽屉（列表视图 + 详情视图）══
-   与播放列表抽屉镜像：右侧滑入、固定 400px、内部全固定 px。
-   两个视图由 JS 用内联 display 切换，所以这里只管各自的内部布局。 */
+/* 歌单抽屉：与播放列表抽屉镜像（右侧滑入、固定 400px、内部全固定 px）。
+   列表/详情两个视图由 JS 用内联 display 切换，这里只管各自的内部布局。 */
 .playlists-drawer {
   position: absolute;
   top: 0;
@@ -2061,8 +2013,7 @@ kbd {
   border-radius: 3px;
 }
 
-/* ── 歌单卡片 ──
-   ⚠️ 左侧的通用图标已按用户要求移除：每个歌单都长一样，纯装饰、零信息。 */
+/* ⚠️ 歌单卡片左侧的通用图标已移除：每个歌单都长一样，纯装饰、零信息。 */
 .playlists-card {
   position: relative;
   display: flex;
@@ -2203,7 +2154,6 @@ kbd {
   color: var(--ink3);
 }
 
-/* ── 详情视图 ── */
 .playlists-back-btn {
   width: 32px;
   height: 32px;
@@ -2348,10 +2298,8 @@ body.mini-mode .playlists-drawer {
   display: none !important;
 }
 
-/* ══ 歌曲右键菜单 ══
-   ⚠️ 宽度 = 216 + 左右各 6px 内边距 = **228px**。
-   playlists.js 里的位置钳制常量必须同步改成 MENU_W = 228，
-   否则菜单贴到窗口右边时会出界。 */
+/* ⚠️ 右键菜单宽度 = 216 + 左右各 6px = **228px**，playlists.js 里的 MENU_W 必须同步，
+   否则菜单贴到窗口右边会出界。 */
 .context-menu {
   position: fixed;
   z-index: 200;
@@ -2432,7 +2380,6 @@ body.mini-mode .playlists-drawer {
   background: var(--hair);
 }
 
-/* ══ 播放统计浮层 ══ */
 .stats-overlay {
   position: fixed;
   inset: 0;
@@ -2494,7 +2441,6 @@ body.mini-mode .playlists-drawer {
   min-height: 0;
 }
 
-/* ── 左栏：当前播放 ── */
 .stats-live {
   width: 322px;
   flex-shrink: 0;
@@ -2682,7 +2628,6 @@ body.mini-mode .playlists-drawer {
   margin-top: 2px;
 }
 
-/* ── 右栏：排行 ── */
 .stats-chart {
   flex: 1;
   min-width: 0;

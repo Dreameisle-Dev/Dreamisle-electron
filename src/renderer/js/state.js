@@ -1,9 +1,6 @@
-// 渲染进程共享状态：feature 模块通过 `import { state } from './state.js'` 直接读写。
-// 所有权约定：
-// - songs / originalSongs / currentIndex / playMode 由 playlist 与 playback 协作维护
-// - 歌词状态（currentLyrics 等）仅 lyrics.js 写入
-// - currentLyricsStyle / systemFonts 仅 settings.js 写入
-// - equalizer 仅 equalizer.js 写入
+// 渲染进程共享状态：feature 模块 import 后直接读写。
+// 所有权约定 —— songs/currentIndex/playMode 归 playlist 与 playback，歌词状态归 lyrics.js，
+// currentLyricsStyle/systemFonts 归 settings.js，equalizer 归 equalizer.js。
 import { DEFAULT_EQ } from '../../shared/equalizer.js';
 
 export const state = {
