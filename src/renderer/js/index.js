@@ -39,6 +39,7 @@ import { toggleStats, closeStats, isStatsOpen, bindStatsEvents } from './stats.j
 import { initMouseFollow, updateProgressStyle, applyThemeMode } from './theme.js';
 import { initAutoHide, setAutoHideEnabled } from './autohide.js';
 import { initVisualizer } from './visualizer.js';
+import { initEqualizer, bindEqEvents } from './equalizer.js';
 import { showSyncToast } from './helpers.js';
 import { resolveRestoredIndex } from './playback-restore.js';
 
@@ -111,6 +112,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   bindPlaylistEvents();
   bindPlaylistsEvents();
   bindStatsEvents();
+  bindEqEvents();
 
   // 启动时应用已存语言并刷新界面文案
   const settings = await window.dreamApi.getSettings();
@@ -120,11 +122,15 @@ window.addEventListener('DOMContentLoaded', async () => {
   volumeHud.innerText = t('hud.volume', { n: Math.round(audio.volume * 100) });
   setLyricsTranslationVisible(settings.lyricsTranslation !== false);
 
+  // 均衡器：若配置里是开启状态，这里就把 Web Audio 图建起来 —— 必须早于
+  // 下面恢复播放的那次 audio.play()，避免播放中途接管输出链路产生爆音。
+  initEqualizer(settings.equalizer);
+
   initMouseFollow();
   initAutoHide();
 
-  // 频谱：把传输条已播放段变成实时频谱。必须在音频开始播放前建立
-  // AudioContext 链路，否则 createMediaElementSource 之后再接会丢失首帧。
+  // 频谱：这里是**模拟**频谱，与上面的均衡器无关，不读 Web Audio 的实时分析
+  // （理由见 visualizer.js 顶部注释）。
   initVisualizer(audio, document.getElementById('vizBars'));
 
   // 检测当前系统并添加类标识

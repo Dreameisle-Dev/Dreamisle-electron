@@ -28,6 +28,7 @@ Dreamisle is designed to deliver the purest listening and visual experience. Hig
     *   Click a lyric line to jump to that playback position; lyric time offsets (`[offset:]`) are corrected automatically.
 *   **Desktop lyrics**: An always-on-top floating window shows the current lyrics in real time, with adjustable background/font opacity, font color, and custom fonts.
 *   **Playback statistics**: Hold Left Shift to open the statistics panel — audio quality specs for the current track (Hi-Res / SQ / HQ tiers), full-play and single-loop counts, total plays, daily average, and an all-song play count ranking (click to play).
+*   **10-band equalizer**: Settings → "Equalizer" adjusts ten bands from 31Hz to 16kHz (±12dB), with nine built-in presets (Acoustic, Pop, Rock, Jazz, Classical, Electronic, Bass boost, Vocal, Late night). Dragging any fader switches to a custom curve. An auto preamp offsets the largest boost to avoid clipping. With the switch off, audio stays on the original untouched path.
 *   **Custom playlists**: Right-click a song to add it to a playlist, drag to reorder, rename/delete, and switch seamlessly between the queue and the library.
 *   **Search & sorting**: Sort by title/artist/default/random, with real-time search filtering.
 *   **Auto memory**: Remembers your music library paths, playback progress, volume, play mode, and all settings — resume right where you left off next time.

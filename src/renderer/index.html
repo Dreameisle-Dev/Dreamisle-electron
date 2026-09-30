@@ -592,6 +592,25 @@
               </svg>
               <span data-i18n="settings.lyricsStyle">桌面歌词样式</span>
             </button>
+            <button class="settings-nav-item" data-section="equalizer">
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.5"
+                stroke-linecap="round"
+              >
+                <path d="M6 4v16"></path>
+                <path d="M12 4v16"></path>
+                <path d="M18 4v16"></path>
+                <path d="M3 9h6"></path>
+                <path d="M9 15h6"></path>
+                <path d="M15 8h6"></path>
+              </svg>
+              <span data-i18n="settings.equalizer">均衡器</span>
+            </button>
           </nav>
           <div class="settings-content">
             <section class="settings-panel active" data-panel="appearance">
@@ -703,6 +722,45 @@
                   </span>
                 </div>
               </div>
+            </section>
+            <section class="settings-panel" data-panel="equalizer">
+              <p class="settings-desc" data-i18n="settings.equalizerDesc">
+                调整各频段的增益。开启后音频会经过均衡器处理。
+              </p>
+
+              <div class="style-label-row eq-enable-row">
+                <span data-i18n="settings.eqEnable">启用均衡器</span>
+                <button
+                  type="button"
+                  class="eq-switch"
+                  id="eqEnable"
+                  role="switch"
+                  aria-checked="false"
+                  data-i18n-title="settings.eqEnable"
+                  title="启用均衡器"
+                >
+                  <span class="eq-switch-knob"></span>
+                </button>
+              </div>
+
+              <div class="eq-presets" id="eqPresets"></div>
+
+              <div class="eq-bank">
+                <div class="eq-scale">
+                  <span>+12</span>
+                  <span>0</span>
+                  <span>−12</span>
+                </div>
+                <div class="eq-faders" id="eqFaders"></div>
+              </div>
+
+              <div class="eq-foot">
+                <span class="eq-status" id="eqStatus"></span>
+                <button class="settings-reset-btn" id="eqReset" data-i18n="settings.eqReset">
+                  重置为平直
+                </button>
+              </div>
+              <p class="eq-preamp" id="eqPreamp"></p>
             </section>
           </div>
         </div>

@@ -1783,6 +1783,201 @@ kbd {
   border-radius: 6px;
 }
 
+/* ── 均衡器面板 ──
+   十段竖式推子。内容区宽只有约 314px（卡片 560 − 导航 194 − 左右内边距 52），
+   摊到 10 段每段约 31px：20px 的推子本体加 10px 字号的数值/频率标签刚够。 */
+
+.eq-enable-row {
+  margin-bottom: 18px;
+}
+
+/* 开关：「选中 = 实心」沿用播放按钮与排序分段控件那一套语言。
+   关闭时轨道用 --track、滑块用 --rng-fill-1（浅色下深墨、深色下纯白），
+   两种主题下滑块与轨道都拉开对比；开启时轨道填实、滑块翻成反色。 */
+.eq-switch {
+  position: relative;
+  width: 40px;
+  height: 22px;
+  padding: 0;
+  border: none;
+  border-radius: 999px;
+  background: var(--track);
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.eq-switch-knob {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--rng-fill-1);
+  transition:
+    transform 0.22s cubic-bezier(0.4, 0, 0.2, 1),
+    background-color 0.2s ease;
+}
+
+.eq-switch.active {
+  background: var(--play-bg);
+}
+
+.eq-switch.active .eq-switch-knob {
+  background: var(--play-ink);
+  transform: translateX(18px);
+}
+
+.eq-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 20px;
+}
+
+.eq-preset {
+  padding: 5px 10px;
+  border: none;
+  border-radius: 8px;
+  background: var(--seg-bg);
+  color: var(--ink2);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease;
+}
+
+.eq-preset:hover {
+  color: var(--ink1);
+}
+
+.eq-preset.active {
+  background: var(--seg-on-bg);
+  color: var(--seg-on-ink);
+  font-weight: 600;
+}
+
+.eq-bank {
+  display: flex;
+  align-items: flex-start;
+  gap: 4px;
+  margin-bottom: 16px;
+}
+
+/* 刻度列要空出推子上方那行数值，才能和轨道上下对齐 */
+.eq-scale {
+  width: 24px;
+  height: 132px;
+  margin-top: 16px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  font-size: 10px;
+  color: var(--ink2);
+  font-variant-numeric: tabular-nums;
+}
+
+.eq-faders {
+  flex: 1;
+  display: flex;
+  justify-content: space-between;
+}
+
+.eq-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.eq-col-val {
+  height: 12px;
+  font-size: 10px;
+  line-height: 12px;
+  color: var(--ink2);
+  font-variant-numeric: tabular-nums;
+  transition: color 0.15s ease;
+}
+
+/* 指针落在哪一段，哪一段的读数提亮 —— 十段数值同屏，全亮会盖过推子本身 */
+.eq-col:hover .eq-col-val,
+.eq-col:focus-within .eq-col-val {
+  color: var(--ink1);
+  font-weight: 600;
+}
+
+/* 竖式推子：Chromium 的现代写法是给 input 加 writing-mode（124+ 支持，
+   Electron 40 的 Chromium 远高于此）。vertical-lr 的 inline 轴自上而下、
+   最小值在上，再用 direction: rtl 翻过来才是「上大下小」的均衡器方向。
+   顺带白拿方向键操作与原生无障碍。 */
+.eq-fader {
+  writing-mode: vertical-lr;
+  direction: rtl;
+  width: 20px;
+  height: 132px;
+  margin: 0;
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+  outline: none;
+  cursor: pointer;
+}
+
+/* 轨道：0dB 线到滑块之间那段按 --eq-a/--eq-b 填实，提升向上填、衰减向下填 */
+.eq-fader::-webkit-slider-runnable-track {
+  width: 4px;
+  border-radius: 999px;
+  background: linear-gradient(
+    to bottom,
+    var(--rng-track) 0%,
+    var(--rng-track) var(--eq-a, 50%),
+    var(--rng-fill-1) var(--eq-a, 50%),
+    var(--rng-fill-1) var(--eq-b, 50%),
+    var(--rng-track) var(--eq-b, 50%),
+    var(--rng-track) 100%
+  );
+}
+
+/* 滑块：竖推子配横向方条。vertical 模式下这两个尺寸按逻辑轴解释
+   （width = 沿轨道方向、height = 垂直轨道方向），所以写出来是「横宽竖窄」。 */
+.eq-fader::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 6px;
+  height: 18px;
+  border-radius: 3px;
+  background: var(--rng-thumb);
+  box-shadow: 0 1px 4px var(--shade-1);
+}
+
+.eq-col-freq {
+  font-size: 10px;
+  color: var(--ink2);
+  font-variant-numeric: tabular-nums;
+}
+
+.eq-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.eq-status {
+  font-size: 13px;
+  color: var(--ink1);
+}
+
+.eq-preamp {
+  margin: 10px 0 0;
+  font-size: 11.5px;
+  color: var(--ink2);
+  font-variant-numeric: tabular-nums;
+}
+
 
 
 /* ===== 自定义歌单抽屉(镜像右侧播放列表抽屉)===== */

@@ -3,6 +3,9 @@
 // - songs / originalSongs / currentIndex / playMode 由 playlist 与 playback 协作维护
 // - 歌词状态（currentLyrics 等）仅 lyrics.js 写入
 // - currentLyricsStyle / systemFonts 仅 settings.js 写入
+// - equalizer 仅 equalizer.js 写入
+import { DEFAULT_EQ } from '../../shared/equalizer.js';
+
 export const state = {
   // 播放列表
   originalSongs: [], // 保存最原始物理读取顺序的备份
@@ -56,6 +59,7 @@ export const state = {
   currentLyricsStyle: { bgOpacity: 45, textOpacity: 100, textColor: '#ffffff', fontFamily: '' },
   systemFonts: null,
   fontsLoadFailed: false,
+  equalizer: { ...DEFAULT_EQ, gains: [...DEFAULT_EQ.gains] }, // 启动时由主进程配置覆盖
 
   // 同步提示 toast
   syncToastTimer: null,

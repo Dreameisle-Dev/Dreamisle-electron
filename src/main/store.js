@@ -1,6 +1,7 @@
 import { app } from 'electron';
 import Store from 'electron-store';
 import { setLang as i18nSetLang } from '../shared/i18n.js';
+import { normalizeEq } from '../shared/equalizer.js';
 
 // 主进程持久化配置的唯一入口：electron-store 实例与设置读写集中于此
 export const store = new Store();
@@ -56,6 +57,19 @@ export function getLyricsTranslation() {
 
 export function setLyricsTranslation(visible) {
   store.set('settings.lyricsTranslation', !!visible);
+}
+
+// 均衡器配置：{ enabled, gains: number[10] }。
+// 读写两侧都过一遍 normalizeEq —— store 是 JSON 文件，可能被手改坏，
+// 界面上宁可少一个频段的设置，也不能把 NaN 灌进 BiquadFilter。
+export function getEqualizer() {
+  return normalizeEq(store.get('settings.equalizer'));
+}
+
+export function setEqualizer(raw) {
+  const next = normalizeEq(raw);
+  store.set('settings.equalizer', next);
+  return next;
 }
 
 export function clampPercent(value, fallback) {

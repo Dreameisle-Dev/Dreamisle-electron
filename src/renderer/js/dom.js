@@ -60,6 +60,14 @@ export const fontSelectValue = document.getElementById('fontSelectValue');
 export const fontSearchInput = document.getElementById('fontSearch');
 export const fontOptions = document.getElementById('fontOptions');
 
+// 均衡器面板元素（推子与预设胶囊由 equalizer.js 动态生成）
+export const eqEnableSwitch = document.getElementById('eqEnable');
+export const eqPresetsEl = document.getElementById('eqPresets');
+export const eqFadersEl = document.getElementById('eqFaders');
+export const eqStatusEl = document.getElementById('eqStatus');
+export const eqPreampEl = document.getElementById('eqPreamp');
+export const eqResetBtn = document.getElementById('eqReset');
+
 // 小窗单行歌词元素
 export const miniLyricsEl = document.getElementById('miniLyrics');
 

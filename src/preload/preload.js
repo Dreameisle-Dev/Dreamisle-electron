@@ -21,6 +21,7 @@ contextBridge.exposeInMainWorld('dreamApi', {
   getSettings: () => ipcRenderer.invoke('settings:get'),
   setLanguage: (lang) => ipcRenderer.invoke('settings:setLanguage', lang),
   setLyricsStyle: (style) => ipcRenderer.invoke('settings:setLyricsStyle', style),
+  setEqualizer: (eq) => ipcRenderer.invoke('settings:setEqualizer', eq),
   setLyricsTranslation: (visible) => ipcRenderer.invoke('settings:setLyricsTranslation', visible),
   setThemeMode: (mode) => ipcRenderer.invoke('settings:setThemeMode', mode),
   addFolder: () => ipcRenderer.invoke('folders:add'),

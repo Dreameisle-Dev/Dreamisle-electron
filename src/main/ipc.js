@@ -9,6 +9,8 @@ import {
   setLyricsTranslation,
   getThemeMode,
   setThemeMode,
+  getEqualizer,
+  setEqualizer,
   applyLanguage,
   clampPercent,
   DEFAULT_LYRICS_STYLE,
@@ -149,9 +151,12 @@ export function registerIpcHandlers() {
       lyricsStyle: getLyricsStyle(),
       lyricsTranslation: getLyricsTranslation(),
       themeMode: getThemeMode(),
+      equalizer: getEqualizer(),
       musicFolders: folders,
     };
   });
+
+  ipcMain.handle('settings:setEqualizer', (event, eq) => setEqualizer(eq));
 
   // 主题模式同时下发给 Chromium：themeSource 一变，渲染进程里的
   // prefers-color-scheme 就跟着变，light-dark() 与噪点透明度的媒体查询才会对。
