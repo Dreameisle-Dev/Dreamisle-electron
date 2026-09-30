@@ -892,6 +892,60 @@ body.bar-hidden .lyric-translation-toggle {
   font-weight: 600;
 }
 
+/* 列表与字母索引并排：索引贴在抽屉里侧、不随列表滚动。
+   min-height: 0 是必须的 —— flex 子项默认 min-height:auto，
+   会让里面 .playlist-list 的 overflow 失效、列表撑破抽屉。 */
+.playlist-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+}
+
+.letter-index {
+  flex-shrink: 0;
+  width: 24px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 1px;
+  padding: 8px 4px 8px 0;
+  overflow: hidden;
+}
+
+/* hidden 属性默认被 display:flex 覆盖，要显式关掉 */
+.letter-index[hidden] {
+  display: none;
+}
+
+.letter-index-item {
+  flex-shrink: 0;
+  width: 20px;
+  height: 15px;
+  border: 0;
+  padding: 0;
+  border-radius: 5px;
+  background: none;
+  color: var(--ink2);
+  font-family: inherit;
+  font-size: 10.5px;
+  font-weight: 600;
+  line-height: 15px;
+  cursor: pointer;
+  transition:
+    color 0.15s ease,
+    background 0.15s ease;
+}
+
+.letter-index-item:hover {
+  color: var(--ink1);
+  background: var(--row-hover);
+}
+
+.letter-index-item.active {
+  color: var(--accent);
+  font-weight: 700;
+}
+
 .playlist-list {
   list-style: none;
   margin: 14px 0 0;

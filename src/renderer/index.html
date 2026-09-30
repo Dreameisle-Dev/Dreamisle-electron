@@ -282,15 +282,7 @@
       <!-- 排序控制栏 -->
       <div class="sort-container">
         <span class="sort-label" data-i18n="playlist.sortLabel">排序:</span>
-        <button
-          class="sort-btn active"
-          id="sortDefault"
-          data-mode="default"
-          data-i18n="playlist.sortDefault"
-        >
-          默认
-        </button>
-        <button class="sort-btn" id="sortTitle" data-mode="title" data-i18n="playlist.sortTitle">
+        <button class="sort-btn active" id="sortTitle" data-mode="title" data-i18n="playlist.sortTitle">
           歌名
         </button>
         <button class="sort-btn" id="sortArtist" data-mode="artist" data-i18n="playlist.sortArtist">
@@ -301,7 +293,12 @@
         </button>
       </div>
 
-      <ul class="playlist-list" id="playlist"></ul>
+      <!-- 列表与字母索引并排：索引固定在右内侧，不随列表滚动 -->
+      <div class="playlist-body">
+        <ul class="playlist-list" id="playlist"></ul>
+        <!-- 默认排序（物理顺序）下不适用，初始即隐藏；排序切到歌名/歌手时由 JS 打开 -->
+        <nav class="letter-index" id="letterIndex" aria-label="字母定位" hidden></nav>
+      </div>
     </div>
 
     <!-- 自定义歌单抽屉 -->

@@ -17,7 +17,7 @@ import {
   btnMode,
   contextMenu,
 } from './dom.js';
-import { initVirtualList, applyPlaylistFromMain, bindPlaylistEvents } from './playlist.js';
+import { applyActiveSort, applyPlaylistFromMain, bindPlaylistEvents } from './playlist.js';
 import {
   togglePlaylistsDrawer,
   bindPlaylistsEvents,
@@ -336,7 +336,9 @@ window.addEventListener('DOMContentLoaded', async () => {
     state.songs = [...savedSongs];
     state.librarySongs = [...savedSongs]; // 曲库缓存
     searchInput.value = '';
-    initVirtualList();
+    // 必须走排序入口而不是 initVirtualList：后者按物理扫描顺序渲染，
+    // 会和「歌名」按钮的高亮对不上，字母索引也会从错误的字母开始
+    applyActiveSort();
 
     const savedState = await window.dreamApi.loadPlaybackState();
     const restoredIndex = resolveRestoredIndex(state.songs, savedState);

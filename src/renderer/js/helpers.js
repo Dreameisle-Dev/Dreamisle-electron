@@ -16,41 +16,6 @@ export function escapeHtml(unsafe) {
     .replace(/'/g, '&#039;');
 }
 
-// 混排比对器：优先 A-Z 排序英文，然后按拼音排序中文，其余字符排在尾部
-export function compareMixed(aStr, bStr) {
-  const cleanA = (aStr || '').trim();
-  const cleanB = (bStr || '').trim();
-
-  if (!cleanA && !cleanB) return 0;
-  if (!cleanA) return 1;
-  if (!cleanB) return -1;
-
-  const charA = cleanA[0];
-  const charB = cleanB[0];
-
-  const isLatin = (ch) => /^[a-zA-Z]/.test(ch);
-  const isChinese = (ch) => /^[\u4e00-\u9fa5]/.test(ch);
-
-  // 分类评级：1-英文 2-中文 3-数字或其它符号
-  const typeA = isLatin(charA) ? 1 : isChinese(charA) ? 2 : 3;
-  const typeB = isLatin(charB) ? 1 : isChinese(charB) ? 2 : 3;
-
-  if (typeA !== typeB) {
-    return typeA - typeB;
-  }
-
-  if (typeA === 1) {
-    // 英文按标准 A-Z 忽略大小写及数字排序
-    return cleanA.localeCompare(cleanB, 'en', { sensitivity: 'base', numeric: true });
-  } else if (typeA === 2) {
-    // 中文按本地化拼音排序
-    return cleanA.localeCompare(cleanB, 'zh-CN', { numeric: true });
-  } else {
-    // 其它边缘符号或数字
-    return cleanA.localeCompare(cleanB, undefined, { numeric: true });
-  }
-}
-
 // 淡出结束后清空文本，避免旧提示长期滞留在 DOM 里。
 // 用 transitionend 而不是再加一个定时器：清早了会把淡出中的胶囊清成空壳。
 // 万一过渡被禁用（如 prefers-reduced-motion）这里不触发也没关系 ——

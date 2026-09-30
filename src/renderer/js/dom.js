@@ -5,6 +5,7 @@ export const playlistDrawer = document.getElementById('playlistDrawer');
 export const playlistEl = document.getElementById('playlist');
 export const playlistCountEl = document.getElementById('playlistCount');
 export const searchInput = document.getElementById('searchInput');
+export const letterIndexEl = document.getElementById('letterIndex');
 
 export const coverContainer = document.getElementById('coverContainer');
 export const coverImg = document.getElementById('coverImg');
@@ -34,7 +35,6 @@ export const iconOne = document.getElementById('iconOne');
 export const iconShuffle = document.getElementById('iconShuffle');
 
 // 排序交互节点
-export const btnSortDefault = document.getElementById('sortDefault');
 export const btnSortTitle = document.getElementById('sortTitle');
 export const btnSortArtist = document.getElementById('sortArtist');
 export const btnSortRandom = document.getElementById('sortRandom');

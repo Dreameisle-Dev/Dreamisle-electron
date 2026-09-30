@@ -9,6 +9,8 @@ export const state = {
   songs: [],
   currentIndex: -1,
   playMode: 0,
+  sortMode: 'title', // 'title' | 'artist' | 'random'；字母索引只在 title/artist 下有意义
+  letterIndex: [], // [{ letter, index }]，按当前排序算出的每组首行下标
 
   // 自定义歌单
   activeQueue: { type: 'library' }, // { type: 'library' } | { type: 'playlist', id };会话级,不持久化

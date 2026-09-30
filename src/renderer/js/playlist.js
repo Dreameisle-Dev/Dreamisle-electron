@@ -6,14 +6,14 @@ import {
   playlistEl,
   playlistCountEl,
   searchInput,
+  letterIndexEl,
   btnPlaylist,
-  btnSortDefault,
   btnSortTitle,
   btnSortArtist,
   btnSortRandom,
   lyricsScroll,
 } from './dom.js';
-import { compareMixed } from './helpers.js';
+import { compareByInitial, buildLetterIndex } from '../../shared/initial-letter.js';
 import { playSong, resetToEmptyLibrary } from './playback.js';
 import { resetLyrics } from './lyrics.js';
 import { resolveRestoredIndex } from './playback-restore.js';
@@ -34,6 +34,73 @@ export function initVirtualList(filterText = '') {
 
   state.vsStartIndex = -1;
   updateVirtualList();
+  refreshLetterIndex();
+}
+
+// 索引取哪一列，取决于当前排序模式；默认/随机没有可索引的顺序
+const INDEX_KEY = {
+  title: (song) => song.title,
+  artist: (song) => song.artist,
+};
+
+// 重建字母索引表与索引条 DOM。只在按歌名/歌手排序且列表非空时出现。
+function refreshLetterIndex() {
+  const keyOf = INDEX_KEY[state.sortMode];
+  const visible = Boolean(keyOf) && state.filteredSongs.length > 0;
+
+  if (!letterIndexEl) return;
+
+  if (!visible) {
+    state.letterIndex = [];
+    letterIndexEl.hidden = true;
+    letterIndexEl.innerHTML = '';
+    return;
+  }
+
+  state.letterIndex = buildLetterIndex(state.filteredSongs, keyOf);
+  letterIndexEl.hidden = false;
+  letterIndexEl.innerHTML = '';
+
+  const fragment = document.createDocumentFragment();
+  for (const { letter, index } of state.letterIndex) {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'letter-index-item';
+    btn.dataset.letter = letter;
+    btn.innerText = letter;
+    fragment.appendChild(btn);
+  }
+  letterIndexEl.appendChild(fragment);
+
+  updateActiveLetter();
+}
+
+// 高亮当前滚动位置所属的字母组
+function updateActiveLetter() {
+  if (!letterIndexEl || letterIndexEl.hidden || state.letterIndex.length === 0) return;
+
+  const firstVisibleRow = Math.floor(playlistEl.scrollTop / ITEM_HEIGHT);
+  let active = state.letterIndex[0].letter;
+  for (const entry of state.letterIndex) {
+    if (entry.index > firstVisibleRow) break;
+    active = entry.letter;
+  }
+
+  for (const btn of letterIndexEl.children) {
+    btn.classList.toggle('active', btn.dataset.letter === active);
+  }
+}
+
+// 跳到某字母组的第一行。
+// 这里显式刷新虚拟列表与高亮，而不是等 scroll 事件：滚动事件是异步派发的，
+// 而点击是同步动作；把结果押在事件上会让「点同一个字母两次」这类情况没有反应。
+function jumpToLetter(letter) {
+  const entry = state.letterIndex.find((e) => e.letter === letter);
+  if (!entry) return;
+
+  playlistEl.scrollTop = entry.index * ITEM_HEIGHT;
+  updateVirtualList();
+  updateActiveLetter();
 }
 
 export function updateVirtualList() {
@@ -99,7 +166,7 @@ export function updateVirtualList() {
  * 更新排序按钮的高亮状态
  */
 function updateSortButtons(activeBtn) {
-  [btnSortDefault, btnSortTitle, btnSortArtist, btnSortRandom].forEach((btn) => {
+  [btnSortTitle, btnSortArtist, btnSortRandom].forEach((btn) => {
     if (btn) btn.classList.remove('active');
   });
   if (activeBtn) activeBtn.classList.add('active');
@@ -111,17 +178,16 @@ function updateSortButtons(activeBtn) {
 export function applySort(mode, btnEl) {
   if (state.originalSongs.length === 0) return;
 
+  state.sortMode = mode;
   updateSortButtons(btnEl);
 
   // 记录当前播放的歌曲，以便重排后重定向指针，不干扰当前播放
   const currentPlayingSong = state.songs[state.currentIndex];
 
-  if (mode === 'default') {
-    state.songs = [...state.originalSongs];
-  } else if (mode === 'title') {
-    state.songs = [...state.originalSongs].sort((a, b) => compareMixed(a.title, b.title));
+  if (mode === 'title') {
+    state.songs = [...state.originalSongs].sort((a, b) => compareByInitial(a.title, b.title));
   } else if (mode === 'artist') {
-    state.songs = [...state.originalSongs].sort((a, b) => compareMixed(a.artist, b.artist));
+    state.songs = [...state.originalSongs].sort((a, b) => compareByInitial(a.artist, b.artist));
   } else if (mode === 'random') {
     // 洗牌算法重新排列
     state.songs = [...state.originalSongs].sort(() => Math.random() - 0.5);
@@ -133,6 +199,18 @@ export function applySort(mode, btnEl) {
 
   // 刷新前端过滤和列表渲染，保留搜索框已有字符
   initVirtualList(searchInput.value.trim());
+}
+
+// 套用当前激活的排序按钮。
+// 任何「列表要重新出现」的路径（启动、换队列）都得走这里：
+// 直接调 initVirtualList 会按 state.songs 的物理顺序渲染，
+// 而按钮高亮仍是「歌名」——列表顺序和按钮说法对不上，字母索引也会跟着错位。
+export function applyActiveSort() {
+  const activeSortBtn = [btnSortTitle, btnSortArtist, btnSortRandom].find(
+    (btn) => btn && btn.classList.contains('active')
+  );
+  if (activeSortBtn) applySort(activeSortBtn.dataset.mode, activeSortBtn);
+  else applySort('title', btnSortTitle); // 兜底：按钮全没高亮时按歌名排
 }
 
 // 应用一套新队列:重定位当前歌曲、套用激活排序、刷新列表(空队列复位)
@@ -153,14 +231,7 @@ function applyQueueSongs(songs) {
     }
   }
 
-  const activeSortBtn = [btnSortDefault, btnSortTitle, btnSortArtist, btnSortRandom].find(
-    (btn) => btn && btn.classList.contains('active')
-  );
-  if (activeSortBtn && activeSortBtn !== btnSortDefault) {
-    applySort(activeSortBtn.dataset.mode, activeSortBtn);
-  } else {
-    initVirtualList(searchInput.value.trim());
-  }
+  applyActiveSort();
 }
 
 // 切换播放队列:歌单队列或曲库队列
@@ -175,7 +246,9 @@ export function applyPlaylistFromMain(playlist) {
   setQueue(playlist, { type: 'library' });
 }
 
-// 手动拖拽调整"正在播放"队列顺序:按 path 重排 songs;默认排序激活时同步 originalSongs 以保持顺序
+// 手动拖拽调整"正在播放"队列顺序：按 path 重排 songs。
+// 列表现在恒处于某种排序下，所以拖拽只改当前播放顺序，
+// 下一次重排（点排序按钮 / 换队列 / 同步文件夹）会从 originalSongs 重新生成并覆盖它。
 function reorderQueue(fromPath, toPath) {
   if (fromPath === toPath) return;
   const from = state.songs.findIndex((s) => s.path === fromPath);
@@ -185,15 +258,6 @@ function reorderQueue(fromPath, toPath) {
   const playingPath = state.songs[state.currentIndex] ? state.songs[state.currentIndex].path : null;
   const [moved] = state.songs.splice(from, 1);
   state.songs.splice(to, 0, moved);
-
-  if (btnSortDefault && btnSortDefault.classList.contains('active')) {
-    const of = state.originalSongs.findIndex((s) => s.path === fromPath);
-    const ot = state.originalSongs.findIndex((s) => s.path === toPath);
-    if (of >= 0 && ot >= 0) {
-      const [m] = state.originalSongs.splice(of, 1);
-      state.originalSongs.splice(ot, 0, m);
-    }
-  }
 
   if (playingPath) {
     state.currentIndex = state.songs.findIndex((s) => s.path === playingPath);
@@ -205,6 +269,16 @@ function reorderQueue(fromPath, toPath) {
 
 export function bindPlaylistEvents() {
   playlistEl.addEventListener('scroll', updateVirtualList);
+  // 滚动时同步高亮当前字母组
+  playlistEl.addEventListener('scroll', updateActiveLetter);
+
+  if (letterIndexEl) {
+    letterIndexEl.addEventListener('click', (e) => {
+      const btn = e.target.closest('.letter-index-item');
+      if (btn) jumpToLetter(btn.dataset.letter);
+    });
+  }
+
   searchInput.addEventListener('input', (e) => initVirtualList(e.target.value.trim()));
 
   btnPlaylist.addEventListener('click', (e) => {
@@ -218,7 +292,6 @@ export function bindPlaylistEvents() {
   });
   playlistDrawer.addEventListener('click', (e) => e.stopPropagation());
 
-  if (btnSortDefault) btnSortDefault.onclick = () => applySort('default', btnSortDefault);
   if (btnSortTitle) btnSortTitle.onclick = () => applySort('title', btnSortTitle);
   if (btnSortArtist) btnSortArtist.onclick = () => applySort('artist', btnSortArtist);
   if (btnSortRandom) btnSortRandom.onclick = () => applySort('random', btnSortRandom);
