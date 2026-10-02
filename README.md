@@ -15,6 +15,8 @@
 *   **动态封面辉光**：专辑封面拥有根据主色调生成的呼吸感辉光阴影，拒绝死板的黑色投影。
 *   **现代毛玻璃 UI**：高级磨砂玻璃质感播放列表，视觉轻盈。
 *   **隐形手势控制**：鼠标悬停在封面区域时，**滚动滚轮**即可调节音量，配合极简 HUD 显示。
+*   **控制栏自动隐藏**：鼠标离开窗口底部后，播放控制栏自动滑出视口，只留一条提示线；鼠标靠近底部再滑回来。
+*   **小窗模式**：F5 收成 300×340 的置顶小窗，只保留封面、当前歌词行与播放控制，适合挂在屏幕角落。
 *   **液态交互体验**：切歌时文字信息的丝滑下沉/上浮过渡动画，拒绝生硬跳变。
 *   **强大的本地解析**：
     *   递归扫描文件夹导入音乐。
@@ -31,6 +33,7 @@
 *   **十段均衡器**：设置 →「均衡器」调整 31Hz–16kHz 十段增益（±12dB），内置原声/流行/摇滚/爵士/古典/电子/低音增强/人声/深夜九组预设，手动拖动任一推子即转为自定义曲线；自动前级抵消最大提升量避免削顶。开关关闭时音频完全保持原始直出链路。
 *   **自定义歌单**：右键歌曲添加到歌单、拖拽排序、重命名/删除，队列与曲库无缝切换。
 *   **搜索与排序**：按歌名/歌手/随机排序，实时搜索过滤；歌名与歌手排序下，列表右侧提供 A-Z# 字母索引（中英文按拼音混排）快速定位。
+*   **系统媒体控制**：接入 Windows SMTC —— 键盘媒体键与系统音量浮层可直接控制播放，并显示封面、曲目信息与播放进度。
 *   **自动记忆**：记住音乐库路径、播放进度、音量、播放模式与各项设置，下次打开即刻续播。
 
 ## 快捷键
@@ -57,13 +60,14 @@
 *   **Frontend**: JS, CSS
 *   **Data Persistence**: `electron-store`
 *   **Audio Parsing**: `music-metadata`
+*   **Audio Processing**: Web Audio API（均衡器：10 个 peaking 型 BiquadFilter 级联 + 自动前级 GainNode；未启用时不接入音频链路）
 
 ## 快速开始
 
 ### 1. 克隆项目
 ```bash
 git clone https://github.com/Dreameisle-Dev/Dreamisle-electron.git
-cd dreamisle
+cd Dreamisle-electron
 ```
 
 or using ssh
@@ -89,17 +93,27 @@ npm run build:win
 
 ## 项目结构
 ```
-dreamisle/
+Dreamisle-electron/
+├── README.md                 # 中文说明（本文件）
+├── README/README.en.md       # 英文说明
+├── img/                      # 文档截图
 └── src/
-    ├── main/           # 主进程：入口、窗口、托盘、音乐库、歌单、统计、IPC
-    ├── preload/        # 预加载桥接脚本
-    ├── lyrics/         # 桌面歌词悬浮窗
-    ├── shared/         # 主/渲染进程共享模块（i18n、歌词解析、统计逻辑）
-    ├── renderer/       # 渲染进程
+    ├── main/                 # 主进程：入口、窗口、托盘、音乐库、歌单、持久化、IPC
+    ├── preload/              # 预加载桥接脚本（主窗口 / 桌面歌词各一个）
+    ├── lyrics/               # 桌面歌词悬浮窗
+    ├── shared/               # 主/渲染进程共享的纯逻辑（无 DOM 依赖）
+    │   ├── i18n.js           #   中英文字典
+    │   ├── lyrics-parse.js   #   歌词解析入口 + universal-lyric-parser.js 通用解析器
+    │   ├── initial-letter.js #   首字母归位与 A-Z# 字母索引
+    │   ├── equalizer.js      #   频段表 / 预设曲线 / 自动前级
+    │   ├── stats.js          #   播放计数与排行
+    │   ├── stats-format.js   #   音质分级与格式化
+    │   └── song-metadata.js  #   歌单快照与曲库缓存的按 path 回填
+    ├── renderer/             # 渲染进程
     │   ├── index.html
-    │   ├── js/         # 按职责拆分：入口/播放/列表/歌单/歌词/统计/设置/主题
-    │   └── style/
-    └── assets/         # 应用图标
+    │   ├── js/               # 按职责拆分：入口/播放/列表/歌单/歌词/统计/设置/主题/均衡器
+    │   └── style/            # tokens.css（设计令牌）+ index.css
+    └── assets/               # 应用图标
 ```
 
 代码格式化使用 Prettier（单引号、2 空格缩进、CRLF），执行 `npm run format` 可统一格式。
