@@ -559,6 +559,36 @@ body.bar-hidden .lyric-translation-toggle {
   height: 2px;
   will-change: height, opacity;
 }
+
+/* 暂停时那一排竖条要「回归进度条本身」。
+   光把条收到底线不够：160 根 3px 宽、间距 6.5px，收平了是一条**虚线**，看上去
+   还是一排点。所以暂停时把竖条整体淡出，改由这里画一条实线。
+   .viz-bars 的宽度就是播放进度（updateProgressStyle 写的），所以实线天然只覆盖
+   已播放段，和 .viz-rest 那条暗线接成一条完整的进度条。 */
+.viz-bars::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 13px;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--ink1);
+  opacity: 0;
+  transition: opacity 0.25s ease;
+}
+
+.viz-bars.paused::after {
+  opacity: 1;
+}
+
+/* 过渡只写在这里，不写在 .viz-bars i 的基类上：
+   基类上带过渡的话，播放中每帧写入的 opacity 会被 0.25s 的缓动拖住、永远追不上
+   目标值，透明度等于被压平。放在状态类里就只在淡出的这一下生效。 */
+.viz-bars.paused i {
+  opacity: 0;
+  transition: opacity 0.25s ease;
+}
 /* 播放头：高度与频谱最大高度一致（28px），原来 38px 比条高出一截 */
 .viz-head {
   position: absolute;

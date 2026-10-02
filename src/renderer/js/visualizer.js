@@ -66,20 +66,28 @@ export function initVisualizer(audioEl, containerEl) {
   };
 
   const start = () => {
+    containerEl.classList.remove('paused');
     if (!rafId) rafId = requestAnimationFrame(draw);
   };
-  // 暂停时把条收回底线并停掉循环：让「停了」这件事看得见，也省掉无意义的绘制
+  // 暂停：停掉循环，把竖条收回底线（top 必须一起归位，见 draw 里的注释）并淡出，
+  // 由 .viz-bars.paused::after 接管成一条实线 —— 也就是「回归进度条本身」。
+  // 不归位 top 的话每根条会停在它最后一帧算出的高度上，表现为一排高低不齐的点。
   const stop = () => {
     if (rafId) cancelAnimationFrame(rafId);
     rafId = 0;
+    containerEl.classList.add('paused');
     for (let i = 0; i < BAR_COUNT; i++) {
-      bars[i].style.height = '2.5px';
-      bars[i].style.opacity = '0.45';
+      bars[i].style.height = '2px';
+      bars[i].style.top = '13px';
+      // 清掉内联透明度，让 .viz-bars.paused i 的规则接管（内联样式优先级更高）
+      bars[i].style.removeProperty('opacity');
     }
   };
 
   audioEl.addEventListener('play', start);
   audioEl.addEventListener('pause', stop);
-  // 初始化时可能已经在播放（状态恢复），补一次
+  // 初始化时可能已经在播放（状态恢复），补一次；停在暂停态也要把初始样式对齐，
+  // 否则竖条会停在 CSS 默认高度、显示成一条虚线而不是实线
   if (!audioEl.paused) start();
+  else stop();
 }
