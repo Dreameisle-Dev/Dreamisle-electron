@@ -1,6 +1,9 @@
 // 通用 LRC 歌词解析器(ESM 化版本,解析逻辑与 universal-lyric-parser.js 一致)
 class universalLyricParser {
   static TIME_REGEX = /\[(\d{1,2}):(\d{2})(?:[.:](\d{1,3}))?\]/g;
+  // 逐字（增强型）LRC 的词级时间戳 <mm:ss.xxx>。它跟在每个字/词前面，
+  // 不属于歌词文本，必须在取文本时剥掉 —— 否则会原样显示在歌词里。
+  static WORD_TIME_REGEX = /<\d{1,3}:\d{2}(?:[.:]\d{1,3})?>/g;
   static META_TAG_REGEX = /^\[(ti|ar|al|by|offset):(.*)\]$/i;
   static META_TEXT_REGEX =
     /^(作词|作曲|编曲|制作|混音|吉他|贝斯|鼓|键盘|录音|母带|和声|监制|企划|发行|Lyricist|Composer|Arranger|Producer|Vocals|Mixed|Mastered)\s*[:：]/i;
@@ -47,7 +50,10 @@ class universalLyricParser {
       const matches = [...trimmed.matchAll(this.TIME_REGEX)];
       if (matches.length === 0) continue;
 
-      const text = trimmed.replace(this.TIME_REGEX, '').trim();
+      const text = trimmed
+        .replace(this.TIME_REGEX, '')
+        .replace(this.WORD_TIME_REGEX, '')
+        .trim();
 
       for (const match of matches) {
         const min = parseInt(match[1], 10);
