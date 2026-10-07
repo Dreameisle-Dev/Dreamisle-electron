@@ -25,35 +25,35 @@
   --lyric-4: light-dark(rgba(0, 0, 0, 0.5), rgba(255, 255, 255, 0.6));
 
   /* 底色要比面板压深一档，否则面板浮不起来，整屏糊成一片白。 */
-  --base: light-dark(#e7e0ec, #301c34);
-  --veil1: light-dark(rgba(255, 255, 255, 0.24), rgba(22, 11, 26, 0.36));
-  --veil2: light-dark(rgba(250, 247, 252, 0.4), rgba(11, 6, 15, 0.64));
+  --base: light-dark(#f3eef6, #301c34);
+  --veil1: light-dark(rgba(255, 255, 255, 0.10), rgba(22, 11, 26, 0.36));
+  --veil2: light-dark(rgba(255, 255, 255, 0.18), rgba(11, 6, 15, 0.64));
 
   /* 存的是**颜色值**（不是 rgb 三元组）：淡出要用 rgb(from var(--c1) r g b / 0) 得到
      「同色的零透明」，写 transparent 会淡向透明黑、每个斑边缘多一圈脏边。
      浅色模式必须用本身更浅的色斑，靠白遮罩盖深色斑等于去饱和，会洗成惨白。 */
-  --c1: light-dark(rgba(138, 104, 246, 0.72), rgba(112, 74, 216, 0.9));
-  --c2: light-dark(rgba(255, 108, 108, 0.68), rgba(214, 58, 64, 0.85));
-  --c3: light-dark(rgba(246, 176, 134, 0.6), rgba(202, 128, 96, 0.72));
-  --c4: light-dark(rgba(206, 120, 216, 0.56), rgba(168, 72, 180, 0.66));
+  --c1: light-dark(rgba(151, 122, 246, 0.58), rgba(112, 74, 216, 0.9));
+  --c2: light-dark(rgba(255, 145, 151, 0.52), rgba(214, 58, 64, 0.85));
+  --c3: light-dark(rgba(249, 191, 154, 0.46), rgba(202, 128, 96, 0.72));
+  --c4: light-dark(rgba(210, 151, 226, 0.44), rgba(168, 72, 180, 0.66));
 
   /* 浅色侧的面降到 0.66 / 0.72 让氛围色透上来：不透的白盖在近白底色上等于白板盖白底，
      深色那套「半透玻璃」在浅色下会完全失效。代价是面板对比度略降，靠 --ink 加深补回。 */
   /* 传输条要读作「同一片色场压深了一道」，不是另一块材料 —— 白色 alpha 就是这个压深量，
      调到让浅色/深色两侧压深幅度接近，否则条会和背景裂成两块。 */
-  --bar-bg: light-dark(rgba(255, 255, 255, 0.18), rgba(17, 12, 23, 0.66));
-  --bar-border: light-dark(rgba(46, 39, 57, 0.05), rgba(255, 255, 255, 0.1));
-  --panel-bg: light-dark(rgba(255, 255, 255, 0.66), rgba(16, 11, 22, 0.86));
-  --panel-border: light-dark(rgba(46, 39, 57, 0.14), rgba(255, 255, 255, 0.11));
+  --bar-bg: light-dark(rgba(255, 255, 255, 0.48), rgba(17, 12, 23, 0.66));
+  --bar-border: light-dark(rgba(46, 39, 57, 0.08), rgba(255, 255, 255, 0.1));
+  --panel-bg: light-dark(rgba(255, 255, 255, 0.54), rgba(16, 11, 22, 0.86));
+  --panel-border: light-dark(rgba(46, 39, 57, 0.10), rgba(255, 255, 255, 0.11));
   /* 浮层比抽屉实一点：抽屉底下只有氛围色，浮层底下是整个 UI，太透会糊在一起 */
-  --modal-bg: light-dark(rgba(253, 251, 255, 0.78), rgba(20, 14, 26, 0.9));
+  --modal-bg: light-dark(rgba(253, 251, 255, 0.88), rgba(20, 14, 26, 0.9));
   --modal-border: light-dark(rgba(46, 39, 57, 0.14), rgba(255, 255, 255, 0.12));
   --hair: light-dark(rgba(46, 39, 57, 0.1), rgba(255, 255, 255, 0.08));
   --card-bg: light-dark(rgba(46, 39, 57, 0.06), rgba(255, 255, 255, 0.05));
   --field-bg: light-dark(rgba(46, 39, 57, 0.08), rgba(255, 255, 255, 0.08));
   /* 菜单悬在任意内容之上，比其他面保持得更实一些 */
-  --menu-bg: light-dark(rgba(255, 255, 255, 0.9), rgba(24, 17, 30, 0.94));
-  --backdrop: light-dark(rgba(40, 28, 45, 0.35), rgba(8, 5, 12, 0.55));
+  --menu-bg: light-dark(rgba(255, 255, 255, 0.94), rgba(24, 17, 30, 0.94));
+  --backdrop: light-dark(rgba(40, 28, 45, 0.18), rgba(8, 5, 12, 0.55));
 
   --row-hover: light-dark(rgba(46, 39, 57, 0.06), rgba(255, 255, 255, 0.07));
   --row-on: light-dark(rgba(46, 39, 57, 0.1), rgba(255, 255, 255, 0.12));
