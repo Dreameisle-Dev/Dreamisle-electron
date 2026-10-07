@@ -1469,6 +1469,17 @@ kbd {
   margin: 0 0 18px;
 }
 
+/* 分区内的小标题：一个面板里有多组设置时用来分节（如「外观」下的主题与桌面歌词）。
+   用分隔线 + 更大的上边距把两组分开，比只靠间距清楚。 */
+.settings-group-title {
+  font-size: 14px;
+  font-weight: 650;
+  color: var(--ink1);
+  margin: 28px 0 10px;
+  padding-top: 20px;
+  border-top: 1px solid var(--panel-border);
+}
+
 .theme-seg {
   display: flex;
   gap: 4px;

@@ -577,21 +577,6 @@
               </svg>
               <span data-i18n="settings.folders">音乐文件夹</span>
             </button>
-            <button class="settings-nav-item" data-section="lyrics">
-              <svg
-                width="14"
-                height="14"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="1.5"
-              >
-                <path d="M4 6h16"></path>
-                <path d="M4 12h10"></path>
-                <path d="M4 18h7"></path>
-              </svg>
-              <span data-i18n="settings.lyricsStyle">桌面歌词样式</span>
-            </button>
             <button class="settings-nav-item" data-section="equalizer">
               <svg
                 width="14"
@@ -624,41 +609,9 @@
                 <button type="button" data-mode="light" data-i18n="settings.themeLight">浅色</button>
                 <button type="button" data-mode="dark" data-i18n="settings.themeDark">暗色</button>
               </div>
-            </section>
-            <section class="settings-panel" data-panel="language">
-              <p class="settings-desc" data-i18n="settings.languageDesc">
-                界面与托盘菜单的显示语言
-              </p>
-              <div class="lang-select" id="langSelectWrap">
-                <button type="button" class="lang-select-btn" id="langSelectBtn">
-                  <span id="langSelectValue">中文</span>
-                  <svg
-                    width="10"
-                    height="6"
-                    viewBox="0 0 10 6"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="1.2"
-                  >
-                    <path d="M1 1l4 4 4-4"></path>
-                  </svg>
-                </button>
-                <ul class="lang-select-list" id="langSelectList">
-                  <li class="lang-select-option" data-value="zh-CN">中文</li>
-                  <li class="lang-select-option" data-value="en">English</li>
-                </ul>
-              </div>
-            </section>
-            <section class="settings-panel" data-panel="folders">
-              <p class="settings-desc" data-i18n="settings.foldersDesc">
-                添加多个文件夹，歌曲将合并到播放列表
-              </p>
-              <ul class="folder-list" id="folderList"></ul>
-              <button class="settings-add-btn" id="btnAddFolder" data-i18n="settings.addFolder">
-                添加文件夹
-              </button>
-            </section>
-            <section class="settings-panel" data-panel="lyrics">
+
+              <!-- 桌面歌词样式：同属外观设置，和主题放在同一个分区里 -->
+              <p class="settings-group-title" data-i18n="settings.lyricsStyle">桌面歌词</p>
               <p class="settings-desc" data-i18n="settings.lyricsStyleDesc">
                 调整桌面歌词悬浮窗的外观
               </p>
@@ -722,6 +675,39 @@
                   </span>
                 </div>
               </div>
+            </section>
+            <section class="settings-panel" data-panel="language">
+              <p class="settings-desc" data-i18n="settings.languageDesc">
+                界面与托盘菜单的显示语言
+              </p>
+              <div class="lang-select" id="langSelectWrap">
+                <button type="button" class="lang-select-btn" id="langSelectBtn">
+                  <span id="langSelectValue">中文</span>
+                  <svg
+                    width="10"
+                    height="6"
+                    viewBox="0 0 10 6"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.2"
+                  >
+                    <path d="M1 1l4 4 4-4"></path>
+                  </svg>
+                </button>
+                <ul class="lang-select-list" id="langSelectList">
+                  <li class="lang-select-option" data-value="zh-CN">中文</li>
+                  <li class="lang-select-option" data-value="en">English</li>
+                </ul>
+              </div>
+            </section>
+            <section class="settings-panel" data-panel="folders">
+              <p class="settings-desc" data-i18n="settings.foldersDesc">
+                添加多个文件夹，歌曲将合并到播放列表
+              </p>
+              <ul class="folder-list" id="folderList"></ul>
+              <button class="settings-add-btn" id="btnAddFolder" data-i18n="settings.addFolder">
+                添加文件夹
+              </button>
             </section>
             <section class="settings-panel" data-panel="equalizer">
               <p class="settings-desc" data-i18n="settings.equalizerDesc">
