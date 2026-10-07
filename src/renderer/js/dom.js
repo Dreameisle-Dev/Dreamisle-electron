@@ -44,6 +44,7 @@ export const settingsOverlay = document.getElementById('settingsOverlay');
 export const btnSettingsClose = document.getElementById('btnSettingsClose');
 export const folderListEl = document.getElementById('folderList');
 export const btnAddFolder = document.getElementById('btnAddFolder');
+export const btnRescanLibrary = document.getElementById('btnRescanLibrary');
 export const langSelectWrap = document.getElementById('langSelectWrap');
 export const langSelectBtn = document.getElementById('langSelectBtn');
 export const langSelectValue = document.getElementById('langSelectValue');

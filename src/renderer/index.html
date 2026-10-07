@@ -705,9 +705,18 @@
                 添加多个文件夹，歌曲将合并到播放列表
               </p>
               <ul class="folder-list" id="folderList"></ul>
-              <button class="settings-add-btn" id="btnAddFolder" data-i18n="settings.addFolder">
-                添加文件夹
-              </button>
+              <div class="folder-actions">
+                <button class="settings-add-btn" id="btnAddFolder" data-i18n="settings.addFolder">
+                  添加文件夹
+                </button>
+                <button
+                  class="settings-rescan-btn"
+                  id="btnRescanLibrary"
+                  data-i18n="settings.rescan"
+                >
+                  重新扫描
+                </button>
+              </div>
             </section>
             <section class="settings-panel" data-panel="equalizer">
               <p class="settings-desc" data-i18n="settings.equalizerDesc">

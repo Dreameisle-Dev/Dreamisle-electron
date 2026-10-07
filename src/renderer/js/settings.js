@@ -5,6 +5,7 @@ import {
   btnSettingsClose,
   folderListEl,
   btnAddFolder,
+  btnRescanLibrary,
   langSelectWrap,
   langSelectBtn,
   langSelectValue,
@@ -24,6 +25,7 @@ import {
 } from './dom.js';
 import { showSyncToast } from './helpers.js';
 import { applyPlaylistFromMain } from './playlist.js';
+import { syncLibrary } from './library-sync.js';
 import { renderPlaylistsList } from './playlists.js';
 import { applyThemeMode } from './theme.js';
 import { renderEqPresets, syncEqUi } from './equalizer.js';
@@ -109,6 +111,7 @@ export async function handleAddFolder() {
   if (res.playlist && res.playlist.length > 0) {
     applyPlaylistFromMain(res.playlist);
   }
+  renderPlaylistsList(); // 曲库变了，歌单抽屉的「全部歌曲」数量要跟着走
   refreshSettingsUi();
 }
 
@@ -117,7 +120,24 @@ export async function handleRemoveFolder(folderPath) {
   if (res && res.playlist) {
     applyPlaylistFromMain(res.playlist);
   }
+  renderPlaylistsList(); // 同上
   refreshSettingsUi();
+}
+
+// 手动重新扫描曲库。扫描期间禁用按钮：主进程是串行解析新文件的，
+// 大曲库要几秒到几十秒，不禁用会被连点。
+export async function handleRescanLibrary() {
+  if (!btnRescanLibrary || btnRescanLibrary.disabled) return;
+
+  btnRescanLibrary.disabled = true;
+  btnRescanLibrary.textContent = t('settings.rescanning');
+  try {
+    await syncLibrary({ manual: true });
+  } finally {
+    // 文案按当前语言取回，而不是记住点击前的字符串 —— 扫描期间可能切了语言
+    btnRescanLibrary.disabled = false;
+    btnRescanLibrary.textContent = t('settings.rescan');
+  }
 }
 
 export async function handleLanguageChange(lang) {
@@ -279,4 +299,5 @@ export function bindSettingsEvents() {
     else if (!langSelectWrap.contains(e.target)) langSelectWrap.classList.remove('open'); // 点下拉外部收起
   });
   if (btnAddFolder) btnAddFolder.onclick = handleAddFolder;
+  if (btnRescanLibrary) btnRescanLibrary.onclick = handleRescanLibrary;
 }

@@ -1680,8 +1680,14 @@ kbd {
   color: var(--ink3);
 }
 
+/* 「添加文件夹」和「重新扫描」并排各占一半 */
+.folder-actions {
+  display: flex;
+  gap: 8px;
+}
+
 .settings-add-btn {
-  width: 100%;
+  flex: 1;
   padding: 12px 0;
   border-radius: 10px;
   border: 1px dashed var(--modal-border);
@@ -1695,6 +1701,36 @@ kbd {
 
 .settings-add-btn:hover {
   background: var(--field-bg);
+}
+
+/* 重新扫描用实线边框：虚线在这个面板里是「添加」的语义，
+   拿它做扫描按钮会让人以为点了会新增什么。 */
+.settings-rescan-btn {
+  flex: 1;
+  padding: 12px 0;
+  border-radius: 10px;
+  border: 1px solid var(--modal-border);
+  background: var(--field-bg);
+  color: var(--ink2);
+  font: inherit;
+  font-size: 14px;
+  cursor: pointer;
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease;
+}
+
+.settings-rescan-btn:hover:not(:disabled) {
+  background: var(--row-on);
+  color: var(--ink1);
+}
+
+/* 扫描中：禁用并褪成透明底，配合「扫描中…」文案表示正在进行 */
+.settings-rescan-btn:disabled {
+  cursor: default;
+  background: transparent;
+  border-color: var(--hair);
+  color: var(--ink3);
 }
 
 .settings-reset-btn {

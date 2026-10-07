@@ -24,6 +24,7 @@ import {
   loadPlaylists,
   closeContextMenu,
   prunePlaylistsFromLibrary,
+  renderPlaylistsList,
 } from './playlists.js';
 import {
   playSong,
@@ -40,7 +41,7 @@ import { initMouseFollow, updateProgressStyle, applyThemeMode } from './theme.js
 import { initAutoHide, setAutoHideEnabled } from './autohide.js';
 import { initVisualizer } from './visualizer.js';
 import { initEqualizer, bindEqEvents } from './equalizer.js';
-import { showSyncToast } from './helpers.js';
+import { syncLibrary } from './library-sync.js';
 import { resolveRestoredIndex } from './playback-restore.js';
 
 function openHelp() {
@@ -86,22 +87,6 @@ function setupIpcListeners() {
     else if (prev < 0) prev = state.songs.length - 1;
     playSong(prev);
   });
-}
-
-// 启动后自动同步：合并文件夹新增/删除的歌曲，不打断当前播放
-async function applyFolderSync() {
-  const result = await window.dreamApi.syncFolder();
-  if (!result || (result.added === 0 && result.removed === 0)) return;
-
-  if (state.activeQueue.type === 'playlist') {
-    // 歌单队列中：只更新曲库缓存，不打断播放；随后清理歌单失效歌曲
-    state.librarySongs = [...result.playlist];
-    await prunePlaylistsFromLibrary();
-    return;
-  }
-
-  applyPlaylistFromMain(result.playlist);
-  if (result.added > 0) showSyncToast(t('sync.foundNew', { n: result.added }));
 }
 
 window.addEventListener('DOMContentLoaded', async () => {
@@ -374,6 +359,7 @@ window.addEventListener('DOMContentLoaded', async () => {
       const res = await window.dreamApi.addFolder();
       if (res && res.playlist && res.playlist.length > 0) {
         applyPlaylistFromMain(res.playlist);
+        renderPlaylistsList(); // 曲库变了，歌单抽屉的数量要跟着走
         playSong(0);
       }
     }
@@ -384,7 +370,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   loadPlaylists().catch(() => {});
 
   // 播放恢复完成后，后台同步文件夹新增/删除的歌曲；同步结束后再清理歌单失效歌曲
-  applyFolderSync()
+  syncLibrary()
     .then(() => prunePlaylistsFromLibrary())
     .catch(() => {});
 });
