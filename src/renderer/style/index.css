@@ -350,10 +350,16 @@ body.bar-hidden .lyrics-container {
   cursor: pointer;
   white-space: nowrap;
   overflow: hidden;
-  filter: blur(1.2px);
+  /* 渐变：离当前播放行越远，越糊、也越暗。两个量一起衰减 ——
+     只糊不暗的话远处的行会「糊在原地」，像一块污渍而不是退到背景里。
+     距离算不了纯 CSS 表达式，由 lyrics.js 的 applyLineDepth() 写进自定义属性；
+     默认值（1.2px / 1）是 JS 还没跑到时的兜底（静态歌词等）。 */
+  filter: blur(var(--lyric-blur, 1.2px));
+  opacity: var(--lyric-dim, 1);
   transition:
     color 0.3s ease,
-    filter 0.3s ease;
+    filter 0.3s ease,
+    opacity 0.3s ease;
 }
 
 .lyric-text {
@@ -1297,13 +1303,29 @@ body.mini-mode .mini-lyrics {
   line-height: 1.6;
   pointer-events: none; /* 穿透鼠标事件，否则挡住小窗的拖拽区 */
   box-sizing: border-box;
+  /* 换句动画：lyrics.js 淡出时加 .swapping，约 110ms 后换字再淡入 */
+  transition: opacity 0.11s ease;
+}
+body.mini-mode .mini-lyrics.swapping {
+  /* 只压暗、不淡到 0。淡到全透明时四行歌词一起空掉再回来，
+     读起来就是「换句时闪一下」——整块消失比换字本身显眼得多。
+     0.35 足够把换字藏在暗处，同时块始终在。 */
+  opacity: 0.35;
 }
 body.mini-mode .mini-lyric {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   color: var(--ink2);
-  transition: color 0.25s ease;
+  /* 渐变：离当前句越远越糊、也越暗（同主界面，值由 writeMiniLyrics 写进变量）。
+     四行距离只有 0/1/2，所以实际取值是 0/0.35/0.70 与 1/0.88/0.76。
+     这里的底色本来就用 --ink2 压过一道，所以再叠亮度会偏暗 —— 是有意的。 */
+  filter: blur(var(--lyric-blur, 0px));
+  opacity: var(--lyric-dim, 1);
+  transition:
+    color 0.25s ease,
+    filter 0.25s ease,
+    opacity 0.25s ease;
 }
 /* 当前句固定在第 2 行 */
 body.mini-mode .mini-lyric.now {

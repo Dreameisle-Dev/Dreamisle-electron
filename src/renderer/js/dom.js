@@ -73,6 +73,7 @@ export const eqResetBtn = document.getElementById('eqReset');
 // 小窗单行歌词元素
 // 小窗四行歌词，按显示顺序：上一句 / 当前句 / 下一句 / 再下一句。
 // 当前句固定占第 2 行（见 lyrics.js 的 MINI_NOW_SLOT 与 CSS 的 .mini-lyric.now）。
+export const miniLyricsBoxEl = document.getElementById('miniLyricsBox'); // 四行的容器，做整体淡入淡出
 export const miniLyricPrevEl = document.getElementById('miniLyricPrev');
 export const miniLyricNowEl = document.getElementById('miniLyricNow');
 export const miniLyricNextEl = document.getElementById('miniLyricNext');
