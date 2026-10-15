@@ -39,7 +39,7 @@ import { toggleSettings, closeSettings, bindSettingsEvents } from './settings.js
 import { toggleStats, closeStats, isStatsOpen, bindStatsEvents } from './stats.js';
 import { initMouseFollow, updateProgressStyle, applyThemeMode } from './theme.js';
 import { initAutoHide, setAutoHideEnabled } from './autohide.js';
-import { initVisualizer } from './visualizer.js';
+import { initVisualizer, relayoutVisualizer } from './visualizer.js';
 import { initEqualizer, bindEqEvents } from './equalizer.js';
 import { syncLibrary } from './library-sync.js';
 import { resolveRestoredIndex } from './playback-restore.js';
@@ -318,6 +318,10 @@ window.addEventListener('DOMContentLoaded', async () => {
     setAutoHideEnabled(!state.isMiniMode);
     // 进度可视化在两种模式下结构不同（主区频谱 / 小窗细线），重新套一次
     updateProgressStyle(audio.duration ? (audio.currentTime / audio.duration) * 100 : 0);
+    // 波形条按像素定位，而 .viz-wrap 在小窗里是 display:none。
+    // 类切换本身不触发 window resize，所以这里必须显式重排一次，
+    // 否则切回来时条会停在按小窗宽度算出的位置上（整排缩在开头）。
+    relayoutVisualizer();
   });
 
   const savedSongs = await window.dreamApi.loadSavedMusic();

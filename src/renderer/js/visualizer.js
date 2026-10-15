@@ -7,6 +7,24 @@ const BAR_MAX_H = 28; // 与 .viz-bars 的高度一致
 
 let bars = [];
 let rafId = 0;
+let relayout = null; // initVisualizer 里挂上重排函数，供窗口模式切换后显式调用
+
+/**
+ * 重新按当前宽度排布波形条。
+ *
+ * 必须由窗口模式切换后显式调用一次：波形条的横坐标是**像素**（不能用百分比，
+ * 见 layout 里的注释），而 .viz-wrap 在小窗模式是 display:none。
+ * 主进程切模式时先 setSize/setBounds、之后才发消息切 body.mini-mode，于是：
+ *   · 切进小窗：那串 resize 打进来时元素还可见，layout 会按**中间宽度**写一版位置；
+ *     类随后加上，元素隐藏、clientWidth 变 0，layout 早退 —— 错位置留下；
+ *   · 切回正常：仍然先 setBounds（此时类还在、宽度 0 → 早退），类随后才移除，
+ *     而「元素从 display:none 变回可见」**不触发 window resize**，
+ *     那一版按小窗宽度算的位置就再也修不回来 —— 表现为整排条缩在开头。
+ * 类切换是我们自己的动作，知道它何时发生，直接补一次重排最可靠。
+ */
+export function relayoutVisualizer() {
+  if (relayout) relayout();
+}
 
 export function initVisualizer(audioEl, containerEl) {
   if (!containerEl) return;
@@ -25,7 +43,7 @@ export function initVisualizer(audioEl, containerEl) {
   const wrap = containerEl.closest('.viz-wrap') || containerEl.parentElement;
   const layout = () => {
     const w = (wrap || containerEl).clientWidth;
-    if (!w) return;
+    if (!w) return; // 隐藏时宽度为 0：保留上一次的正确值，别把条全压到 0
     const pitch = w / BAR_COUNT;
     for (let i = 0; i < bars.length; i++) {
       bars[i].style.left = `${(i * pitch).toFixed(2)}px`;
@@ -33,6 +51,7 @@ export function initVisualizer(audioEl, containerEl) {
   };
   layout();
   window.addEventListener('resize', layout);
+  relayout = layout;
 
   // 每根条一个固定的振幅与相位，避免排成整齐的梳子。
   // 振幅用平方分布 → 少数高峰、大量矮条，比均匀分布更像真实频谱。
