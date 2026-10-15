@@ -638,6 +638,12 @@ body.bar-hidden .lyric-translation-toggle {
   text-overflow: ellipsis;
 }
 
+/* 专辑名：只有小窗模式显示（见下方的 body.mini-mode 覆盖）。
+   主窗口那条传输条放不下第三行，所以这里默认收起来。 */
+.bar-album {
+  display: none;
+}
+
 /* 控制键：居中于整条 */
 .bar-controls {
   position: absolute;
@@ -1046,14 +1052,14 @@ body.bar-hidden .lyric-translation-toggle {
 
 
 
-/* 小窗模式：窗口固定 300×340（见 main/window.js），只留唱片 / 当前歌词 / 控制键 / 底部细进度线，
-   歌词只有原文。主界面专属元素（歌词列、频谱、两端时间、封面小图、歌名歌手、模式键）全收掉。 */
+/* ══ 小窗模式（横排紧凑）══
+   窗口固定 300×340（见 main/window.js）：封面收成 92px 圆角方图放左上，右侧三行
+   （歌名/歌手/专辑）；下面依次是两行歌词、进度条+时间、控制键。
+   主界面专属元素（歌词列、频谱、封面小图、模式键、播放列表键）全收掉。
+   这里复用的仍是主窗口那套节点，只改坐标 —— 只有 .bar-album 是小窗专属。 */
 body.mini-mode .lyrics-container,
 body.mini-mode .viz-wrap,
-body.mini-mode .bar-time,
 body.mini-mode .bar-thumb,
-body.mini-mode .bar-title,
-body.mini-mode .bar-artist,
 body.mini-mode #btnMode,
 body.mini-mode #btnPlaylist,
 body.mini-mode .custom-titlebar,
@@ -1071,37 +1077,117 @@ body.mini-mode .bar-controls {
   -webkit-app-region: no-drag;
 }
 
-/* 唱片居中缩小。主界面那套「从右上出框」的定位（left/top 乘 --u）整个丢掉。 */
+/* 封面：主窗口是一张会转的黑胶，小窗里收成一张圆角方图。
+   方图转起来很怪，所以旋转动画一并停掉。 */
 body.mini-mode .album-art-container {
-  left: 50%;
-  top: 30px;
-  width: 152px;
-  height: 152px;
-  translate: -50% 0;
+  left: 20px;
+  top: 24px;
+  width: 92px;
+  height: 92px;
+  translate: none;
+  animation: none;
+}
+body.mini-mode .cover-disc,
+body.mini-mode .disc-hole {
+  display: none; /* 小窗不要黑胶那圈纹路和中心孔 */
+}
+body.mini-mode .cover-img,
+body.mini-mode .default-cover {
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  border-radius: 10px;
+  box-shadow:
+    0 6px 18px var(--shade-2),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.1);
+}
+/* 无封面时的音符图标：内联的 80px 和 0.1 透明度都是按主窗口那张大唱片定的，
+   缩进 92px 的小方图里要跟着缩、还要提亮，否则基本看不见。 */
+body.mini-mode .default-cover svg {
+  width: 34px;
+  height: 34px;
+  stroke: rgba(255, 255, 255, 0.42);
 }
 
-/* 传输条退成一条通栏底栏，只剩居中的控制键 */
+/* 封面右侧三行文字。x=128 = 20(左距) + 92(封面) + 16(间距)。 */
+body.mini-mode .bar-title {
+  left: 128px;
+  top: 26px;
+  max-width: 152px;
+  font-size: 16px;
+  font-weight: 650;
+  letter-spacing: 0.01em;
+}
+body.mini-mode .bar-artist {
+  left: 128px;
+  top: 50px;
+  max-width: 152px;
+  font-size: 12px;
+  letter-spacing: 0;
+  color: var(--ink2);
+}
+body.mini-mode .bar-album {
+  display: block;
+  position: absolute;
+  left: 128px;
+  top: 70px;
+  max-width: 152px;
+  font-size: 11px;
+  color: var(--ink2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* 传输条在小窗里没有底色也没有描边，只当定位容器用。
+   注意要铺满整窗（top:0 + bottom:0）：它平时是贴在窗口底部的 130px 条，
+   子元素若按窗口坐标写 top 就会整体下移一个条高 —— 之前歌名/歌手/专辑
+   正是因此跑到 y≈288，和控制键叠在一起、专辑还掉出了窗口。
+   铺满之后，子元素的 top/bottom 都直接是窗口坐标，不会再错。 */
 body.mini-mode .player-bar {
-  height: 78px;
+  top: 0;
+  height: auto;
   background: none;
   border-top: none;
   backdrop-filter: none;
 }
 
 body.mini-mode .bar-controls {
-  top: 12px;
-  gap: 18px;
+  top: auto;
+  bottom: 22px;
+  gap: 26px;
 }
 
-/* 主区那 28px 高的频谱换成一条 3px 细线 */
+/* 主区那条频谱换成一根 5px 圆角进度条，两端配时间。
+   进度由 --progress-ratio 驱动（theme.js 的 updateProgressStyle），不用额外接线。 */
 body.mini-mode .mini-progress {
   display: block;
   position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  height: 3px;
+  left: 20px;
+  right: 20px;
+  bottom: 92px;
+  height: 5px;
+  border-radius: 3px;
   background: var(--track);
+}
+body.mini-mode .mini-progress i {
+  border-radius: 3px;
+  background: var(--ink1);
+}
+body.mini-mode .bar-time {
+  top: auto;
+  bottom: 76px;
+  font-size: 10px;
+  letter-spacing: 0.02em;
+  color: var(--ink2);
+}
+body.mini-mode .bar-time.left {
+  left: 20px;
+}
+body.mini-mode .bar-time.right {
+  right: 20px;
 }
 
 .custom-titlebar {
@@ -1195,26 +1281,36 @@ body.mini-mode .custom-titlebar {
   display: none; /* 普通模式下默认隐藏 */
 }
 
-/* 小窗里唱片下方那一行原文歌词，位置写死在小窗的坐标系里
-   （窗口固定 300×340，唱片 top:30 + 152 = 182）。 */
+/* 小窗里封面下方的四行原文歌词：上一句 / 当前句 / 后两句。
+   主界面那套「当前行加大加粗、其余变暗」的层次照搬，但有两处不照搬：
+   1) 去掉 blur(1.2px) —— 压在 13px 的字上糊成一团，读不了；
+   2) 尺寸用固定 px 而不是 --u —— 300px 窗口里 36*u 只有 6px。
+   位置写死在小窗坐标系里（窗口固定 300×340，封面 bottom = 24 + 92 = 116）。 */
 body.mini-mode .mini-lyrics {
   display: block;
   position: absolute;
-  left: 0;
-  right: 0;
-  top: 196px;
-  text-align: center;
+  left: 20px;
+  right: 20px;
+  top: 128px;
   font-size: 13px;
   font-weight: 500;
-  color: var(--ink1);
-  opacity: 0.85;
+  line-height: 1.6;
+  pointer-events: none; /* 穿透鼠标事件，否则挡住小窗的拖拽区 */
+  box-sizing: border-box;
+}
+body.mini-mode .mini-lyric {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  pointer-events: none; /* 穿透鼠标事件，否则挡住小窗的拖拽区 */
-  box-sizing: border-box;
-  padding: 0 14px;
-  -webkit-app-region: no-drag;
+  color: var(--ink2);
+  transition: color 0.25s ease;
+}
+/* 当前句固定在第 2 行 */
+body.mini-mode .mini-lyric.now {
+  font-size: 16px;
+  font-weight: 650;
+  line-height: 1.5;
+  color: var(--ink1);
 }
 
 /* 浮层外壳（设置 / 帮助共用）：居中显示。 */

@@ -1,10 +1,35 @@
 import { t } from '../../shared/i18n.js';
 import { state } from './state.js';
-import { audio, lyricsContainer, lyricsScroll, miniLyricsEl, btnLyricTranslation } from './dom.js';
+import {
+  audio,
+  lyricsContainer,
+  lyricsScroll,
+  miniLyricPrevEl,
+  miniLyricNowEl,
+  miniLyricNextEl,
+  miniLyricNext2El,
+  btnLyricTranslation,
+} from './dom.js';
 import { escapeHtml } from './helpers.js';
 import { updatePlayButton } from './playback.js';
 import universalLyricParser from '../../shared/universal-lyric-parser.js';
 import { parseLyricsText, parseSyncLyrics } from '../../shared/lyrics-parse.js';
+
+// 小窗四行：上一句 / 当前句 / 后两句。只显示原文，不含翻译（与桌面歌词一致）。
+// 所有「写入」和「清空」都走这里，免得漏清某一行、留下上一首的残句。
+const MINI_LYRIC_SLOTS = [miniLyricPrevEl, miniLyricNowEl, miniLyricNextEl, miniLyricNext2El];
+const MINI_NOW_SLOT = 1; // 当前句固定在第 2 行（用户选的「上 1 下 2」）
+
+// activeIndex = 当前句下标；传 null 表示清空（切歌 / 无歌词 / 空库）。
+// 开头还没唱到第一句时 activeIndex 为 -1，此时后两格会显示即将到来的句子，符合预期。
+function setMiniLyrics(activeIndex = null) {
+  MINI_LYRIC_SLOTS.forEach((el, i) => {
+    if (!el) return;
+    const line = activeIndex === null ? null : state.currentLyrics[activeIndex - MINI_NOW_SLOT + i];
+    el.innerText = line ? line.text || '' : '';
+    el.classList.toggle('now', activeIndex !== null && i === MINI_NOW_SLOT);
+  });
+}
 
 // 清空歌词状态：切换歌曲 / 空库复位时调用
 export function resetLyrics() {
@@ -13,7 +38,7 @@ export function resetLyrics() {
   state.lyricDoms = [];
   state.lastDesktopText = null;
   pushDesktopLyrics('');
-  if (miniLyricsEl) miniLyricsEl.innerText = '';
+  setMiniLyrics();
 }
 
 export async function loadAndRenderLyrics(song) {
@@ -110,7 +135,7 @@ export function syncLyrics(currentTime) {
     state.currentLyrics[0].isStatic ||
     state.lyricDoms.length === 0
   ) {
-    if (miniLyricsEl) miniLyricsEl.innerText = '';
+    setMiniLyrics();
     pushDesktopLyrics('');
     return;
   }
@@ -139,14 +164,14 @@ export function syncLyrics(currentTime) {
         targetLine.offsetTop - lyricsContainer.clientHeight / 2 + targetLine.clientHeight / 2;
     }
 
-    if (miniLyricsEl && state.currentLyrics[activeIndex]) {
+    if (state.currentLyrics[activeIndex]) {
       // 小窗与桌面歌词只显示原文,不含翻译
       const text = state.currentLyrics[activeIndex].text || '';
-      miniLyricsEl.innerText = text;
+      setMiniLyrics(activeIndex);
       pushDesktopLyrics(text);
     }
   } else {
-    if (miniLyricsEl) miniLyricsEl.innerText = '';
+    setMiniLyrics();
     pushDesktopLyrics('');
   }
 }

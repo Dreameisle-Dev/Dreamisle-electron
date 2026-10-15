@@ -9,6 +9,7 @@ import {
   volumeHud,
   titleEl,
   artistEl,
+  albumEl,
   currentTimeEl,
   totalTimeEl,
   btnPlay,
@@ -62,14 +63,22 @@ function setPositionState() {
   } catch (e) {}
 }
 
+// 歌名/歌手/专辑三行一起写。主窗口的传输条只显示前两行（.bar-album 平时 display:none），
+// 小窗三行都显示 —— 所以凡是改这几行的地方都得走这里，
+// 否则小窗的专辑行会留着上一首的内容。
+function setTrackInfo(song) {
+  titleEl.innerText = song.title;
+  artistEl.innerText = song.artist;
+  albumEl.innerText = song.album || '';
+}
+
 export function initSongInfo(index) {
   if (index < 0 || index >= state.songs.length) return;
   state.currentIndex = index;
   const song = state.songs[index];
   audio.src = song.url;
 
-  titleEl.innerText = song.title;
-  artistEl.innerText = song.artist;
+  setTrackInfo(song);
   setMediaMetadata(song); // 封面等 updateCoverAndColor 拿到后再补
   updateVirtualList();
 
@@ -86,8 +95,7 @@ export function playSong(index) {
   audio.src = song.url;
   audio.play();
 
-  titleEl.innerText = song.title;
-  artistEl.innerText = song.artist;
+  setTrackInfo(song);
   setMediaMetadata(song); // 封面等 updateCoverAndColor 拿到后再补
 
   updatePlayButton(true);
@@ -224,6 +232,7 @@ export function resetToEmptyLibrary() {
   updatePlayButton(false);
   titleEl.innerText = 'Dreamisle';
   artistEl.innerText = t('app.waitingForMusic');
+  albumEl.innerText = '';
   if (state.currentCoverBlobUrl) {
     URL.revokeObjectURL(state.currentCoverBlobUrl);
     state.currentCoverBlobUrl = null;

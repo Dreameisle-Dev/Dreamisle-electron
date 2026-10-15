@@ -106,8 +106,14 @@
         <div id="volumeHud" class="volume-hud">VOL 50%</div>
       </div>
 
-      <!-- 小窗单行歌词（只显示原文，不含翻译，与桌面歌词一致） -->
-      <div class="mini-lyrics" id="miniLyrics"></div>
+      <!-- 小窗歌词：四行，当前句固定在第 2 行（上一句 / 当前句 / 后两句）。
+           只显示原文，不含翻译，与桌面歌词一致 -->
+      <div class="mini-lyrics">
+        <div class="mini-lyric" id="miniLyricPrev"></div>
+        <div class="mini-lyric now" id="miniLyricNow"></div>
+        <div class="mini-lyric" id="miniLyricNext"></div>
+        <div class="mini-lyric" id="miniLyricNext2"></div>
+      </div>
 
       <!-- 歌词区域：绝对定位在窗口左侧（不再占右半屏，右侧让给黑胶） -->
       <div class="lyrics-container" id="lyricsContainer">
@@ -141,6 +147,8 @@
         <img id="barThumb" class="bar-thumb" src="" alt="" />
         <div class="bar-title" id="barTitle">Dreamisle</div>
         <div class="bar-artist" id="barArtist" data-i18n="app.waitingForMusic">Waiting for music...</div>
+        <!-- 专辑名：只有小窗模式显示（主窗口的传输条放不下第三行） -->
+        <div class="bar-album" id="barAlbum"></div>
 
         <div class="bar-controls">
           <!-- 模式切换 -->

@@ -16,7 +16,7 @@ Dreamisle is designed to deliver the purest listening and visual experience. Hig
 *   **Modern frosted-glass UI**: A premium frosted-glass playlist, visually lightweight.
 *   **Invisible gesture controls**: Hover over the cover area and **scroll the mouse wheel** to adjust volume, paired with a minimal HUD display.
 *   **Auto-hiding control bar**: When the pointer leaves the bottom of the window, the playback bar slides out of view leaving only a slim hint line; move back toward the bottom and it slides in again.
-*   **Mini mode**: Press F5 to collapse into a 300×340 always-on-top mini window showing just the cover, the current lyric line, and playback controls — handy in a screen corner.
+*   **Mini mode**: Press F5 to collapse into a 300×340 always-on-top mini window showing the cover, title/artist/album, the current and next lyric lines, progress and playback controls — handy in a screen corner.
 *   **Liquid interactions**: Silky sink/rise transitions for track info when switching songs — no harsh jumps.
 *   **Powerful local parsing**:
     *   Recursively scan folders to import music.

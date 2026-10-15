@@ -19,6 +19,7 @@ export const volumeHud = document.getElementById('volumeHud');
 // 所以改名只需要动这里。
 export const titleEl = document.getElementById('barTitle');
 export const artistEl = document.getElementById('barArtist');
+export const albumEl = document.getElementById('barAlbum');
 export const barThumb = document.getElementById('barThumb');
 export const currentTimeEl = document.getElementById('currentTime');
 export const totalTimeEl = document.getElementById('totalTime');
@@ -70,7 +71,12 @@ export const eqPreampEl = document.getElementById('eqPreamp');
 export const eqResetBtn = document.getElementById('eqReset');
 
 // 小窗单行歌词元素
-export const miniLyricsEl = document.getElementById('miniLyrics');
+// 小窗四行歌词，按显示顺序：上一句 / 当前句 / 下一句 / 再下一句。
+// 当前句固定占第 2 行（见 lyrics.js 的 MINI_NOW_SLOT 与 CSS 的 .mini-lyric.now）。
+export const miniLyricPrevEl = document.getElementById('miniLyricPrev');
+export const miniLyricNowEl = document.getElementById('miniLyricNow');
+export const miniLyricNextEl = document.getElementById('miniLyricNext');
+export const miniLyricNext2El = document.getElementById('miniLyricNext2');
 
 // 帮助浮层元素
 export const helpOverlayEl = document.getElementById('helpOverlay');
