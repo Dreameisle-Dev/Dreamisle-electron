@@ -26,6 +26,11 @@ const dict = {
     'sync.upToDate': '已是最新',
     'sync.rescanResult': '新增 {added} 首，移除 {removed} 首',
     'folders.duplicate': '该文件夹已在列表中',
+    'store.corruptTitle': '配置文件已损坏',
+    'store.corruptDetail':
+      '音梦屿读不出原来的配置，已重置为默认设置——音乐库、歌单和播放统计需要重新设置。\n\n原文件已备份到：\n{path}',
+    'store.corruptDetailNoBackup':
+      '音梦屿读不出原来的配置，已重置为默认设置——音乐库、歌单和播放统计需要重新设置。\n\n原文件正被占用或权限不足，未能备份。',
     'help.intro': '一款离线音乐播放器',
     'help.shortcuts': '键盘快捷键',
     'help.playPause': '播放 / 暂停',
@@ -154,6 +159,11 @@ const dict = {
     'sync.upToDate': 'Already up to date',
     'sync.rescanResult': '{added} added, {removed} removed',
     'folders.duplicate': 'This folder is already in the list',
+    'store.corruptTitle': 'Settings file was corrupted',
+    'store.corruptDetail':
+      'Dreamisle could not read your settings and has reset them to defaults — music folders, playlists and play stats need to be set up again.\n\nThe original file was backed up to:\n{path}',
+    'store.corruptDetailNoBackup':
+      'Dreamisle could not read your settings and has reset them to defaults — music folders, playlists and play stats need to be set up again.\n\nThe original file could not be backed up (it is in use or permission was denied).',
     'help.intro': 'An offline music player',
     'help.shortcuts': 'Keyboard shortcuts',
     'help.playPause': 'Play / Pause',

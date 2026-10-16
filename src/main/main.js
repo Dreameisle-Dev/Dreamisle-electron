@@ -1,5 +1,11 @@
 import { app, session, nativeTheme } from 'electron';
-import { migrateLegacyMusicFolder, getLanguage, getLyricsStyle, getThemeMode } from './store.js';
+import {
+  migrateLegacyMusicFolder,
+  getLanguage,
+  getLyricsStyle,
+  getThemeMode,
+  notifyStoreRecovery,
+} from './store.js';
 import { createWindow, getMainWindow } from './window.js';
 import { createTray } from './tray.js';
 import { registerIpcHandlers } from './ipc.js';
@@ -39,6 +45,7 @@ app.whenReady().then(() => {
   registerIpcHandlers();
   registerPlaylistsIpc();
   createWindow();
+  notifyStoreRecovery(getMainWindow()); // 配置被重置过就告知用户备份位置
   createTray();
   setLyricsStyle(getLyricsStyle()); // 同步已存歌词样式
   setLyricsLang(getLanguage()); // 同步已存语言
