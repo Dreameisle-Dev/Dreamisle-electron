@@ -3,6 +3,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { t } from '../shared/i18n.js';
 import { getMainWindow } from './window.js';
+import { isTaskbarLyricsEnabled, setTaskbarLyricsEnabled } from '../taskbar/taskbar-lyrics.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -29,6 +30,15 @@ function buildTrayMenuTemplate() {
       },
     },
     { type: 'separator' },
+    {
+      type: 'checkbox',
+      label: t('tray.taskbarLyrics'),
+      checked: isTaskbarLyricsEnabled(),
+      click: (item) => {
+        setTaskbarLyricsEnabled(item.checked);
+        rebuildTrayMenu();
+      },
+    },
     {
       label: t('tray.showWindow'),
       click: () => {

@@ -15,6 +15,7 @@ import { escapeHtml } from './helpers.js';
 import { updatePlayButton } from './playback.js';
 import universalLyricParser from '../../shared/universal-lyric-parser.js';
 import { parseLyricsText, parseSyncLyrics } from '../../shared/lyrics-parse.js';
+import { buildLyricDocument } from '../../shared/taskbar-lyrics-document.js';
 
 // 小窗四行：上一句 / 当前句 / 后两句。只显示原文，不含翻译（与桌面歌词一致）。
 const MINI_LYRIC_SLOTS = [miniLyricPrevEl, miniLyricNowEl, miniLyricNextEl, miniLyricNext2El];
@@ -59,18 +60,25 @@ function setMiniLyrics(activeIndex = null) {
   }, MINI_FADE_MS);
 }
 
-// 清空歌词状态：切换歌曲 / 空库复位时调用
-export function resetLyrics() {
+// 清空歌词状态：切换歌曲 / 空库复位时调用。
+// 传了 song 就同时推一份空行占位文档，任务栏在歌词异步加载期间先显示新歌的歌名/歌手。
+export function resetLyrics(song = null) {
   state.currentLyrics = [];
   state.currentLineIndex = -1;
   state.lyricDoms = [];
   state.lastDesktopText = null;
   pushDesktopLyrics('');
   setMiniLyrics();
+  pushTaskbarLyricsDocument(song, []);
+}
+
+// 向主进程推送任务栏歌词文档（fire-and-forget，不阻塞歌词渲染）
+function pushTaskbarLyricsDocument(song, lines) {
+  window.dreamApi.setTaskbarLyricsDocument(buildLyricDocument(song, lines));
 }
 
 export async function loadAndRenderLyrics(song) {
-  resetLyrics();
+  resetLyrics(song);
 
   if (lyricsScroll) {
     lyricsScroll.innerHTML = `<p class="lyric-line placeholder">${t('lyrics.loading')}</p>`;
@@ -99,6 +107,8 @@ export async function loadAndRenderLyrics(song) {
   }
 
   renderLyricsToDom();
+  // 解析完成后再推完整文档；此时任务栏可从占位（歌名/歌手）切到歌词行
+  pushTaskbarLyricsDocument(song, state.currentLyrics);
 }
 
 // ── 渐变：离当前播放行越远，越糊、也越暗 ──

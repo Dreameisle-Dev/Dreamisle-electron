@@ -23,8 +23,30 @@ import { updateVirtualList } from './playlist.js';
 import { loadAndRenderLyrics, syncLyrics } from './lyrics.js';
 import { updateThemeColor, updateProgressStyle } from './theme.js';
 import { onSongChanged, onCoverReady } from './stats.js';
+import { buildPlaybackState } from '../../shared/taskbar-lyrics-document.js';
 
 audio.volume = 0.5;
+
+// 任务栏歌词播放状态：timeupdate 约 4Hz，再节流到 ≥200ms；切歌/暂停/跳转时强制补一拍。
+const TASKBAR_PLAYBACK_MIN_INTERVAL_MS = 200;
+let lastTaskbarPlaybackAt = -Infinity;
+
+export function pushTaskbarPlayback(force = false) {
+  const song = state.songs[state.currentIndex];
+  if (!song) return;
+
+  const now = performance.now();
+  if (!force && now - lastTaskbarPlaybackAt < TASKBAR_PLAYBACK_MIN_INTERVAL_MS) return;
+  lastTaskbarPlaybackAt = now;
+
+  window.dreamApi.updateTaskbarLyricsPlayback(
+    buildPlaybackState(song, {
+      currentTimeSec: audio.currentTime,
+      playing: !audio.paused,
+      rate: audio.playbackRate || 1,
+    })
+  );
+}
 
 // 拖动进度条直接拖到末尾会触发 ended,此类不计入完整播放:记录最近一次 seek 时间用于过滤
 let lastSeekAt = 0;
@@ -85,6 +107,7 @@ export function initSongInfo(index) {
   updateCoverAndColor(song);
   loadAndRenderLyrics(song);
   onSongChanged();
+  pushTaskbarPlayback(true);
 }
 
 export function playSong(index) {
@@ -108,6 +131,7 @@ export function playSong(index) {
   onSongChanged();
 
   saveStateOnChange();
+  pushTaskbarPlayback(true);
 }
 
 export function playNext(auto = false) {
@@ -283,6 +307,7 @@ export function bindPlaybackEvents() {
       syncLyrics(audio.currentTime);
       setPositionState();
     }
+    pushTaskbarPlayback();
   });
 
   // 进度可视化不是 range input，seek 由点击位置的比例直接算出。
@@ -324,6 +349,12 @@ export function bindPlaybackEvents() {
   audio.addEventListener('seeking', () => {
     lastSeekAt = Date.now();
   });
+
+  // 任务栏歌词：play/pause/seeking/seeked/ended 都是「立即补一拍」的时机，
+  // 不能等下一次 timeupdate，否则暂停或跳转后歌词条会慢半拍。
+  for (const event of ['play', 'pause', 'seeking', 'seeked', 'ended']) {
+    audio.addEventListener(event, () => pushTaskbarPlayback(true));
+  }
 
   audio.addEventListener('ended', () => {
     // 完整播放计次;单曲循环模式下额外计一次循环重播(在切歌前捕获当前歌曲)

@@ -16,6 +16,7 @@ import {
   setLyricsStyle,
   setLyricsLang,
 } from '../lyrics/lyrics-window.js';
+import { initTaskbarLyrics, disposeTaskbarLyrics } from '../taskbar/taskbar-lyrics.js';
 
 app.isQuitting = false;
 app.setAppUserModelId('org.dreamisle-dev.dreamisle');
@@ -45,6 +46,7 @@ app.whenReady().then(() => {
   registerIpcHandlers();
   registerPlaylistsIpc();
   createWindow();
+  initTaskbarLyrics();
   notifyStoreRecovery(getMainWindow()); // 配置被重置过就告知用户备份位置
   createTray();
   setLyricsStyle(getLyricsStyle()); // 同步已存歌词样式
@@ -63,4 +65,5 @@ app.on('activate', () => {
 app.on('before-quit', () => {
   app.isQuitting = true;
   disposeLyrics();
+  disposeTaskbarLyrics();
 });

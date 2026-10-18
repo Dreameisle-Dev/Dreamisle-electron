@@ -1945,7 +1945,8 @@ kbd {
 /* 开关：「选中 = 实心」沿用播放按钮与排序分段控件那一套语言。
    关闭时轨道用 --track、滑块用 --rng-fill-1（浅色下深墨、深色下纯白），
    两种主题下滑块与轨道都拉开对比；开启时轨道填实、滑块翻成反色。 */
-.eq-switch {
+.eq-switch,
+.settings-switch {
   position: relative;
   width: 40px;
   height: 22px;
@@ -1970,11 +1971,13 @@ kbd {
     background-color 0.2s ease;
 }
 
-.eq-switch.active {
+.eq-switch.active,
+.settings-switch.active {
   background: var(--play-bg);
 }
 
-.eq-switch.active .eq-switch-knob {
+.eq-switch.active .eq-switch-knob,
+.settings-switch.active .eq-switch-knob {
   background: var(--play-ink);
   transform: translateX(18px);
 }

@@ -1,0 +1,125 @@
+/* 任务栏歌词条：窗口本身透明，只绘制文字。
+   字体大小按 48 CSS px 的任务栏高度设计；颜色跟随任务栏明暗。 */
+html,
+body {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  background: transparent;
+}
+
+body {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  font-family: 'Microsoft YaHei UI', 'Segoe UI', sans-serif;
+  -webkit-user-select: none;
+  user-select: none;
+  cursor: default;
+}
+
+/* 浅色任务栏：深色文字 + 白色柔光；深色任务栏反之。
+   次要文字的不透明度包含在颜色里，不要再叠加 #translation 的 opacity。 */
+body.light {
+  --line-color: #101010;
+  --secondary-color: rgba(16, 16, 16, 0.68);
+  --text-shadow: 0 1px 2px rgba(255, 255, 255, 0.55);
+}
+
+body.dark {
+  --line-color: #fff;
+  --secondary-color: rgba(255, 255, 255, 0.7);
+  --text-shadow: 0 1px 3px rgba(0, 0, 0, 0.75);
+}
+
+/* 左侧封面 + 右侧两行文字，整体在窗口内垂直居中；左右 12px 内边距与主进程的
+   WINDOW_PADDING_CSS 对应。封面占满任务栏高度减 12px，文字列左对齐。 */
+#strip {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 10px;
+  box-sizing: border-box;
+  width: 100%;
+  height: 100%;
+  padding: 0 12px;
+  overflow: hidden;
+}
+
+#cover {
+  flex: none;
+  height: calc(100% - 12px);
+  aspect-ratio: 1;
+  border-radius: 6px;
+  object-fit: cover;
+}
+
+#cover[hidden] {
+  display: none;
+}
+
+#textcol {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 2px;
+  min-width: 0;
+  max-width: 100%;
+}
+
+#line,
+#translation {
+  max-width: 100%;
+  white-space: nowrap;
+  line-height: 1.15;
+}
+
+#line {
+  color: var(--line-color);
+  font-size: 15px;
+  font-weight: 600;
+  text-shadow: var(--text-shadow);
+  transition:
+    opacity 180ms ease,
+    transform 180ms ease;
+}
+
+/* 换行瞬间先落到起始态（无过渡），移除类后由基础规则做 180ms 淡入 + 2px 上移 */
+#line.line-change {
+  opacity: 0;
+  transform: translateY(2px);
+  transition: none;
+}
+
+#translation {
+  color: var(--secondary-color);
+  font-size: 12px;
+  font-weight: 500;
+  text-shadow: var(--text-shadow);
+}
+
+#translation[hidden] {
+  display: none;
+}
+
+/* 长行跑马灯：两端各停 0.8s（渲染进程会按实际时长动态覆盖 keyframes 百分比），
+   速度约 45px/s。 */
+#line.marquee {
+  animation: taskbar-marquee var(--marquee-duration, 6s) linear infinite;
+  will-change: transform;
+}
+
+@keyframes taskbar-marquee {
+  0%,
+  10% {
+    transform: translateX(0);
+  }
+  90%,
+  100% {
+    transform: translateX(var(--marquee-distance, 0px));
+  }
+}

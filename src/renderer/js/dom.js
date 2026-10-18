@@ -61,6 +61,7 @@ export const fontSelectBtn = document.getElementById('fontSelectBtn');
 export const fontSelectValue = document.getElementById('fontSelectValue');
 export const fontSearchInput = document.getElementById('fontSearch');
 export const fontOptions = document.getElementById('fontOptions');
+export const taskbarLyricsSwitch = document.getElementById('taskbarLyricsSwitch');
 
 // 均衡器面板元素（推子与预设胶囊由 equalizer.js 动态生成）
 export const eqEnableSwitch = document.getElementById('eqEnable');

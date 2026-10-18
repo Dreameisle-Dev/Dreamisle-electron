@@ -28,6 +28,15 @@ import {
 import { toggleMiniMode, minimizeWindow, maximizeWindow, closeWindow } from './window.js';
 import { rebuildTrayMenu } from './tray.js';
 import { setLyricsText, setLyricsStyle, setLyricsLang } from '../lyrics/lyrics-window.js';
+import {
+  isTaskbarLyricsEnabled,
+  setTaskbarLyricsEnabled,
+  updateTaskbarLyricsDocument,
+  updateTaskbarLyricsPlayback,
+  updateTaskbarLyricsStyle,
+  updateTaskbarLyricsTranslation,
+  refreshTaskbarLyricsConfig,
+} from '../taskbar/taskbar-lyrics.js';
 import { emptyStats, recordPlay, pruneStats } from '../shared/stats.js';
 import { refreshPlaylistsMetadata } from './playlists.js';
 
@@ -152,8 +161,15 @@ export function registerIpcHandlers() {
       lyricsTranslation: getLyricsTranslation(),
       themeMode: getThemeMode(),
       equalizer: getEqualizer(),
+      taskbarLyrics: isTaskbarLyricsEnabled(),
       musicFolders: folders,
     };
+  });
+
+  ipcMain.handle('settings:setTaskbarLyrics', (event, enabled) => {
+    const next = setTaskbarLyricsEnabled(!!enabled);
+    rebuildTrayMenu();
+    return next;
   });
 
   ipcMain.handle('settings:setEqualizer', (event, eq) => setEqualizer(eq));
@@ -171,11 +187,13 @@ export function registerIpcHandlers() {
     applyLanguage(lang);
     rebuildTrayMenu();
     setLyricsLang(lang);
+    refreshTaskbarLyricsConfig();
     return true;
   });
 
   ipcMain.handle('settings:setLyricsTranslation', (event, visible) => {
     setLyricsTranslation(visible);
+    updateTaskbarLyricsTranslation(!!visible);
     return true;
   });
 
@@ -194,12 +212,23 @@ export function registerIpcHandlers() {
     };
     store.set('settings.lyricsStyle', next);
     setLyricsStyle(next);
+    updateTaskbarLyricsStyle(next);
     return next;
   });
 
   ipcMain.handle('app:updateDesktopLyrics', (event, text) => {
     setLyricsText(typeof text === 'string' ? text : '');
     return true;
+  });
+
+  // 任务栏歌词：主窗口渲染进程只推数据，主进程原样转发给任务栏窗。
+  // 用 send/on 而不是 invoke：timeupdate 4Hz 的频率不值得为每次推送建 Promise。
+  ipcMain.on('app:setTaskbarLyricsDocument', (event, doc) => {
+    updateTaskbarLyricsDocument(doc);
+  });
+
+  ipcMain.on('app:updateTaskbarLyricsPlayback', (event, playback) => {
+    updateTaskbarLyricsPlayback(playback);
   });
 
   // 处理小窗模式切换

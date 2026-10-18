@@ -100,6 +100,16 @@ export function getLyricsTranslation() {
   return store.get('settings.lyricsTranslation') !== false; // 默认开启
 }
 
+// 任务栏歌词：默认关闭，开启后主进程会在任务栏里嵌入歌词条窗口
+export function getTaskbarLyricsSetting() {
+  return store.get('settings.taskbarLyrics') === true;
+}
+
+export function setTaskbarLyricsSetting(enabled) {
+  store.set('settings.taskbarLyrics', !!enabled);
+  return !!enabled;
+}
+
 export function setLyricsTranslation(visible) {
   store.set('settings.lyricsTranslation', !!visible);
 }

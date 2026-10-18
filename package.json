@@ -12,6 +12,7 @@
     "build:win": "electron-builder --win"
   },
   "build": {
+    "asarUnpack": ["node_modules/koffi/**/*"],
     "win": {
       "icon": "src/assets/app_icon.ico",
       "appId": "org.dreamisle-dev.dreamisle"
@@ -24,6 +25,7 @@
   },
   "dependencies": {
     "electron-store": "^11.0.2",
+    "koffi": "^3.3.3",
     "music-metadata": "^11.10.6"
   },
   "devDependencies": {

@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:"
+    />
+    <link rel="stylesheet" href="taskbar-lyrics.css" />
+    <title>Dreamisle taskbar lyrics</title>
+  </head>
+  <body class="light">
+    <div id="strip">
+      <img id="cover" hidden alt="" />
+      <div id="textcol">
+        <div id="line"></div>
+        <div id="translation" hidden></div>
+      </div>
+    </div>
+    <script type="module" src="taskbar-renderer.js"></script>
+  </body>
+</html>
