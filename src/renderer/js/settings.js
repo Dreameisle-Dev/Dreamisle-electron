@@ -26,7 +26,6 @@ import {
   fontSearchInput,
   fontOptions,
   themeSeg,
-  taskbarLyricsSwitch,
   taskbarFontSelectWrap,
   taskbarFontSelectBtn,
   taskbarFontSelectValue,
@@ -80,9 +79,6 @@ export async function refreshSettingsUi() {
   syncLyricsStyleUi(settings.lyricsStyle || DEFAULT_LYRICS_STYLE);
   syncTaskbarLyricsStyleUi(settings.taskbarLyricsStyle || DEFAULT_TASKBAR_LYRICS_STYLE);
   syncThemeSeg(settings.themeMode);
-  const taskbarLyrics = !!settings.taskbarLyrics;
-  taskbarLyricsSwitch.classList.toggle('active', taskbarLyrics);
-  taskbarLyricsSwitch.setAttribute('aria-checked', String(taskbarLyrics));
   // 均衡器状态在渲染进程里（state.equalizer 是唯一真源，主进程只负责存），
   // 这里只重建跟随语言的文案：预设胶囊名、当前曲线、前级读数
   renderEqPresets();
@@ -362,17 +358,6 @@ export function bindSettingsEvents() {
         .querySelectorAll('.settings-panel')
         .forEach((p) => p.classList.toggle('active', p.dataset.panel === item.dataset.section));
     });
-  });
-
-  taskbarLyricsSwitch.addEventListener('click', () => {
-    const next = !taskbarLyricsSwitch.classList.contains('active');
-    window.dreamApi.setTaskbarLyrics(next).then(refreshSettingsUi);
-  });
-
-  // 托盘菜单也能切换任务栏歌词；打开着的设置页要跟着变
-  window.dreamApi.onTaskbarLyricsChanged((enabled) => {
-    taskbarLyricsSwitch.classList.toggle('active', !!enabled);
-    taskbarLyricsSwitch.setAttribute('aria-checked', String(!!enabled));
   });
 
   // ── 任务栏歌词外观 ──

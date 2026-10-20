@@ -29,7 +29,6 @@ contextBridge.exposeInMainWorld('dreamApi', {
   setEqualizer: (eq) => ipcRenderer.invoke('settings:setEqualizer', eq),
   setLyricsTranslation: (visible) => ipcRenderer.invoke('settings:setLyricsTranslation', visible),
   setThemeMode: (mode) => ipcRenderer.invoke('settings:setThemeMode', mode),
-  setTaskbarLyrics: (enabled) => ipcRenderer.invoke('settings:setTaskbarLyrics', enabled),
   addFolder: () => ipcRenderer.invoke('folders:add'),
   removeFolder: (folderPath) => ipcRenderer.invoke('folders:remove', folderPath),
 
@@ -38,8 +37,6 @@ contextBridge.exposeInMainWorld('dreamApi', {
   onTrayPlayPause: (callback) => ipcRenderer.on('tray-play-pause', () => callback()),
   onTrayNext: (callback) => ipcRenderer.on('tray-next', () => callback()),
   onTrayPrev: (callback) => ipcRenderer.on('tray-prev', () => callback()),
-  onTaskbarLyricsChanged: (callback) =>
-    ipcRenderer.on('taskbar-lyrics:changed', (event, enabled) => callback(enabled)),
 
   toggleMiniMode: () => ipcRenderer.invoke('app:toggleMiniMode'),
   onWindowModeChanged: (callback) =>

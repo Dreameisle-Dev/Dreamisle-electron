@@ -40,6 +40,10 @@ function buildTrayMenuTemplate() {
       },
     },
     {
+      label: t('tray.taskbarLyricsHotkey'),
+      enabled: false,
+    },
+    {
       label: t('tray.showWindow'),
       click: () => {
         if (getMainWindow()) {

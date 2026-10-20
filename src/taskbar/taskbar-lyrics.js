@@ -638,12 +638,6 @@ function createWindow(context = {}) {
   });
 }
 
-function notifyMainRenderer(next) {
-  const mainWindow = getMainWindow();
-  if (!mainWindow || mainWindow.isDestroyed() || mainWindow.webContents.isDestroyed()) return;
-  mainWindow.webContents.send('taskbar-lyrics:changed', next);
-}
-
 function showEnableFailureDialog() {
   const options = {
     type: 'warning',
@@ -775,7 +769,6 @@ export function setTaskbarLyricsEnabled(value) {
     if (next) showEnableFailureDialog();
   }
 
-  notifyMainRenderer(getTaskbarLyricsSetting());
   return getTaskbarLyricsSetting();
 }
 

@@ -61,7 +61,6 @@ export const fontSelectBtn = document.getElementById('fontSelectBtn');
 export const fontSelectValue = document.getElementById('fontSelectValue');
 export const fontSearchInput = document.getElementById('fontSearch');
 export const fontOptions = document.getElementById('fontOptions');
-export const taskbarLyricsSwitch = document.getElementById('taskbarLyricsSwitch');
 export const taskbarFontSelectWrap = document.getElementById('taskbarFontSelectWrap');
 export const taskbarFontSelectBtn = document.getElementById('taskbarFontSelectBtn');
 export const taskbarFontSelectValue = document.getElementById('taskbarFontSelectValue');

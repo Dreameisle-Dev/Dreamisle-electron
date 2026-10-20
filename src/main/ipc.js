@@ -31,8 +31,6 @@ import { toggleMiniMode, minimizeWindow, maximizeWindow, closeWindow } from './w
 import { rebuildTrayMenu } from './tray.js';
 import { setLyricsText, setLyricsStyle, setLyricsLang } from '../lyrics/lyrics-window.js';
 import {
-  isTaskbarLyricsEnabled,
-  setTaskbarLyricsEnabled,
   updateTaskbarLyricsDocument,
   updateTaskbarLyricsPlayback,
   updateTaskbarLyricsStyle,
@@ -163,16 +161,9 @@ export function registerIpcHandlers() {
       lyricsTranslation: getLyricsTranslation(),
       themeMode: getThemeMode(),
       equalizer: getEqualizer(),
-      taskbarLyrics: isTaskbarLyricsEnabled(),
       taskbarLyricsStyle: getTaskbarLyricsStyle(),
       musicFolders: folders,
     };
-  });
-
-  ipcMain.handle('settings:setTaskbarLyrics', (event, enabled) => {
-    const next = setTaskbarLyricsEnabled(!!enabled);
-    rebuildTrayMenu();
-    return next;
   });
 
   ipcMain.handle('settings:setTaskbarLyricsStyle', (event, style) => {

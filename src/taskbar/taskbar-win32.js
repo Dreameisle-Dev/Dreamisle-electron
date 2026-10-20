@@ -81,6 +81,7 @@ function ensureNative() {
       IsWindow: user32Lib.func('bool __stdcall IsWindow(void *hWnd)'),
       IsWindowVisible: user32Lib.func('bool __stdcall IsWindowVisible(void *hWnd)'),
       GetForegroundWindow: user32Lib.func('void * __stdcall GetForegroundWindow()'),
+      GetAsyncKeyState: user32Lib.func('short __stdcall GetAsyncKeyState(int vKey)'),
       GetWindow: user32Lib.func('void * __stdcall GetWindow(void *hWnd, uint uCmd)'),
       EnumWindows: user32Lib.func(
         'bool __stdcall EnumWindows(EnumWindowsProc *lpEnumFunc, intptr_t lParam)'
@@ -390,4 +391,21 @@ export function readTaskbarAlignment() {
 
 export function getOsBuild() {
   return Number(os.release().split('.')[2] || 0);
+}
+
+// 全局快捷键回调里区分左右 Ctrl/Alt：Electron 的 globalShortcut 不提供修饰键信息。
+// 多数键盘布局里 AltGr 就是右侧 Ctrl+Alt，这里在右侧 Ctrl/Alt 按下时忽略这次切换，
+// 避免用户用 AltGr 输入字符时误开/误关任务栏歌词。拿不到状态时返回 false（放行）。
+const VK_RCONTROL = 0xa3;
+const VK_RMENU = 0xa5;
+
+export function isRightAltOrCtrlDown() {
+  if (!ensureNative()) return false;
+  try {
+    const rightCtrl = user32.GetAsyncKeyState(VK_RCONTROL);
+    const rightAlt = user32.GetAsyncKeyState(VK_RMENU);
+    return (rightCtrl & 0x8000) !== 0 || (rightAlt & 0x8000) !== 0;
+  } catch {
+    return false;
+  }
 }

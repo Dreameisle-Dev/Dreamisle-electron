@@ -1,13 +1,14 @@
-import { app, session, nativeTheme } from 'electron';
+import { app, globalShortcut, session, nativeTheme } from 'electron';
 import {
   migrateLegacyMusicFolder,
   getLanguage,
   getLyricsStyle,
+  getTaskbarLyricsSetting,
   getThemeMode,
   notifyStoreRecovery,
 } from './store.js';
 import { createWindow, getMainWindow } from './window.js';
-import { createTray } from './tray.js';
+import { createTray, rebuildTrayMenu } from './tray.js';
 import { registerIpcHandlers } from './ipc.js';
 import { registerPlaylistsIpc } from './playlists.js';
 import {
@@ -16,7 +17,35 @@ import {
   setLyricsStyle,
   setLyricsLang,
 } from '../lyrics/lyrics-window.js';
-import { initTaskbarLyrics, disposeTaskbarLyrics } from '../taskbar/taskbar-lyrics.js';
+import {
+  initTaskbarLyrics,
+  disposeTaskbarLyrics,
+  setTaskbarLyricsEnabled,
+} from '../taskbar/taskbar-lyrics.js';
+import { isRightAltOrCtrlDown } from '../taskbar/taskbar-win32.js';
+
+// 全局开关任务栏歌词。注意 Electron 的 globalShortcut 不能区分左右 Ctrl/Alt：
+// 在把 AltGr 映射成 Ctrl+Alt 的键盘布局上，AltGr+T 也可能触发这个组合。
+// 注册失败（被其他程序占用）只能记日志，设置页开关和托盘菜单仍然可用。
+const TASKBAR_LYRICS_HOTKEY = 'Control+Alt+T';
+
+function registerTaskbarLyricsHotkey() {
+  const ok = globalShortcut.register(TASKBAR_LYRICS_HOTKEY, () => {
+    // AltGr 在多数布局上等价于右侧 Ctrl+Alt；右侧修饰键按下时不响应，
+    // 只让真正的左 Ctrl+左 Alt+T 生效（Electron 本身不区分左右）。
+    if (isRightAltOrCtrlDown()) return;
+    const next = !getTaskbarLyricsSetting();
+    setTaskbarLyricsEnabled(next);
+    // 设置页开关由主进程的 taskbar-lyrics:changed 事件同步；
+    // 托盘勾选状态在菜单构建时读取，必须重建一次。
+    rebuildTrayMenu();
+  });
+  if (!ok) {
+    console.warn(
+      `[Dreamisle] 全局快捷键 ${TASKBAR_LYRICS_HOTKEY} 注册失败，可能已被其他程序占用；设置页/托盘仍可切换`
+    );
+  }
+}
 
 app.isQuitting = false;
 app.setAppUserModelId('org.dreamisle-dev.dreamisle');
@@ -52,6 +81,7 @@ app.whenReady().then(() => {
   setLyricsStyle(getLyricsStyle()); // 同步已存歌词样式
   setLyricsLang(getLanguage()); // 同步已存语言
   registerLyricsHotkey();
+  registerTaskbarLyricsHotkey();
 });
 
 app.on('window-all-closed', () => {
@@ -64,6 +94,7 @@ app.on('activate', () => {
 });
 app.on('before-quit', () => {
   app.isQuitting = true;
+  globalShortcut.unregister(TASKBAR_LYRICS_HOTKEY);
   disposeLyrics();
   disposeTaskbarLyrics();
 });

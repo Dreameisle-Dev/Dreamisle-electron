@@ -479,6 +479,10 @@
             ><span class="help-keys"><kbd>Ctrl</kbd><kbd>Alt</kbd><kbd>L</kbd></span>
           </div>
           <div class="help-row">
+            <span class="help-desc" data-i18n="help.taskbarLyrics">任务栏歌词</span
+            ><span class="help-keys"><kbd>Ctrl</kbd><kbd>Alt</kbd><kbd>T</kbd></span>
+          </div>
+          <div class="help-row">
             <span class="help-desc" data-i18n="help.settings">打开设置</span
             ><span class="help-keys"><kbd>Ctrl</kbd><kbd>,</kbd></span>
           </div>
@@ -608,7 +612,7 @@
           <div class="settings-content">
             <section class="settings-panel active" data-panel="appearance">
               <p class="settings-desc" data-i18n="settings.themeDesc">
-                界面配色。选「跟随系统」时会按系统外观自动切换。
+                跟随系统时会随 Windows 的浅色/深色模式自动切换；也可以固定为浅色或暗色。
               </p>
               <div class="theme-seg" id="themeSeg">
                 <button type="button" data-mode="system" data-i18n="settings.themeSystem">
@@ -621,7 +625,7 @@
               <!-- 桌面歌词样式：同属外观设置，和主题放在同一个分区里 -->
               <p class="settings-group-title" data-i18n="settings.lyricsStyle">桌面歌词</p>
               <p class="settings-desc" data-i18n="settings.lyricsStyleDesc">
-                调整桌面歌词悬浮窗的外观
+                屏幕上的浮动歌词，按 Ctrl+Alt+L 可以显示或隐藏。
               </p>
               <div class="style-control">
                 <div class="style-label-row">
@@ -687,22 +691,8 @@
               <!-- 任务栏歌词：嵌在任务栏里的歌词条，外观独立于桌面歌词 -->
               <p class="settings-group-title" data-i18n="settings.taskbarLyrics">任务栏歌词</p>
               <p class="settings-desc" data-i18n="settings.taskbarLyricsDesc">
-                在任务栏上显示歌词；字体、粗细和颜色可单独调整
+                嵌在任务栏空档里的歌词条；字体和颜色与桌面歌词互不影响。按 Ctrl+Alt+T 或通过托盘菜单开关。
               </p>
-              <div class="style-label-row">
-                <span data-i18n="settings.taskbarLyricsEnable">启用任务栏歌词</span>
-                <button
-                  type="button"
-                  class="eq-switch settings-switch"
-                  id="taskbarLyricsSwitch"
-                  role="switch"
-                  aria-checked="false"
-                  data-i18n-title="settings.taskbarLyricsEnable"
-                  title="启用任务栏歌词"
-                >
-                  <span class="eq-switch-knob"></span>
-                </button>
-              </div>
 
               <div class="style-control">
                 <div class="style-label-row">
@@ -771,7 +761,7 @@
             </section>
             <section class="settings-panel" data-panel="language">
               <p class="settings-desc" data-i18n="settings.languageDesc">
-                界面与托盘菜单的显示语言
+                切换后界面和托盘菜单立即更新，不需要重启。
               </p>
               <div class="lang-select" id="langSelectWrap">
                 <button type="button" class="lang-select-btn" id="langSelectBtn">
@@ -795,7 +785,7 @@
             </section>
             <section class="settings-panel" data-panel="folders">
               <p class="settings-desc" data-i18n="settings.foldersDesc">
-                添加多个文件夹，歌曲将合并到播放列表
+                可以添加多个文件夹，歌曲会合并显示；移除文件夹不会删除磁盘上的音乐文件。
               </p>
               <ul class="folder-list" id="folderList"></ul>
               <div class="folder-actions">
@@ -813,7 +803,7 @@
             </section>
             <section class="settings-panel" data-panel="equalizer">
               <p class="settings-desc" data-i18n="settings.equalizerDesc">
-                调整各频段的增益。开启后音频会经过均衡器处理。
+                开启后所有播放都会经过均衡器；关闭时保持原始音质。
               </p>
 
               <div class="style-label-row eq-enable-row">
