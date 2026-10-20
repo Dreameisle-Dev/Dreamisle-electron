@@ -340,7 +340,10 @@ window.addEventListener('DOMContentLoaded', async () => {
     if (restoredIndex >= 0) {
       state.currentIndex = restoredIndex;
       state.playMode = savedState.playMode || 0;
-      audio.volume = savedState.volume || 0.5;
+      // 0 是有效的静音值，不能用 || 回退到默认音量
+      audio.volume = Number.isFinite(savedState.volume)
+        ? Math.min(1, Math.max(0, savedState.volume))
+        : 1;
 
       iconLoop.style.display = state.playMode === 0 ? 'block' : 'none';
       iconOne.style.display = state.playMode === 1 ? 'block' : 'none';

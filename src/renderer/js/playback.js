@@ -25,7 +25,8 @@ import { updateThemeColor, updateProgressStyle } from './theme.js';
 import { onSongChanged, onCoverReady } from './stats.js';
 import { buildPlaybackState } from '../../shared/taskbar-lyrics-document.js';
 
-audio.volume = 0.5;
+// 默认音量 100%；启动恢复播放状态时如果存过音量，会用保存值覆盖
+audio.volume = 1;
 
 // 任务栏歌词播放状态：timeupdate 约 4Hz，再节流到 ≥200ms；切歌/暂停/跳转时强制补一拍。
 const TASKBAR_PLAYBACK_MIN_INTERVAL_MS = 200;
