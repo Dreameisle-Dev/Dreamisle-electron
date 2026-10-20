@@ -11,6 +11,8 @@ import {
   setThemeMode,
   getEqualizer,
   setEqualizer,
+  getTaskbarLyricsStyle,
+  setTaskbarLyricsStyle,
   applyLanguage,
   clampPercent,
   DEFAULT_LYRICS_STYLE,
@@ -162,6 +164,7 @@ export function registerIpcHandlers() {
       themeMode: getThemeMode(),
       equalizer: getEqualizer(),
       taskbarLyrics: isTaskbarLyricsEnabled(),
+      taskbarLyricsStyle: getTaskbarLyricsStyle(),
       musicFolders: folders,
     };
   });
@@ -169,6 +172,12 @@ export function registerIpcHandlers() {
   ipcMain.handle('settings:setTaskbarLyrics', (event, enabled) => {
     const next = setTaskbarLyricsEnabled(!!enabled);
     rebuildTrayMenu();
+    return next;
+  });
+
+  ipcMain.handle('settings:setTaskbarLyricsStyle', (event, style) => {
+    const next = setTaskbarLyricsStyle(style);
+    updateTaskbarLyricsStyle();
     return next;
   });
 
@@ -212,7 +221,6 @@ export function registerIpcHandlers() {
     };
     store.set('settings.lyricsStyle', next);
     setLyricsStyle(next);
-    updateTaskbarLyricsStyle(next);
     return next;
   });
 

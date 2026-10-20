@@ -1,4 +1,8 @@
 import { t, setLang, applyLang } from '../../shared/i18n.js';
+import {
+  DEFAULT_TASKBAR_LYRICS_STYLE,
+  normalizeTaskbarLyricsStyle,
+} from '../../shared/taskbar-style.js';
 import { state, DEFAULT_LYRICS_STYLE } from './state.js';
 import {
   settingsOverlay,
@@ -23,6 +27,14 @@ import {
   fontOptions,
   themeSeg,
   taskbarLyricsSwitch,
+  taskbarFontSelectWrap,
+  taskbarFontSelectBtn,
+  taskbarFontSelectValue,
+  taskbarFontSearchInput,
+  taskbarFontOptions,
+  taskbarWeightSeg,
+  taskbarAutoColor,
+  taskbarTextColor,
 } from './dom.js';
 import { showSyncToast } from './helpers.js';
 import { applyPlaylistFromMain } from './playlist.js';
@@ -66,6 +78,7 @@ export async function refreshSettingsUi() {
   });
   renderFolderList(settings.musicFolders || []);
   syncLyricsStyleUi(settings.lyricsStyle || DEFAULT_LYRICS_STYLE);
+  syncTaskbarLyricsStyleUi(settings.taskbarLyricsStyle || DEFAULT_TASKBAR_LYRICS_STYLE);
   syncThemeSeg(settings.themeMode);
   const taskbarLyrics = !!settings.taskbarLyrics;
   taskbarLyricsSwitch.classList.toggle('active', taskbarLyrics);
@@ -172,6 +185,33 @@ export function pushLyricsStyle() {
   window.dreamApi.setLyricsStyle(state.currentLyricsStyle);
 }
 
+// ── 任务栏歌词外观（独立于桌面歌词） ──
+let taskbarStyle = { ...DEFAULT_TASKBAR_LYRICS_STYLE };
+
+export function syncTaskbarLyricsStyleUi(style) {
+  taskbarStyle = normalizeTaskbarLyricsStyle(style);
+  taskbarFontSelectValue.textContent = taskbarStyle.fontFamily || t('settings.fontDefault');
+  taskbarFontSelectValue.style.fontFamily = taskbarStyle.fontFamily
+    ? `"${taskbarStyle.fontFamily}"`
+    : '';
+  taskbarWeightSeg.querySelectorAll('button').forEach((btn) => {
+    btn.classList.toggle('active', Number(btn.dataset.weight) === taskbarStyle.fontWeight);
+  });
+  const auto = taskbarStyle.textColor === 'auto';
+  taskbarAutoColor.checked = auto;
+  taskbarTextColor.disabled = auto;
+  taskbarTextColor.value = auto ? '#ffffff' : taskbarStyle.textColor;
+}
+
+export function pushTaskbarLyricsStyle() {
+  window.dreamApi
+    .setTaskbarLyricsStyle(taskbarStyle)
+    .then((next) => {
+      if (next) syncTaskbarLyricsStyleUi(next);
+    })
+    .catch(() => {});
+}
+
 // 系统字体列表：首次展开下拉时通过 Local Font Access API 读取并缓存
 export async function ensureSystemFonts() {
   if (state.systemFonts || state.fontsLoadFailed) return;
@@ -193,9 +233,10 @@ export async function ensureSystemFonts() {
   }
 }
 
-export function renderFontOptions(filter = '') {
-  fontOptions.innerHTML = '';
-  const query = filter.trim().toLowerCase();
+// 字体下拉的通用渲染：桌面歌词与任务栏歌词各用一套 DOM 和回调。
+function renderFontOptionsInto({ optionsEl, valueEl, wrapEl, selectedFamily, onSelect, filter }) {
+  optionsEl.innerHTML = '';
+  const query = (filter || '').trim().toLowerCase();
 
   const makeOption = (family, label, ownFont) => {
     const li = document.createElement('li');
@@ -203,15 +244,14 @@ export function renderFontOptions(filter = '') {
     if (ownFont) li.style.fontFamily = `"${family}"`;
     li.textContent = label;
     li.dataset.value = family;
-    if (family === (state.currentLyricsStyle.fontFamily || '')) li.classList.add('selected');
+    if (family === (selectedFamily || '')) li.classList.add('selected');
     li.addEventListener('click', () => {
-      state.currentLyricsStyle.fontFamily = family;
-      fontSelectValue.textContent = label;
-      fontSelectValue.style.fontFamily = ownFont ? `"${family}"` : '';
-      fontSelectWrap.classList.remove('open');
-      pushLyricsStyle();
+      valueEl.textContent = label;
+      valueEl.style.fontFamily = ownFont ? `"${family}"` : '';
+      wrapEl.classList.remove('open');
+      onSelect(family);
     });
-    fontOptions.appendChild(li);
+    optionsEl.appendChild(li);
   };
 
   // 首项固定为默认字体，不参与搜索过滤
@@ -220,6 +260,34 @@ export function renderFontOptions(filter = '') {
     if (query && !family.toLowerCase().includes(query)) continue;
     makeOption(family, family, true);
   }
+}
+
+export function renderFontOptions(filter = '') {
+  renderFontOptionsInto({
+    optionsEl: fontOptions,
+    valueEl: fontSelectValue,
+    wrapEl: fontSelectWrap,
+    selectedFamily: state.currentLyricsStyle.fontFamily,
+    onSelect: (family) => {
+      state.currentLyricsStyle.fontFamily = family;
+      pushLyricsStyle();
+    },
+    filter,
+  });
+}
+
+function renderTaskbarFontOptions(filter = '') {
+  renderFontOptionsInto({
+    optionsEl: taskbarFontOptions,
+    valueEl: taskbarFontSelectValue,
+    wrapEl: taskbarFontSelectWrap,
+    selectedFamily: taskbarStyle.fontFamily,
+    onSelect: (family) => {
+      taskbarStyle.fontFamily = family;
+      pushTaskbarLyricsStyle();
+    },
+    filter,
+  });
 }
 
 export function bindSettingsEvents() {
@@ -307,11 +375,55 @@ export function bindSettingsEvents() {
     taskbarLyricsSwitch.setAttribute('aria-checked', String(!!enabled));
   });
 
+  // ── 任务栏歌词外观 ──
+  taskbarFontSelectBtn.addEventListener('click', async () => {
+    const willOpen = !taskbarFontSelectWrap.classList.contains('open');
+    taskbarFontSelectWrap.classList.toggle('open');
+    if (!willOpen) return;
+    await ensureSystemFonts();
+    if (state.fontsLoadFailed) {
+      taskbarFontSelectWrap.classList.remove('open');
+      return;
+    }
+    taskbarFontSearchInput.value = '';
+    renderTaskbarFontOptions();
+    taskbarFontSearchInput.focus();
+  });
+
+  taskbarFontSearchInput.addEventListener('input', () =>
+    renderTaskbarFontOptions(taskbarFontSearchInput.value)
+  );
+
+  taskbarWeightSeg.querySelectorAll('button').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      taskbarStyle.fontWeight = Number(btn.dataset.weight);
+      syncTaskbarLyricsStyleUi(taskbarStyle);
+      pushTaskbarLyricsStyle();
+    });
+  });
+
+  taskbarAutoColor.addEventListener('change', () => {
+    taskbarStyle.textColor = taskbarAutoColor.checked ? 'auto' : taskbarTextColor.value;
+    syncTaskbarLyricsStyleUi(taskbarStyle);
+    pushTaskbarLyricsStyle();
+  });
+
+  taskbarTextColor.addEventListener('input', () => {
+    if (taskbarAutoColor.checked) return;
+    taskbarStyle.textColor = taskbarTextColor.value;
+    pushTaskbarLyricsStyle();
+  });
+
   if (btnSettingsClose) btnSettingsClose.onclick = closeSettings;
   settingsOverlay.addEventListener('click', (e) => {
-    if (e.target === settingsOverlay)
+    if (e.target === settingsOverlay) {
       closeSettings(); // 点击卡片外部遮罩关闭
-    else if (!langSelectWrap.contains(e.target)) langSelectWrap.classList.remove('open'); // 点下拉外部收起
+      return;
+    }
+    // 点下拉外部收起（语言、桌面歌词字体、任务栏歌词字体）
+    if (!langSelectWrap.contains(e.target)) langSelectWrap.classList.remove('open');
+    if (!fontSelectWrap.contains(e.target)) fontSelectWrap.classList.remove('open');
+    if (!taskbarFontSelectWrap.contains(e.target)) taskbarFontSelectWrap.classList.remove('open');
   });
   if (btnAddFolder) btnAddFolder.onclick = handleAddFolder;
   if (btnRescanLibrary) btnRescanLibrary.onclick = handleRescanLibrary;

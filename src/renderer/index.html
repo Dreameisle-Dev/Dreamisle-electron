@@ -684,24 +684,89 @@
                 </div>
               </div>
 
-              <!-- 任务栏歌词：嵌在任务栏里的歌词条，与桌面歌词共用歌词样式 -->
+              <!-- 任务栏歌词：嵌在任务栏里的歌词条，外观独立于桌面歌词 -->
               <p class="settings-group-title" data-i18n="settings.taskbarLyrics">任务栏歌词</p>
               <p class="settings-desc" data-i18n="settings.taskbarLyricsDesc">
-                在任务栏上显示当前播放的歌词
+                在任务栏上显示歌词；字体、粗细和颜色可单独调整
               </p>
               <div class="style-label-row">
-                <span data-i18n="settings.taskbarLyrics">任务栏歌词</span>
+                <span data-i18n="settings.taskbarLyricsEnable">启用任务栏歌词</span>
                 <button
                   type="button"
                   class="eq-switch settings-switch"
                   id="taskbarLyricsSwitch"
                   role="switch"
                   aria-checked="false"
-                  data-i18n-title="settings.taskbarLyrics"
-                  title="任务栏歌词"
+                  data-i18n-title="settings.taskbarLyricsEnable"
+                  title="启用任务栏歌词"
                 >
                   <span class="eq-switch-knob"></span>
                 </button>
+              </div>
+
+              <div class="style-control">
+                <div class="style-label-row">
+                  <span data-i18n="settings.taskbarFont">字体</span>
+                </div>
+                <div class="font-select" id="taskbarFontSelectWrap">
+                  <button type="button" class="font-select-btn" id="taskbarFontSelectBtn">
+                    <span id="taskbarFontSelectValue">默认字体</span>
+                    <svg
+                      width="10"
+                      height="6"
+                      viewBox="0 0 10 6"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="1.2"
+                    >
+                      <path d="M1 1l4 4 4-4"></path>
+                    </svg>
+                  </button>
+                  <div class="font-select-list" id="taskbarFontSelectList">
+                    <div class="font-select-search">
+                      <input
+                        type="text"
+                        id="taskbarFontSearch"
+                        data-i18n-placeholder="settings.fontSearch"
+                        placeholder="搜索字体…"
+                      />
+                    </div>
+                    <ul class="font-select-options" id="taskbarFontOptions"></ul>
+                  </div>
+                </div>
+              </div>
+
+              <div class="style-control">
+                <div class="style-label-row">
+                  <span data-i18n="settings.taskbarWeight">字体粗细</span>
+                </div>
+                <div class="theme-seg" id="taskbarWeightSeg">
+                  <button type="button" data-weight="400" data-i18n="settings.weightRegular">
+                    常规
+                  </button>
+                  <button type="button" data-weight="500" data-i18n="settings.weightMedium">
+                    中等
+                  </button>
+                  <button type="button" data-weight="600" data-i18n="settings.weightSemibold">
+                    半粗
+                  </button>
+                  <button type="button" data-weight="700" data-i18n="settings.weightBold">
+                    粗体
+                  </button>
+                </div>
+              </div>
+
+              <div class="style-control">
+                <div class="style-label-row">
+                  <span data-i18n="settings.taskbarColor">字体颜色</span>
+                  <span class="style-row-actions">
+                    <label class="taskbar-auto-color">
+                      <input type="checkbox" id="taskbarAutoColor" checked />
+                      <span data-i18n="settings.taskbarColorAuto">跟随任务栏</span>
+                    </label>
+                    <input type="color" id="taskbarTextColor" value="#ffffff" disabled />
+                  </span>
+                </div>
               </div>
             </section>
             <section class="settings-panel" data-panel="language">

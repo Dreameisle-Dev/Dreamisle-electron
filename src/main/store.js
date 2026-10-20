@@ -3,6 +3,7 @@ import path from 'path';
 import Store from 'electron-store';
 import { setLang as i18nSetLang, t } from '../shared/i18n.js';
 import { normalizeEq } from '../shared/equalizer.js';
+import { normalizeTaskbarLyricsStyle } from '../shared/taskbar-style.js';
 import { openStoreWithRecovery } from './store-recovery.js';
 
 // electron-store 的默认落盘位置：userData 下的 config.json（name 默认 'config'）。
@@ -108,6 +109,18 @@ export function getTaskbarLyricsSetting() {
 export function setTaskbarLyricsSetting(enabled) {
   store.set('settings.taskbarLyrics', !!enabled);
   return !!enabled;
+}
+
+// 任务栏歌词外观：{ fontFamily, fontWeight, textColor }。读写两侧都归一化，
+// 防止配置文件被手改后把非法字重/颜色灌进渲染进程。
+export function getTaskbarLyricsStyle() {
+  return normalizeTaskbarLyricsStyle(store.get('settings.taskbarLyricsStyle'));
+}
+
+export function setTaskbarLyricsStyle(raw) {
+  const next = normalizeTaskbarLyricsStyle(raw);
+  store.set('settings.taskbarLyricsStyle', next);
+  return next;
 }
 
 export function setLyricsTranslation(visible) {

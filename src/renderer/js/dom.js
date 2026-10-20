@@ -62,6 +62,14 @@ export const fontSelectValue = document.getElementById('fontSelectValue');
 export const fontSearchInput = document.getElementById('fontSearch');
 export const fontOptions = document.getElementById('fontOptions');
 export const taskbarLyricsSwitch = document.getElementById('taskbarLyricsSwitch');
+export const taskbarFontSelectWrap = document.getElementById('taskbarFontSelectWrap');
+export const taskbarFontSelectBtn = document.getElementById('taskbarFontSelectBtn');
+export const taskbarFontSelectValue = document.getElementById('taskbarFontSelectValue');
+export const taskbarFontSearchInput = document.getElementById('taskbarFontSearch');
+export const taskbarFontOptions = document.getElementById('taskbarFontOptions');
+export const taskbarWeightSeg = document.getElementById('taskbarWeightSeg');
+export const taskbarAutoColor = document.getElementById('taskbarAutoColor');
+export const taskbarTextColor = document.getElementById('taskbarTextColor');
 
 // 均衡器面板元素（推子与预设胶囊由 equalizer.js 动态生成）
 export const eqEnableSwitch = document.getElementById('eqEnable');

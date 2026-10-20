@@ -165,6 +165,29 @@ function applyMarquee() {
 }
 
 // ── 主进程下发 ──
+function applyTextStyle() {
+  const allowed = [400, 500, 600, 700];
+  const requested = Number(config?.fontWeight);
+  const weight = allowed.includes(requested) ? requested : 600;
+  lineEl.style.fontWeight = String(weight);
+  // 第二行比主行细一档，保留层级；最低 400
+  translationEl.style.fontWeight = String(Math.max(400, weight - 100));
+
+  // textColor 为 #rrggbb 时覆盖任务栏自适应色；auto 时清掉内联变量，
+  // 让 body.light / body.dark 的规则生效。
+  const color = typeof config?.textColor === 'string' ? config.textColor.toLowerCase() : 'auto';
+  if (/^#[0-9a-f]{6}$/.test(color)) {
+    const r = parseInt(color.slice(1, 3), 16);
+    const g = parseInt(color.slice(3, 5), 16);
+    const b = parseInt(color.slice(5, 7), 16);
+    document.body.style.setProperty('--line-color', color);
+    document.body.style.setProperty('--secondary-color', `rgba(${r}, ${g}, ${b}, 0.7)`);
+  } else {
+    document.body.style.removeProperty('--line-color');
+    document.body.style.removeProperty('--secondary-color');
+  }
+}
+
 function applyConfig(next) {
   config = next || {};
 
@@ -173,8 +196,9 @@ function applyConfig(next) {
   document.body.classList.toggle('dark', !light);
 
   strip.style.fontFamily = config.fontFamily ? `"${config.fontFamily}"` : '';
+  applyTextStyle();
 
-  // 翻译开关/字体/兜底文案都可能变化，强制重新渲染一次
+  // 翻译开关/字体/粗细/颜色/兜底文案都可能变化，强制重新渲染一次
   lastRenderKey = '';
   updateDisplay(resolveNow());
   requestAnimationFrame(() => {

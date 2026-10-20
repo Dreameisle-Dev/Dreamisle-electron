@@ -5,9 +5,9 @@ import { getMainWindow } from '../main/window.js';
 import { readCover } from '../main/music-library.js';
 import {
   getLanguage,
-  getLyricsStyle,
   getLyricsTranslation,
   getTaskbarLyricsSetting,
+  getTaskbarLyricsStyle,
   setTaskbarLyricsSetting,
 } from '../main/store.js';
 import { t } from '../shared/i18n.js';
@@ -114,10 +114,12 @@ function sendToWindow(channel, payload) {
 
 // 配置里只放渲染进程需要的样式信息：字体、翻译开关、任务栏明暗、语言相关文案。
 function buildConfig() {
-  const style = getLyricsStyle();
+  const style = getTaskbarLyricsStyle();
   const lang = getLanguage();
   return {
-    fontFamily: style.fontFamily || '',
+    fontFamily: style.fontFamily,
+    fontWeight: style.fontWeight,
+    textColor: style.textColor,
     translationVisible: getLyricsTranslation(),
     lightTaskbar: lightTaskbar ?? readSystemUsesLightTheme() ?? true,
     labels: {
@@ -834,13 +836,10 @@ export function updateTaskbarLyricsPlayback(state) {
   if (lastPlayback) sendToWindow('taskbar:playback', lastPlayback);
 }
 
-export function updateTaskbarLyricsStyle(style) {
-  const fontFamily =
-    typeof (style && style.fontFamily) === 'string'
-      ? style.fontFamily
-      : getLyricsStyle().fontFamily;
-  lastConfig = { ...buildConfig(), fontFamily };
-  sendToWindow('taskbar:config', lastConfig);
+export function updateTaskbarLyricsStyle() {
+  // store 已由 IPC 更新；buildConfig 重新读字体/粗细/颜色并下发
+  sendConfig();
+  return lastConfig;
 }
 
 export function updateTaskbarLyricsTranslation(visibleValue) {
