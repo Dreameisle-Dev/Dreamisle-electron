@@ -101,6 +101,16 @@ export function getLyricsTranslation() {
   return store.get('settings.lyricsTranslation') !== false; // 默认开启
 }
 
+// 桌面歌词鼠标穿透：默认开启，点击会穿过悬浮窗；关闭后才能拖动调整位置
+export function getDesktopLyricsClickThrough() {
+  return store.get('settings.desktopLyricsClickThrough') !== false;
+}
+
+export function setDesktopLyricsClickThrough(enabled) {
+  store.set('settings.desktopLyricsClickThrough', !!enabled);
+  return !!enabled;
+}
+
 // 任务栏歌词：默认关闭，开启后主进程会在任务栏里嵌入歌词条窗口
 export function getTaskbarLyricsSetting() {
   return store.get('settings.taskbarLyrics') === true;

@@ -25,6 +25,8 @@ contextBridge.exposeInMainWorld('dreamApi', {
   getSettings: () => ipcRenderer.invoke('settings:get'),
   setLanguage: (lang) => ipcRenderer.invoke('settings:setLanguage', lang),
   setLyricsStyle: (style) => ipcRenderer.invoke('settings:setLyricsStyle', style),
+  setDesktopLyricsClickThrough: (enabled) =>
+    ipcRenderer.invoke('settings:setDesktopLyricsClickThrough', enabled),
   setTaskbarLyricsStyle: (style) => ipcRenderer.invoke('settings:setTaskbarLyricsStyle', style),
   setEqualizer: (eq) => ipcRenderer.invoke('settings:setEqualizer', eq),
   setLyricsTranslation: (visible) => ipcRenderer.invoke('settings:setLyricsTranslation', visible),

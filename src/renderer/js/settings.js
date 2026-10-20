@@ -20,6 +20,7 @@ import {
   bgOpacityVal,
   textOpacityVal,
   btnResetStyle,
+  desktopLyricsClickThroughSwitch,
   fontSelectWrap,
   fontSelectBtn,
   fontSelectValue,
@@ -77,6 +78,9 @@ export async function refreshSettingsUi() {
   });
   renderFolderList(settings.musicFolders || []);
   syncLyricsStyleUi(settings.lyricsStyle || DEFAULT_LYRICS_STYLE);
+  const clickThrough = settings.desktopLyricsClickThrough !== false;
+  desktopLyricsClickThroughSwitch.classList.toggle('active', clickThrough);
+  desktopLyricsClickThroughSwitch.setAttribute('aria-checked', String(clickThrough));
   syncTaskbarLyricsStyleUi(settings.taskbarLyricsStyle || DEFAULT_TASKBAR_LYRICS_STYLE);
   syncThemeSeg(settings.themeMode);
   // 均衡器状态在渲染进程里（state.equalizer 是唯一真源，主进程只负责存），
@@ -318,6 +322,13 @@ export function bindSettingsEvents() {
   btnResetStyle.addEventListener('click', () => {
     syncLyricsStyleUi(DEFAULT_LYRICS_STYLE);
     pushLyricsStyle();
+  });
+
+  desktopLyricsClickThroughSwitch.addEventListener('click', () => {
+    const next = !desktopLyricsClickThroughSwitch.classList.contains('active');
+    desktopLyricsClickThroughSwitch.classList.toggle('active', next);
+    desktopLyricsClickThroughSwitch.setAttribute('aria-checked', String(next));
+    window.dreamApi.setDesktopLyricsClickThrough(next).catch(() => {});
   });
 
   langSelectBtn.addEventListener('click', () => {

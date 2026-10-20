@@ -1,7 +1,7 @@
 import { BrowserWindow, globalShortcut, screen } from 'electron';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { store } from '../main/store.js';
+import { store, getDesktopLyricsClickThrough } from '../main/store.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -15,6 +15,11 @@ let saveBoundsTimer = null;
 
 export function isLyricsWindowVisible() {
   return lyricsWindow !== null && !lyricsWindow.isDestroyed();
+}
+
+// 设置页切换鼠标穿透时立即作用到已经打开的悬浮窗
+export function setLyricsClickThrough(enabled) {
+  if (isLyricsWindowVisible()) lyricsWindow.setIgnoreMouseEvents(!!enabled);
 }
 
 export function setLyricsText(text) {
@@ -100,6 +105,8 @@ function createLyricsWindow() {
   });
 
   lyricsWindow.setAlwaysOnTop(true, 'screen-saver');
+  // 默认让点击穿过歌词窗；要拖动时在设置里临时关闭
+  lyricsWindow.setIgnoreMouseEvents(getDesktopLyricsClickThrough());
 
   // 记录最近一次窗口移动时间：原生拖动进行中不交还焦点，避免打断拖动
   let lastMoveAt = 0;

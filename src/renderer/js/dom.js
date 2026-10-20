@@ -56,6 +56,9 @@ export const textColorInput = document.getElementById('textColor');
 export const bgOpacityVal = document.getElementById('bgOpacityVal');
 export const textOpacityVal = document.getElementById('textOpacityVal');
 export const btnResetStyle = document.getElementById('btnResetStyle');
+export const desktopLyricsClickThroughSwitch = document.getElementById(
+  'desktopLyricsClickThroughSwitch'
+);
 export const fontSelectWrap = document.getElementById('fontSelectWrap');
 export const fontSelectBtn = document.getElementById('fontSelectBtn');
 export const fontSelectValue = document.getElementById('fontSelectValue');

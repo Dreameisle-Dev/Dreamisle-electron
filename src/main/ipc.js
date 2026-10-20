@@ -7,6 +7,8 @@ import {
   getLyricsStyle,
   getLyricsTranslation,
   setLyricsTranslation,
+  getDesktopLyricsClickThrough,
+  setDesktopLyricsClickThrough,
   getThemeMode,
   setThemeMode,
   getEqualizer,
@@ -29,7 +31,12 @@ import {
 } from './music-library.js';
 import { toggleMiniMode, minimizeWindow, maximizeWindow, closeWindow } from './window.js';
 import { rebuildTrayMenu } from './tray.js';
-import { setLyricsText, setLyricsStyle, setLyricsLang } from '../lyrics/lyrics-window.js';
+import {
+  setLyricsText,
+  setLyricsStyle,
+  setLyricsLang,
+  setLyricsClickThrough,
+} from '../lyrics/lyrics-window.js';
 import {
   updateTaskbarLyricsDocument,
   updateTaskbarLyricsPlayback,
@@ -159,6 +166,7 @@ export function registerIpcHandlers() {
       language: getLanguage(),
       lyricsStyle: getLyricsStyle(),
       lyricsTranslation: getLyricsTranslation(),
+      desktopLyricsClickThrough: getDesktopLyricsClickThrough(),
       themeMode: getThemeMode(),
       equalizer: getEqualizer(),
       taskbarLyricsStyle: getTaskbarLyricsStyle(),
@@ -169,6 +177,12 @@ export function registerIpcHandlers() {
   ipcMain.handle('settings:setTaskbarLyricsStyle', (event, style) => {
     const next = setTaskbarLyricsStyle(style);
     updateTaskbarLyricsStyle();
+    return next;
+  });
+
+  ipcMain.handle('settings:setDesktopLyricsClickThrough', (event, enabled) => {
+    const next = setDesktopLyricsClickThrough(!!enabled);
+    setLyricsClickThrough(next);
     return next;
   });
 

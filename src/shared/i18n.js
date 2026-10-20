@@ -73,6 +73,8 @@ const dict = {
     'settings.foldersDesc':
       '可以添加多个文件夹，歌曲会合并显示；移除文件夹不会删除磁盘上的音乐文件。',
     'settings.lyricsStyleDesc': '屏幕上的浮动歌词，按 Ctrl+Alt+L 可以显示或隐藏。',
+    'settings.desktopLyricsClickThrough': '鼠标穿透',
+    'settings.desktopLyricsClickThroughDesc': '开启后点击会穿过歌词窗；关闭后才能拖动调整位置。',
     'settings.addFolder': '添加文件夹',
     'settings.noFolders': '尚未添加文件夹',
     'settings.removeFolder': '移除',
@@ -227,6 +229,9 @@ const dict = {
       'Add multiple folders and their songs are merged into one library. Removing a folder does not delete files from disk.',
     'settings.lyricsStyleDesc':
       'The floating lyrics on your desktop. Press Ctrl+Alt+L to show or hide it.',
+    'settings.desktopLyricsClickThrough': 'Click-through',
+    'settings.desktopLyricsClickThroughDesc':
+      'Let clicks pass through the desktop lyrics. Turn it off to drag the overlay.',
     'settings.addFolder': 'Add folder',
     'settings.noFolders': 'No folders added yet',
     'settings.removeFolder': 'Remove',
