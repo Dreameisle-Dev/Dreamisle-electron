@@ -20,7 +20,9 @@
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
-      "perMachine": true
+      "perMachine": true,
+      "createDesktopShortcut": false,
+      "include": "build/installer.nsh"
     }
   },
   "dependencies": {
