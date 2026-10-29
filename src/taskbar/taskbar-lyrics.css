@@ -69,6 +69,9 @@ body.dark {
   gap: 2px;
   min-width: 0;
   max-width: 100%;
+  /* 跑马灯用 transform 左移长行；文字列没有自己的裁剪盒时，长行会滑出
+     文字列、压到左侧封面上。裁剪只作用在文字列内部，封面是兄弟节点不受影响。 */
+  overflow: hidden;
 }
 
 #line,
