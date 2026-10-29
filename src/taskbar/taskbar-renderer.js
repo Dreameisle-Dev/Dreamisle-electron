@@ -110,12 +110,20 @@ function coverZoneWidth() {
 }
 
 function reportWidth() {
-  const width = Math.ceil(
-    coverZoneWidth() + Math.max(lineEl.scrollWidth, translationEl.scrollWidth)
-  );
-  if (!Number.isFinite(width) || width <= 0 || width === reportedWidth) return;
-  reportedWidth = width;
-  window.taskbarApi.reportWidth(width);
+  // 横排报内容宽度；竖排报沿任务栏长轴（y）的内容长度。
+  // 主进程统一把它当作歌词条的“长轴尺寸”。
+  let length;
+  if (config?.verticalTaskbar) {
+    const coverLength = coverVisible
+      ? (coverEl.getBoundingClientRect().height || COVER_FALLBACK_PX) + COVER_GAP_PX
+      : 0;
+    length = Math.ceil(coverLength + Math.max(lineEl.scrollHeight, translationEl.scrollHeight));
+  } else {
+    length = Math.ceil(coverZoneWidth() + Math.max(lineEl.scrollWidth, translationEl.scrollWidth));
+  }
+  if (!Number.isFinite(length) || length <= 0 || length === reportedWidth) return;
+  reportedWidth = length;
+  window.taskbarApi.reportWidth(length);
 }
 
 // ── 长行 marquee ──
@@ -150,6 +158,13 @@ function ensureMarqueeKeyframes(durationSec) {
 }
 
 function applyMarquee() {
+  // 竖排文字沿 y 轴排，横排 marquee 的 translateX 不适用；先保持静态。
+  if (config?.verticalTaskbar) {
+    lineEl.classList.remove('marquee');
+    lineEl.style.removeProperty('--marquee-distance');
+    lineEl.style.removeProperty('--marquee-duration');
+    return;
+  }
   const overflow = lineEl.scrollWidth - (window.innerWidth - 24 - coverZoneWidth());
   if (overflow > 0) {
     const durationSec = Math.max(5, overflow / 45);
@@ -194,6 +209,9 @@ function applyConfig(next) {
   const light = config.lightTaskbar !== false;
   document.body.classList.toggle('light', light);
   document.body.classList.toggle('dark', !light);
+  document.body.classList.toggle('vertical', config.verticalTaskbar === true);
+  document.body.classList.toggle('fixed-length', config.fixedLength === true);
+  document.body.classList.toggle('fixed-start', config.fixedAlign === 'start');
 
   strip.style.fontFamily = config.fontFamily ? `"${config.fontFamily}"` : '';
   applyTextStyle();

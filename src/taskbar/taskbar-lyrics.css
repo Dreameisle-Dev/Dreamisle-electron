@@ -123,3 +123,52 @@ body.dark {
     transform: translateX(var(--marquee-distance, 0px));
   }
 }
+
+/* ── 竖排任务栏（Win10 左/右）：占满任务栏宽度，封面在上，两行文字竖排 ── */
+body.vertical #strip {
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 10px;
+  padding: 12px 0;
+}
+
+body.vertical #cover {
+  width: calc(100% - 10px);
+  height: auto;
+  aspect-ratio: 1;
+}
+
+body.vertical #textcol {
+  flex-direction: row;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 2px;
+  width: 100%;
+  height: auto;
+  max-height: 100%;
+  min-height: 0;
+}
+
+body.vertical #line,
+body.vertical #translation {
+  writing-mode: vertical-rl;
+  text-orientation: upright;
+  max-width: none;
+  max-height: 100%;
+  min-height: 0;
+  white-space: nowrap;
+}
+
+/* 固定长度：换行只改 DOM，不再改窗口尺寸；文字对齐到空档靠外的一侧。 */
+body.fixed-length #strip {
+  justify-content: flex-end;
+}
+
+body.fixed-length.fixed-start:not(.vertical) #strip {
+  justify-content: flex-start;
+}
+
+body.fixed-length.vertical #strip {
+  justify-content: flex-end;
+}

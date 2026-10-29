@@ -11,11 +11,24 @@ const PROBE_SCRIPT = String.raw`
 Add-Type -AssemblyName UIAutomationClient,UIAutomationTypes
 
 $root = [System.Windows.Automation.AutomationElement]::RootElement
-$classCondition = New-Object -TypeName System.Windows.Automation.PropertyCondition -ArgumentList ([System.Windows.Automation.AutomationElement]::ClassNameProperty), 'Shell_TrayWnd'
-$taskbar = $root.FindFirst([System.Windows.Automation.TreeScope]::Children, $classCondition)
+$hwndValue = __TASKBAR_HWND__
+$taskbar = $null
+if ($hwndValue -gt 0) {
+  # 指定了任务栏 HWND（包括副屏任务栏）就直接取它的 UIA 元素，
+  # 不能退回按 Shell_TrayWnd 类名找主任务栏。
+  try {
+    $taskbar = [System.Windows.Automation.AutomationElement]::FromHandle([IntPtr]$hwndValue)
+  } catch {
+    $taskbar = $null
+  }
+} else {
+  $classCondition = New-Object -TypeName System.Windows.Automation.PropertyCondition -ArgumentList ([System.Windows.Automation.AutomationElement]::ClassNameProperty), 'Shell_TrayWnd'
+  $taskbar = $root.FindFirst([System.Windows.Automation.TreeScope]::Children, $classCondition)
+}
+$taskbarFound = $null -ne $taskbar
 
 $buttons = @()
-if ($null -ne $taskbar) {
+if ($taskbarFound) {
   $buttonCondition = New-Object -TypeName System.Windows.Automation.PropertyCondition -ArgumentList ([System.Windows.Automation.AutomationElement]::ControlTypeProperty), ([System.Windows.Automation.ControlType]::Button)
   $found = $taskbar.FindAll([System.Windows.Automation.TreeScope]::Descendants, $buttonCondition)
   foreach ($element in $found) {
@@ -45,15 +58,18 @@ if ($null -ne $personalize -and $null -ne $personalize.SystemUsesLightTheme) {
 
 $build = [Environment]::OSVersion.Version.Build
 
-@{ buttons = @($buttons); taskbarAl = $al; lightTaskbar = $light; osBuild = [int]$build } | ConvertTo-Json -Compress -Depth 4
+@{ buttons = @($buttons); taskbarFound = $taskbarFound; taskbarAl = $al; lightTaskbar = $light; osBuild = [int]$build } | ConvertTo-Json -Compress -Depth 4
 `;
 
 /**
- * The static Windows PowerShell probe script. No interpolation: it is safe to
- * send as a single -EncodedCommand argument.
+ * Build the Windows PowerShell probe script. The only interpolated value is a
+ * validated decimal HWND; 0 means "find the primary taskbar by class" for
+ * backwards compatibility.
  */
-export function buildProbeScript() {
-  return PROBE_SCRIPT;
+export function buildProbeScript(taskbarHwnd = 0) {
+  const numeric = Number(taskbarHwnd);
+  const safeHwnd = Number.isSafeInteger(numeric) && numeric > 0 ? numeric : 0;
+  return PROBE_SCRIPT.replaceAll('__TASKBAR_HWND__', String(safeHwnd));
 }
 
 /** Encode a PowerShell script for `powershell.exe -EncodedCommand` (UTF-16LE). */
@@ -77,6 +93,9 @@ export function parseProbeOutput(stdout) {
     return null;
   }
   if (!data || typeof data !== 'object') return null;
+  // 指定了任务栏句柄却没能拿到它的 UIA 元素时，不能把“零个按钮”当成
+  // 一个巨大的空档；直接返回 null，让调用方走托盘左侧兜底。
+  if (data.taskbarFound === false) return null;
   if (!Array.isArray(data.buttons)) return null;
   if (!isFiniteNumber(data.osBuild)) return null;
 
@@ -117,7 +136,7 @@ function resolvePowerShellPath() {
  * non-Windows platforms, a missing powershell.exe, a spawn/timeout error, a
  * non-zero exit, or unparseable output.
  */
-export function probeTaskbar({ timeoutMs = 10000 } = {}) {
+export function probeTaskbar({ taskbarHwnd = 0, timeoutMs = 10000 } = {}) {
   return new Promise((resolve) => {
     if (process.platform !== 'win32') {
       resolve(null);
@@ -138,7 +157,7 @@ export function probeTaskbar({ timeoutMs = 10000 } = {}) {
         '-ExecutionPolicy',
         'Bypass',
         '-EncodedCommand',
-        encodePowerShellCommand(buildProbeScript()),
+        encodePowerShellCommand(buildProbeScript(taskbarHwnd)),
       ],
       { windowsHide: true, timeout: timeoutMs, maxBuffer: 1024 * 1024 },
       (error, stdout) => {

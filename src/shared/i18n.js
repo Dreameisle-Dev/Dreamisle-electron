@@ -95,7 +95,7 @@ const dict = {
     'settings.taskbarColorAuto': '跟随任务栏',
     'taskbarLyrics.failedTitle': '任务栏歌词启动失败',
     'taskbarLyrics.failedDetail':
-      '本次运行未能创建任务栏歌词条。请确认 Windows 任务栏正常可用，然后重启音梦屿再试。你的设置不会被改动。',
+      '本次运行未能创建任务栏歌词条。请确认 Windows 任务栏正常可用，然后重启音梦屿再试。你的设置不会被改动。\n\n诊断日志：%APPDATA%\\dreamisle\\taskbar-lyrics.log',
     'settings.bgOpacity': '背景不透明度',
     'settings.textOpacity': '字体不透明度',
     'settings.textColor': '字体颜色',
@@ -252,7 +252,7 @@ const dict = {
     'settings.taskbarColorAuto': 'Match taskbar',
     'taskbarLyrics.failedTitle': 'Taskbar lyrics could not start',
     'taskbarLyrics.failedDetail':
-      'The lyrics strip could not be created on the taskbar this time. Make sure the Windows taskbar is available, then restart Dreamisle and try again. Your setting will not be changed.',
+      'The lyrics strip could not be created on the taskbar this time. Make sure the Windows taskbar is available, then restart Dreamisle and try again. Your setting will not be changed.\n\nDiagnostic log: %APPDATA%\\dreamisle\\taskbar-lyrics.log',
     'settings.bgOpacity': 'Background opacity',
     'settings.textOpacity': 'Text opacity',
     'settings.textColor': 'Text color',

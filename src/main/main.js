@@ -23,6 +23,7 @@ import {
   setTaskbarLyricsEnabled,
 } from '../taskbar/taskbar-lyrics.js';
 import { isRightAltOrCtrlDown } from '../taskbar/taskbar-win32.js';
+import { logTaskbar } from '../taskbar/taskbar-log.js';
 
 // 全局开关任务栏歌词。注意 Electron 的 globalShortcut 不能区分左右 Ctrl/Alt：
 // 在把 AltGr 映射成 Ctrl+Alt 的键盘布局上，AltGr+T 也可能触发这个组合。
@@ -35,6 +36,7 @@ function registerTaskbarLyricsHotkey() {
     // 只让真正的左 Ctrl+左 Alt+T 生效（Electron 本身不区分左右）。
     if (isRightAltOrCtrlDown()) return;
     const next = !getTaskbarLyricsSetting();
+    logTaskbar('taskbar lyrics hotkey fired', { enabled: next });
     setTaskbarLyricsEnabled(next);
     // 设置页开关由主进程的 taskbar-lyrics:changed 事件同步；
     // 托盘勾选状态在菜单构建时读取，必须重建一次。
@@ -44,6 +46,11 @@ function registerTaskbarLyricsHotkey() {
     console.warn(
       `[Dreamisle] 全局快捷键 ${TASKBAR_LYRICS_HOTKEY} 注册失败，可能已被其他程序占用；设置页/托盘仍可切换`
     );
+    // 打包后看不到 console；热键被占用时用户会以为“开了没反应”，
+    // 日志里必须留下这个原因，托盘菜单仍然可以开关。
+    logTaskbar('taskbar lyrics hotkey registration failed', {
+      accelerator: TASKBAR_LYRICS_HOTKEY,
+    });
   }
 }
 

@@ -6,6 +6,8 @@ export const WINDOW_PADDING_CSS = 12;
 export const MIN_WINDOW_CSS = 184;
 export const DOCK_MARGIN_CSS = 8;
 export const MIN_GAP_CSS = 200;
+// 固定的歌词条长度（CSS px）：换歌词只更新 DOM，不再重设窗口尺寸。
+export const FIXED_STRIP_CSS = 400;
 
 /**
  * Which half of the taskbar the lyrics strip may occupy.
@@ -37,22 +39,144 @@ export function shouldCoalesceProbe(inFlightKey, requestedKey) {
   return inFlightKey === requestedKey;
 }
 
-const TASKBAR_EDGE_TOLERANCE_PX = 2;
+/**
+ * Windows 10 的经典任务列表会把右侧空档整块盖住；必须先把任务列表从右侧压缩，
+ * 腾出一块真正的空位，再把歌词条放进去。所有坐标都是物理像素：
+ * - rebarClientOrigin / rebarClientSize：ReBarWindow32 客户区原点（屏幕坐标）和尺寸
+ * - taskbarClientOrigin：Shell_TrayWnd 客户区原点（屏幕坐标）
+ * - taskListRect：MSTaskSwWClass 的屏幕矩形
+ * - rightLimitPx：可用的右边界（相对 ReBar 客户区），通常是托盘通知区左边缘
+ *
+ * 返回的 strip 坐标是相对 Shell_TrayWnd 客户区；taskList 的新 bounds 是相对
+ * ReBarWindow32 客户区（MoveWindow 需要父窗口客户区坐标）。任务列表右侧本来
+ * 就有足够空位时不压缩，直接返回 strip。
+ */
+export function computeLegacyTaskbarLayout({
+  rebarClientOrigin,
+  rebarClientSize,
+  taskbarClientOrigin,
+  taskListRect,
+  stripWidthPx,
+  reserveWidthPx = null,
+  gapPx = DOCK_MARGIN_CSS,
+  marginPx = DOCK_MARGIN_CSS,
+  rightLimitPx = null,
+}) {
+  if (!rebarClientOrigin || !rebarClientSize || !taskbarClientOrigin) return null;
+
+  const rebarWidth = Math.trunc(rebarClientSize.width);
+  const rebarHeight = Math.trunc(rebarClientSize.height);
+  const width = Math.trunc(stripWidthPx);
+  if (rebarWidth <= 0 || rebarHeight <= 0 || width <= 0) return null;
+
+  const right =
+    rightLimitPx !== null && Number.isFinite(rightLimitPx)
+      ? Math.min(rebarWidth, Math.trunc(rightLimitPx))
+      : rebarWidth;
+  // 任务列表按“预留宽度”压缩，而不是按当前这一句的宽度。这样歌词句子变长变短时
+  // 任务栏图标不会跟着来回跳；短句只是让预留区里多一段空白。
+  const reserve =
+    reserveWidthPx !== null && Number.isFinite(reserveWidthPx)
+      ? Math.max(width, Math.trunc(reserveWidthPx))
+      : width;
+  const needed = reserve + marginPx + gapPx;
+  if (right <= 0 || needed > right || width + marginPx > right) return null;
+
+  const stripLeft = right - marginPx - width;
+  let taskList = null;
+
+  if (taskListRect) {
+    const taskListWidth = taskListRect.right - taskListRect.left;
+    const taskListHeight = taskListRect.bottom - taskListRect.top;
+    if (taskListWidth > 0 && taskListHeight > 0) {
+      const x = taskListRect.left - rebarClientOrigin.x;
+      const y = taskListRect.top - rebarClientOrigin.y;
+      const freeRight = right - (x + taskListWidth);
+      if (freeRight < needed) {
+        const newWidth = taskListWidth + freeRight - needed;
+        if (newWidth <= 0) return null;
+        taskList = { x, y, width: newWidth, height: taskListHeight };
+      }
+    }
+  }
+
+  return {
+    strip: {
+      x: rebarClientOrigin.x + stripLeft - taskbarClientOrigin.x,
+      y: rebarClientOrigin.y - taskbarClientOrigin.y,
+      width,
+      height: rebarHeight,
+    },
+    taskList,
+  };
+}
 
 /**
- * Only a horizontal taskbar docked at the bottom edge of the display is supported.
- * A bottom taskbar spans the display width and its bottom edge is at or below the
- * display's bottom edge: an auto-hidden taskbar is slid off-screen by Explorer, so
- * its bottom can extend past the display bottom by roughly the taskbar height.
- * Top taskbars fail the bottom-edge test, side taskbars fail the full-width test.
+ * Windows 10 竖排任务栏（左/右）：在任务列表底部腾出空间，歌词条占满
+ * 任务栏宽度、贴在任务列表和托盘之间。坐标全部为物理像素。
+ * - bottomLimitPx：托盘通知区上边缘相对 ReBar 客户区（没有就用 ReBar 高度）
+ *
+ * 返回的 strip 坐标相对 Shell_TrayWnd 客户区；taskList 新 bounds 相对
+ * ReBarWindow32 客户区。任务列表下方本来就有足够空间时不压缩。
  */
-export function isBottomTaskbar(rect, bounds) {
-  if (!rect || !bounds) return false;
-  const near = (a, b) => Math.abs(a - b) <= TASKBAR_EDGE_TOLERANCE_PX;
-  const spansWidth = near(rect.left, bounds.x) && near(rect.right, bounds.x + bounds.width);
-  // 单边比较：自动隐藏时任务栏会被滑到屏幕下方，底边远超屏幕底边
-  const atBottom = rect.bottom >= bounds.y + bounds.height - TASKBAR_EDGE_TOLERANCE_PX;
-  return spansWidth && atBottom;
+export function computeLegacyVerticalTaskbarLayout({
+  rebarClientOrigin,
+  rebarClientSize,
+  taskbarClientOrigin,
+  taskListRect,
+  stripLengthPx,
+  reserveLengthPx = null,
+  gapPx = DOCK_MARGIN_CSS,
+  marginPx = DOCK_MARGIN_CSS,
+  bottomLimitPx = null,
+}) {
+  if (!rebarClientOrigin || !rebarClientSize || !taskbarClientOrigin) return null;
+
+  const rebarWidth = Math.trunc(rebarClientSize.width);
+  const rebarHeight = Math.trunc(rebarClientSize.height);
+  const length = Math.trunc(stripLengthPx);
+  if (rebarWidth <= 0 || rebarHeight <= 0 || length <= 0) return null;
+
+  const bottom =
+    bottomLimitPx !== null && Number.isFinite(bottomLimitPx)
+      ? Math.min(rebarHeight, Math.trunc(bottomLimitPx))
+      : rebarHeight;
+  if (bottom <= 0) return null;
+
+  const reserve =
+    reserveLengthPx !== null && Number.isFinite(reserveLengthPx)
+      ? Math.max(length, Math.trunc(reserveLengthPx))
+      : length;
+  const needed = reserve + marginPx + gapPx;
+  if (needed > bottom || length + marginPx > bottom) return null;
+
+  const stripTop = bottom - marginPx - length;
+  let taskList = null;
+
+  if (taskListRect) {
+    const taskListWidth = taskListRect.right - taskListRect.left;
+    const taskListHeight = taskListRect.bottom - taskListRect.top;
+    if (taskListWidth > 0 && taskListHeight > 0) {
+      const x = taskListRect.left - rebarClientOrigin.x;
+      const y = taskListRect.top - rebarClientOrigin.y;
+      const freeBottom = bottom - (y + taskListHeight);
+      if (freeBottom < needed) {
+        const newHeight = taskListHeight + freeBottom - needed;
+        if (newHeight <= 0) return null;
+        taskList = { x, y, width: taskListWidth, height: newHeight };
+      }
+    }
+  }
+
+  return {
+    strip: {
+      x: rebarClientOrigin.x - taskbarClientOrigin.x,
+      y: rebarClientOrigin.y + stripTop - taskbarClientOrigin.y,
+      width: rebarWidth,
+      height: length,
+    },
+    taskList,
+  };
 }
 
 function pickWidest(gaps, side, taskbarWidth) {
