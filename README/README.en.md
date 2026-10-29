@@ -1,122 +1,88 @@
 # Dreamisle
 
-> A minimalist, immersive local music player built with Electron.
-> Leave the clutter behind and focus on the flow of music and visuals.
-  
-[中文版](../README.md) | English Version
-  
+Dreamisle (音梦屿) is a local music player built with Electron for Windows 10/11.
+
+[中文](../README.md) | English
+
 ![App Screenshot](../img/img1.png)
 
 ## Features
 
-Dreamisle is designed to deliver the purest listening and visual experience. Highlights include:
+- **Local library**: Recursively scans folders; supports MP3, FLAC, WAV, OGG, and M4A; reads title, artist, album, bitrate, sample rate, bit depth, and embedded cover art with `music-metadata`.
+- **Playback**: List loop, single loop, and shuffle; persists library paths, progress, volume, and play mode.
+- **Lyrics**: Prefers an adjacent `.lrc` file, then embedded lyrics; parses same-timestamp bilingual pairs, brackets, vertical bars, tabs, and thin spaces; supports `[offset:]`, a translation toggle, click-to-seek, and horizontal scrolling for overlong lines.
+- **Desktop lyrics**: Always-on-top overlay; adjustable background/text opacity, text color, and font; optional click-through; toggle with `Ctrl+Alt+L`.
+- **Taskbar lyrics (Windows 10/11)**: Shows cover art and two lyric lines in the taskbar's free space, avoiding app buttons and the notification area; a fixed width prevents taskbar icons from shifting between lines; separate font, weight, and color settings; toggle with `Ctrl+Alt+T` or the tray menu.
+- **Mini mode**: `F5` switches to a 300×340 always-on-top window with cover, track info, current/next lyric, progress, and controls.
+- **Interface**: The background follows the cover's dominant color; the cover has a matching glow; the playlist uses a translucent blurred background; the playback bar auto-hides when the pointer leaves the bottom; the mouse wheel over the cover adjusts volume.
+- **Playback statistics**: Hold Left `Shift` for 0.5s to open the panel with the quality tier (Hi-Res / SQ / HQ), full-play and single-loop counts, total plays, daily average, and a song play ranking.
+- **10-band equalizer**: 31Hz–16kHz, ±12dB; presets for Acoustic, Pop, Rock, Jazz, Classical, Electronic, Bass boost, Vocal, and Late night; manual changes switch to a custom curve; an auto preamp compensates for the largest boost; bypassed when off.
+- **Playlists**: Right-click to add songs, drag to reorder, rename/delete; switch between the queue and the library.
+- **Search and sorting**: Sort by title/artist or shuffle, with real-time filtering; an A-Z# index (Chinese sorted by pinyin) in title/artist modes.
+- **System media controls**: Windows SMTC support for media keys and the system volume flyout, with cover, track info, and progress.
+- **Chinese/English UI**: Interface copy and help are available in Chinese and English.
 
-*   **Immersive ambient light**: The background flows in real time with the dominant colors of the album cover of the currently playing track, creating a unique listening atmosphere.
-*   **Dynamic cover glow**: The album cover has a breathing glow shadow generated from its dominant colors — no more flat black shadows.
-*   **Modern frosted-glass UI**: A premium frosted-glass playlist, visually lightweight.
-*   **Invisible gesture controls**: Hover over the cover area and **scroll the mouse wheel** to adjust volume, paired with a minimal HUD display.
-*   **Auto-hiding control bar**: When the pointer leaves the bottom of the window, the playback bar slides out of view leaving only a slim hint line; move back toward the bottom and it slides in again.
-*   **Mini mode**: Press F5 to collapse into a 300×340 always-on-top mini window showing the cover, title/artist/album, the current and next lyric lines, progress and playback controls — handy in a screen corner.
-*   **Liquid interactions**: Silky sink/rise transitions for track info when switching songs — no harsh jumps.
-*   **Powerful local parsing**:
-    *   Recursively scan folders to import music.
-    *   Supports MP3, FLAC, WAV, OGG, M4A formats.
-    *   Fast embedded cover and metadata reading (title/artist/album/bitrate/sample rate/bit depth) based on `music-metadata`.
-*   **Lyrics & translations**:
-    *   Prefers an adjacent `.lrc` file with the same name, falling back to embedded lyrics.
-    *   Universal lyric parsing: auto-splits multiple bilingual formats such as same-timestamp line pairs, brackets, vertical bars, tabs, and thin spaces.
-    *   Translation toggle: the "译" button in the lower-right corner of the lyrics area shows/hides translations with one click, and remembers your choice.
-    *   Single-line scrolling for long lyrics: the currently playing line scrolls horizontally back and forth when it overflows, so the full line stays readable.
-    *   Click a lyric line to jump to that playback position; lyric time offsets (`[offset:]`) are corrected automatically.
-*   **Desktop lyrics**: An always-on-top floating window shows the current lyrics in real time, with adjustable background/font opacity, font color, and custom fonts.
-*   **Playback statistics**: Hold Left Shift to open the statistics panel — audio quality specs for the current track (Hi-Res / SQ / HQ tiers), full-play and single-loop counts, total plays, daily average, and an all-song play count ranking (click to play).
-*   **10-band equalizer**: Settings → "Equalizer" adjusts ten bands from 31Hz to 16kHz (±12dB), with nine built-in presets (Acoustic, Pop, Rock, Jazz, Classical, Electronic, Bass boost, Vocal, Late night). Dragging any fader switches to a custom curve. An auto preamp offsets the largest boost to avoid clipping. With the switch off, audio stays on the original untouched path.
-*   **Custom playlists**: Right-click a song to add it to a playlist, drag to reorder, rename/delete, and switch seamlessly between the queue and the library.
-*   **Search & sorting**: Sort by title/artist/shuffle, with real-time search filtering. In title and artist modes the list carries an A-Z# index on its right edge (Latin and Chinese merged by pinyin) for quick jumps.
-*   **System media controls**: Integrates with Windows SMTC — keyboard media keys and the system volume flyout control playback directly, showing cover art, track info, and progress.
-*   **Auto memory**: Remembers your music library paths, playback progress, volume, play mode, and all settings — resume right where you left off next time.
-
-## Shortcut Keys
+## Shortcuts
 
 | Shortcut | Action |
-| ------ | ---- |
-| Space | Play / Pause |
-| Q / E | Previous / Next track |
-| R | Switch play mode (list loop / single loop / shuffle) |
-| Hold Left ALT 0.5s | Show / hide the playlist |
-| Hold Left CTRL 0.5s | Show / hide playlists |
-| Hold Left SHIFT 0.5s | Show / hide playback statistics |
-| F5 | Toggle mini mode (always-on-top mini window) |
+| --- | --- |
+| Space | Play / pause |
+| Q / E | Previous / next track |
+| R | Cycle play mode (list loop / single loop / shuffle) |
+| Hold Left Alt 0.5s | Show / hide the playlist |
+| Hold Left Ctrl 0.5s | Show / hide playlists |
+| Hold Left Shift 0.5s | Show / hide playback statistics |
+| F5 | Toggle mini mode |
 | Ctrl + , | Open settings |
 | Ctrl + Alt + L | Show / hide desktop lyrics |
+| Ctrl + Alt + T | Show / hide taskbar lyrics |
 | H | Open / close help |
 | Esc | Close menu / overlay / drawer in order |
-| Scroll the mouse wheel over the cover area | Adjust volume |
-| Click a lyric line | Jump to the corresponding playback position |
+| Mouse wheel over the cover | Adjust volume |
+| Click a lyric line | Seek to that position |
+
+The taskbar lyrics shortcut (`Ctrl+Alt+T`) responds only to the left Ctrl/Alt keys to avoid conflicts with AltGr.
 
 ## Tech Stack
 
-*   **Core**: Electron (ESM mode)
-*   **Frontend**: JS, CSS
-*   **Data Persistence**: `electron-store`
-*   **Audio Parsing**: `music-metadata`
-*   **Audio Processing**: Web Audio API (equalizer: 10 cascaded peaking BiquadFilter nodes plus an auto-preamp GainNode; the audio chain is left untouched while the EQ is off)
+- Electron 40 (ESM)
+- Vanilla JavaScript / CSS
+- `electron-store`: settings and state persistence
+- `music-metadata`: audio metadata and embedded cover art
+- Web Audio API: 10 cascaded peaking BiquadFilter nodes plus an auto preamp
+- `koffi` + Win32 API: taskbar lyric positioning, DPI, theme, and other Windows integration
 
-## Getting Started
+## Development
 
-### 1. Clone the repository
-```bash
-git clone https://github.com/Dreameisle-Dev/Dreamisle-electron.git
-cd Dreamisle-electron
-```
+Requirements: Node.js and npm.
 
-or using ssh
-
-```bash
-git clone git@github.com:Dreameisle-Dev/Dreamisle-electron.git
-```
-
-### 2. Install dependencies
 ```bash
 npm install
+npm start          # development
+npm run build:win  # build the Windows installer
+npm run format     # Prettier
 ```
 
-### 3. Launch the app
-```bash
-npm start
-```
-
-### 4. Build the Windows installer (optional)
-```bash
-npm run build:win
-```
+The installer uses NSIS. The desktop shortcut is optional and disabled by default; silent updates leave desktop icons untouched.
 
 ## Project Structure
-```
-Dreamisle-electron/
-├── README.md                 # Chinese docs (default)
-├── README/README.en.md       # English docs (this file)
-├── img/                      # Documentation screenshots
-└── src/
-    ├── main/                 # Main process: entry, window, tray, music library, playlists, persistence, IPC
-    ├── preload/              # Preload bridges (one for the main window, one for desktop lyrics)
-    ├── lyrics/               # Desktop lyrics floating window
-    ├── shared/               # Pure logic shared by main/renderer (no DOM dependency)
-    │   ├── i18n.js           #   Chinese/English dictionary
-    │   ├── lyrics-parse.js   #   Lyric parsing entry + universal-lyric-parser.js
-    │   ├── initial-letter.js #   Initial-letter bucketing and the A-Z# index
-    │   ├── equalizer.js      #   Band table / preset curves / auto preamp
-    │   ├── stats.js          #   Play counts and ranking
-    │   ├── stats-format.js   #   Quality tiers and formatting
-    │   └── song-metadata.js  #   Path-based backfill between playlist snapshots and the library cache
-    ├── renderer/             # Renderer process
-    │   ├── index.html
-    │   ├── js/               # Split by responsibility: entry/playback/queue/playlists/lyrics/statistics/settings/theme/equalizer
-    │   └── style/            # tokens.css (design tokens) + index.css
-    └── assets/               # App icon
-```
 
-Code is formatted with Prettier (single quotes, 2-space indent, CRLF). Run `npm run format` to apply it consistently.
+```text
+Dreamisle-electron/
+├── README.md                  # Chinese docs
+├── README/README.en.md        # English docs
+├── build/installer.nsh        # NSIS installer customization (desktop shortcut option)
+├── img/                       # Documentation screenshots
+└── src/
+    ├── main/                  # Main process: windows, tray, library, playlists, persistence, IPC
+    ├── preload/               # Preload bridges (main window / desktop lyrics / taskbar lyrics)
+    ├── lyrics/                # Desktop lyrics overlay
+    ├── taskbar/               # Windows taskbar lyrics (Win32 positioning, layout, renderer, log)
+    ├── shared/                # Shared pure logic (lyrics parsing, i18n, equalizer, stats, taskbar lyric document/style)
+    ├── renderer/              # Main window renderer (HTML / JS / CSS)
+    └── assets/                # App icon
+```
 
 ## License
+
 MIT
