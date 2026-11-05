@@ -49,5 +49,8 @@
     "electron": "^40.10.6",
     "electron-builder": "^26.4.0",
     "prettier": "^3.9.6"
+  },
+  "allowScripts": {
+    "koffi@3.3.3": true
   }
 }
