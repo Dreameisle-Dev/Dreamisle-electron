@@ -1,0 +1,40 @@
+name: Build Windows Installer
+
+on:
+  push:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-win:
+    runs-on: windows-latest
+    env:
+      CSC_LINK: ${{ secrets.WIN_CERT_P12 }}
+      CSC_KEY_PASSWORD: ${{ secrets.WIN_CERT_PASSWORD }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build Windows installer
+        run: npm run build:win
+
+      - name: Upload installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-installer-x64
+          path: |
+            dist/*.exe
+            !dist/*__uninstaller.exe
+          if-no-files-found: error
+          retention-days: 14

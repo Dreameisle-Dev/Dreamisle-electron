@@ -10,7 +10,8 @@
     "start": "electron .",
     "format": "prettier --write src/",
     "build:win": "electron-builder --win",
-    "build:mac": "electron-builder --mac"
+    "build:mac": "electron-builder --mac --config.mac.identity=-",
+    "build:mac:signed": "electron-builder --mac"
   },
   "build": {
     "appId": "org.dreamisle-dev.dreamisle",
@@ -27,7 +28,6 @@
       ],
       "category": "public.app-category.music",
       "icon": "src/assets/icon_512x512@2x.png",
-      "identity": "-",
       "hardenedRuntime": true,
       "extendInfo": {
         "CFBundleDisplayName": "Dreamisle",
