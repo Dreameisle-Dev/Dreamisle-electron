@@ -29,8 +29,7 @@
       "icon": "src/assets/icon_512x512@2x.png",
       "hardenedRuntime": true,
       "extendInfo": {
-        "CFBundleDisplayName": "Dreamisle",
-        "CFBundleName": "Dreamisle"
+        "CFBundleDisplayName": "Dreamisle"
       }
     },
     "nsis": {
