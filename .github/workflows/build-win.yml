@@ -10,9 +10,6 @@ permissions:
 jobs:
   build-win:
     runs-on: windows-latest
-    env:
-      CSC_LINK: ${{ secrets.WIN_CERT_P12 }}
-      CSC_KEY_PASSWORD: ${{ secrets.WIN_CERT_PASSWORD }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -27,7 +24,9 @@ jobs:
         run: npm ci
 
       - name: Build Windows installer
-        run: npm run build:win
+        run: npm run build:win -- --publish never
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: false
 
       - name: Upload installer
         uses: actions/upload-artifact@v4

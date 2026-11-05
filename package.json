@@ -10,8 +10,7 @@
     "start": "electron .",
     "format": "prettier --write src/",
     "build:win": "electron-builder --win",
-    "build:mac": "electron-builder --mac --config.mac.identity=-",
-    "build:mac:signed": "electron-builder --mac"
+    "build:mac": "electron-builder --mac --config.mac.identity=-"
   },
   "build": {
     "appId": "org.dreamisle-dev.dreamisle",
