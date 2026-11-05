@@ -27,6 +27,8 @@
       ],
       "category": "public.app-category.music",
       "icon": "src/assets/icon_512x512@2x.png",
+      "identity": "-",
+      "hardenedRuntime": true,
       "extendInfo": {
         "CFBundleDisplayName": "Dreamisle",
         "CFBundleName": "Dreamisle"
