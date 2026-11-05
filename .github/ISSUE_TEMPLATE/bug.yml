@@ -1,0 +1,89 @@
+name: Bug
+description: 发现了一个问题？告诉我们！
+title: "[Bug] "
+labels: ["bug", "needs-triage"]
+assignees: ["HuanMeng-official"]
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        👋 感谢提交 Issue。提交前请先搜索 [Issues](https://github.com/Dreameisle-Dev/Dreamisle-electron/issues)，确认没有重复问题。
+
+        如果是启动/安装问题，请注明系统版本、安装包类型（Windows 安装器 / macOS DMG）以及是否为新安装。
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: 问题描述
+      description: 清晰简洁地描述这个 Bug。
+      placeholder: 例如：播放本地 FLAC 时封面不显示 / 任务栏歌词在切歌后消失。
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: 复现步骤
+      description: 复现该 Bug 的详细步骤。
+      value: |
+        1. 打开...
+        2. 点击...
+        3. ...
+        4. 看到错误
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected-behavior
+    attributes:
+      label: 预期行为
+      description: 描述你期望应该发生什么。
+      placeholder: 例如：封面应正常显示 / 歌词条应保持显示。
+    validations:
+      required: true
+
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: 截图或录屏
+      description: 如果适用，请添加截图或录屏来解释问题。
+
+  - type: input
+    id: environment
+    attributes:
+      label: 环境
+      description: 操作系统、版本和架构。
+      placeholder: 例如：Windows 11 25H2 x64 / macOS 26 arm64
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: 版本
+      description: 你使用的软件版本（帮助面板里可以看到）。
+      placeholder: 例如：v1.0.0
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: 报错信息
+      description: |
+        应用内报错、终端输出或系统崩溃报告。
+        Windows 任务栏歌词日志：%APPDATA%\dreamisle\taskbar-lyrics.log
+        macOS 配置目录：~/Library/Application Support/dreamisle/
+      render: shell
+
+  - type: checkboxes
+    id: terms
+    attributes:
+      label: 确认
+      description: 请在提交前确认
+      options:
+        - label: 我已经搜索过现有的 Issues
+          required: true
+        - label: 我已经尝试在最新版本上复现
+          required: true
