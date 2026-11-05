@@ -12,9 +12,12 @@ import {
   btnSortArtist,
   btnSortRandom,
   lyricsScroll,
+  btnClearQueue,
+  sortContainer,
 } from './dom.js';
 import { compareByInitial, buildLetterIndex } from '../../shared/initial-letter.js';
 import { playSong, resetToEmptyLibrary } from './playback.js';
+import { saveQueueSnapshot } from './play-queue.js';
 import { resetLyrics } from './lyrics.js';
 import { resolveRestoredIndex } from './playback-restore.js';
 
@@ -35,6 +38,7 @@ export function initVirtualList(filterText = '') {
   state.vsStartIndex = -1;
   updateVirtualList();
   refreshLetterIndex();
+  syncQueueControls();
 }
 
 // 索引取哪一列，取决于当前排序模式；默认/随机没有可索引的顺序
@@ -145,6 +149,8 @@ export function updateVirtualList() {
 
     li.draggable = true;
     li.dataset.path = songInfo.path;
+    // 播放队列允许同一首歌出现多次，拖拽/右键移除必须按队列下标定位
+    li.dataset.index = String(songInfo.originalIndex);
 
     // i 是过滤后列表里的位置，直接当序号用，不需要新数据
     li.innerHTML =
@@ -160,6 +166,12 @@ export function updateVirtualList() {
     fragment.appendChild(li);
   }
   playlistEl.appendChild(fragment);
+}
+
+// 队列相关控件：队列非空时显示“清空”，手动排序的队列隐藏排序栏
+function syncQueueControls() {
+  if (btnClearQueue) btnClearQueue.hidden = state.songs.length === 0;
+  if (sortContainer) sortContainer.hidden = state.activeQueue.type === 'custom';
 }
 
 /**
@@ -230,10 +242,18 @@ function applyQueueSongs(songs) {
     }
   }
 
-  applyActiveSort();
+  if (state.activeQueue.type === 'custom') {
+    // 手动排序的队列不套用歌名/歌手/随机排序
+    state.sortMode = 'custom';
+    initVirtualList(searchInput.value.trim());
+  } else {
+    applyActiveSort();
+  }
+  syncQueueControls();
+  saveQueueSnapshot(state.songs); // 队列切换后同步重启恢复用的快照
 }
 
-// 切换播放队列:歌单队列或曲库队列
+// 切换播放队列:曲库、歌单或自定义队列
 export function setQueue(songs, activeQueue) {
   state.activeQueue = activeQueue;
   applyQueueSongs(songs);
@@ -245,25 +265,125 @@ export function applyPlaylistFromMain(playlist) {
   setQueue(playlist, { type: 'library' });
 }
 
-// 手动拖拽调整"正在播放"队列顺序：按 path 重排 songs。
-// 列表现在恒处于某种排序下，所以拖拽只改当前播放顺序，
-// 下一次重排（点排序按钮 / 换队列 / 同步文件夹）会从 originalSongs 重新生成并覆盖它。
-function reorderQueue(fromPath, toPath) {
-  if (fromPath === toPath) return;
-  const from = state.songs.findIndex((s) => s.path === fromPath);
-  const to = state.songs.findIndex((s) => s.path === toPath);
-  if (from < 0 || to < 0) return;
+// 手动拖拽调整播放队列顺序：拖拽后队列进入手动顺序模式并保存。
+// 队列允许重复歌曲，所以按下标而不是 path 重排。
+let queueDragFromIndex = null;
 
-  const playingPath = state.songs[state.currentIndex] ? state.songs[state.currentIndex].path : null;
+function reorderQueue(from, to) {
+  if (!Number.isInteger(from) || !Number.isInteger(to) || from === to) return;
+  if (from < 0 || to < 0 || from >= state.songs.length || to >= state.songs.length) return;
+
   const [moved] = state.songs.splice(from, 1);
   state.songs.splice(to, 0, moved);
 
-  if (playingPath) {
-    state.currentIndex = state.songs.findIndex((s) => s.path === playingPath);
-    if (state.currentIndex === -1) state.currentIndex = 0;
+  // 重复歌曲按 path 重定位会落到第一份；这里按下标变化修正播放指针
+  if (state.currentIndex >= 0) {
+    if (state.currentIndex === from) {
+      state.currentIndex = to;
+    } else {
+      let next = state.currentIndex;
+      if (from < next) next -= 1;
+      if (to <= next) next += 1;
+      state.currentIndex = next;
+    }
   }
 
+  state.activeQueue = { type: 'custom' };
+  state.sortMode = 'custom';
+  state.originalSongs = [...state.songs];
+  saveQueueSnapshot(state.songs);
+
   initVirtualList(searchInput.value.trim());
+}
+
+// ── 编辑当前播放队列（QQ 音乐式：下一首播放 / 添加到队列 / 从队列移除）──
+// 任何编辑都会让队列进入手动顺序模式，并保存为重启恢复的快照。
+function beginQueueEdit() {
+  state.activeQueue = { type: 'custom' };
+  state.sortMode = 'custom';
+  state.originalSongs = [...state.songs];
+  syncQueueControls();
+}
+
+function renderQueueAfterEdit() {
+  initVirtualList(searchInput.value.trim());
+  saveQueueSnapshot(state.songs);
+}
+
+// 队列允许重复歌曲：右键来源是队列行时按下标定位，否则按 path 找第一份
+function resolveQueueIndex(song, queueIndex) {
+  if (
+    Number.isInteger(queueIndex) &&
+    queueIndex >= 0 &&
+    queueIndex < state.songs.length &&
+    state.songs[queueIndex].path === song.path
+  )
+    return queueIndex;
+  return state.songs.findIndex((s) => s.path === song.path);
+}
+
+// 「下一首播放」：已在队列里的移到当前歌曲之后，不在队列里的插入一份副本
+export function moveSongToNext(song, queueIndex = -1) {
+  if (!song || typeof song.path !== 'string') return 'invalid';
+
+  const existing = resolveQueueIndex(song, queueIndex);
+  if (existing !== -1 && existing === state.currentIndex) return 'current';
+
+  if (state.songs.length === 0) {
+    state.songs.push({ ...song });
+    beginQueueEdit();
+    renderQueueAfterEdit();
+    return 'added';
+  }
+
+  const insertAt = Math.max(0, state.currentIndex + 1);
+  if (existing === insertAt) return 'alreadyNext';
+
+  if (existing !== -1) {
+    const [moved] = state.songs.splice(existing, 1);
+    const insert = existing < insertAt ? insertAt - 1 : insertAt;
+    state.songs.splice(insert, 0, moved);
+
+    // 重复歌曲按 path 重定位会落到第一份；按下标变化修正播放指针
+    if (state.currentIndex >= 0) {
+      let next = state.currentIndex;
+      if (existing < next) next -= 1;
+      if (insert <= next) next += 1;
+      state.currentIndex = next;
+    }
+  } else {
+    state.songs.splice(insertAt, 0, { ...song });
+  }
+
+  beginQueueEdit();
+  renderQueueAfterEdit();
+  return 'moved';
+}
+
+// 「添加到播放队列」：追加到末尾（允许同一首歌重复加入）
+export function addSongToQueueEnd(song) {
+  if (!song || typeof song.path !== 'string') return 'invalid';
+
+  state.songs.push({ ...song });
+  beginQueueEdit();
+  renderQueueAfterEdit();
+  return 'added';
+}
+
+// 「从播放队列移除」：正在播放的歌曲不允许移除
+export function removeSongFromQueue(song, queueIndex = -1) {
+  if (!song || typeof song.path !== 'string') return 'invalid';
+
+  const index = resolveQueueIndex(song, queueIndex);
+  if (index === -1) return 'notFound';
+  if (index === state.currentIndex) return 'current';
+
+  state.songs.splice(index, 1);
+  if (state.currentIndex >= 0 && index < state.currentIndex) state.currentIndex -= 1;
+
+  beginQueueEdit();
+  renderQueueAfterEdit();
+  return 'removed';
 }
 
 export function bindPlaylistEvents() {
@@ -299,15 +419,18 @@ export function bindPlaylistEvents() {
   playlistEl.addEventListener('dragstart', (e) => {
     const item = e.target.closest('.playlist-item');
     if (!item) return;
-    const song = state.songs.find((s) => s.path === item.dataset.path);
+    const index = Number(item.dataset.index);
+    const song = state.songs[index];
     if (!song) return;
     state.dragSong = song;
+    queueDragFromIndex = index;
     e.dataTransfer.effectAllowed = 'copy';
     e.dataTransfer.setData('text/plain', song.path);
   });
   // 拖拽结束(含取消)时清理起点记录,防止残留被后续 drop 误消费
   playlistEl.addEventListener('dragend', () => {
     state.dragSong = null;
+    queueDragFromIndex = null;
   });
 
   // 拖拽调整"正在播放"队列顺序:拖到目标行松手按 path 重排
@@ -318,9 +441,13 @@ export function bindPlaylistEvents() {
   });
   playlistEl.addEventListener('drop', (e) => {
     const item = e.target.closest('.playlist-item');
-    if (!item || !state.dragSong) return;
+    if (!item || queueDragFromIndex === null) return;
     e.preventDefault();
-    reorderQueue(state.dragSong.path, item.dataset.path);
+    reorderQueue(queueDragFromIndex, Number(item.dataset.index));
+    queueDragFromIndex = null;
     state.dragSong = null;
   });
+
+  // 清空播放队列：停止播放并复位；空队列快照会写入配置
+  btnClearQueue.onclick = () => setQueue([], { type: 'custom' });
 }

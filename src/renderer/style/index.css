@@ -680,6 +680,7 @@ body.bar-hidden .lyric-translation-toggle {
   stroke: currentColor;
   fill: none;
 }
+
 /* 播放/暂停的图标是实心填充的，单独放开 */
 #btnPrev svg,
 #btnNext svg,
@@ -829,6 +830,33 @@ body.bar-hidden .lyric-translation-toggle {
   background: var(--field-bg);
 }
 
+/* 自定义队列视图里的“清空”按钮：只在右侧抽屉头部出现 */
+.queue-clear-btn {
+  margin-left: auto;
+  align-self: center;
+  padding: 4px 10px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--field-bg);
+  color: var(--ink3);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition:
+    color 0.15s ease,
+    background-color 0.15s ease;
+}
+
+.queue-clear-btn:hover {
+  color: var(--ink1);
+  background: var(--row-hover);
+}
+
+.queue-clear-btn[hidden] {
+  display: none;
+}
+
 .search-container {
   padding: 16px 26px 0;
   border-bottom: none;
@@ -866,6 +894,11 @@ body.bar-hidden .lyric-translation-toggle {
   border-radius: 10px;
   background: var(--seg-bg);
   flex-shrink: 0;
+}
+
+/* 自定义队列按手动顺序播放，不显示排序栏 */
+.sort-container[hidden] {
+  display: none;
 }
 
 /* 「排序:」这个前缀在分段控件里是冗余的 */
@@ -2585,6 +2618,12 @@ body.mini-mode .playlists-drawer {
 }
 
 .context-menu-sub .sep {
+  height: 1px;
+  margin: 5px 10px;
+  background: var(--hair);
+}
+
+.context-menu-sep {
   height: 1px;
   margin: 5px 10px;
   background: var(--hair);

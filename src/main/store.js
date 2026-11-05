@@ -121,6 +121,37 @@ export function setTaskbarLyricsSetting(enabled) {
   return !!enabled;
 }
 
+// 播放队列快照：跨重启恢复当前播放队列。配置可能被手改，
+// 读取和写入都归一化，只保留可播放的字段并限制长度。
+const MAX_PLAY_QUEUE_LENGTH = 1000;
+
+function normalizeQueueEntry(song) {
+  if (!song || typeof song !== 'object' || typeof song.path !== 'string' || !song.path) return null;
+  return {
+    path: song.path,
+    title: typeof song.title === 'string' ? song.title : '',
+    artist: typeof song.artist === 'string' ? song.artist : '',
+    url: typeof song.url === 'string' ? song.url : '',
+  };
+}
+
+export function getPlayQueue() {
+  const raw = store.get('playQueue');
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .map(normalizeQueueEntry)
+    .filter(Boolean)
+    .slice(0, MAX_PLAY_QUEUE_LENGTH);
+}
+
+export function setPlayQueue(queue) {
+  const list = Array.isArray(queue) ? queue : [];
+  store.set(
+    'playQueue',
+    list.map(normalizeQueueEntry).filter(Boolean).slice(0, MAX_PLAY_QUEUE_LENGTH)
+  );
+}
+
 // 菜单栏歌词：macOS 专属，默认关闭；开启后在托盘图标旁显示当前歌词行。
 export function getMenubarLyricsSetting() {
   return store.get('settings.menubarLyrics') === true;

@@ -9,11 +9,11 @@ export const state = {
   songs: [],
   currentIndex: -1,
   playMode: 0,
-  sortMode: 'title', // 'title' | 'artist' | 'random'；字母索引只在 title/artist 下有意义
+  sortMode: 'title', // 'title' | 'artist' | 'random' | 'custom'；字母索引只在 title/artist 下有意义
   letterIndex: [], // [{ letter, index }]，按当前排序算出的每组首行下标
 
   // 自定义歌单
-  activeQueue: { type: 'library' }, // { type: 'library' } | { type: 'playlist', id };会话级,不持久化
+  activeQueue: { type: 'library' }, // { type: 'library' } | { type: 'playlist', id } | { type: 'custom' };会话级,不持久化
   librarySongs: [], // 曲库缓存:activeQueue 为歌单时与播放队列解耦
   playlists: [], // 歌单缓存副本(主进程为唯一数据源)
   playlistsView: 'list', // 'list' | 'detail'

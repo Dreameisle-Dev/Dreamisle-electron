@@ -15,12 +15,20 @@ import {
   btnDeletePlaylist,
   playlistsSongListEl,
   contextMenu,
+  ctxPlayNext,
+  ctxRemoveFromQueue,
+  ctxAddToQueue,
   ctxAddToPlaylist,
   ctxPlaylistOptions,
   playlistEl,
 } from './dom.js';
 import { escapeHtml, showToast } from './helpers.js';
-import { setQueue } from './playlist.js';
+import {
+  addSongToQueueEnd,
+  moveSongToNext,
+  removeSongFromQueue,
+  setQueue,
+} from './playlist.js';
 import { playSong } from './playback.js';
 
 // 拉取主进程歌单并缓存
@@ -201,11 +209,14 @@ function closePlaylistDetail() {
 }
 
 let contextSong = null;
+// 右键来源是播放队列行时，记录该行在 state.songs 中的下标（队列允许重复歌曲）
+let contextQueueIndex = -1;
 let contextAnchor = { x: 0, y: 0 };
 
 export function closeContextMenu() {
   contextMenu.classList.remove('open');
   contextSong = null;
+  contextQueueIndex = -1;
 }
 
 // 菜单高度不是常量：展开「添加到歌单」后条目数 = 歌单数 + 1，歌单一多菜单会变很高。
@@ -221,9 +232,14 @@ function placeContextMenu() {
   contextMenu.style.top = `${Math.max(MENU_EDGE, Math.min(contextAnchor.y, maxY))}px`;
 }
 
-function openContextMenu(x, y, song) {
+function openContextMenu(x, y, song, queueIndex = -1) {
   contextSong = song;
+  contextQueueIndex = queueIndex;
   contextAnchor = { x, y };
+  // 在当前播放队列里的歌才显示“从播放队列移除”
+  const inQueue =
+    queueIndex >= 0 || (song && state.songs.some((item) => item.path === song.path));
+  ctxRemoveFromQueue.style.display = inQueue ? 'block' : 'none';
   ctxAddToPlaylist.style.display = 'block';
   ctxPlaylistOptions.style.display = 'none';
   // 先挂 open 再量：opacity/transform 不参与布局，量到的就是最终尺寸
@@ -506,6 +522,17 @@ export function bindPlaylistsEvents() {
     }
   };
 
+  // 歌单详情里右键同样可以加入播放队列 / 添加到歌单
+  playlistsSongListEl.addEventListener('contextmenu', (e) => {
+    const item = e.target.closest('.playlists-song-item');
+    if (!item) return;
+    const pl = getDetailPlaylist();
+    const song = pl && pl.songs[Number(item.dataset.index)];
+    if (!song) return;
+    e.preventDefault();
+    openContextMenu(e.clientX, e.clientY, song, -1);
+  });
+
   // 歌单内拖拽排序
   playlistsSongListEl.addEventListener('dragover', (e) => {
     const target = e.target.closest('.playlists-song-item');
@@ -532,16 +559,48 @@ export function bindPlaylistsEvents() {
     renderDetailSongs();
   });
 
-  // 右侧播放列表右键 → 添加到歌单
+  // 右侧播放队列右键 → 队列操作 / 添加到歌单
   playlistEl.addEventListener('contextmenu', (e) => {
     const item = e.target.closest('.playlist-item');
     if (!item) return;
     e.preventDefault();
-    const song = state.songs.find((s) => s.path === item.dataset.path);
-    if (song) openContextMenu(e.clientX, e.clientY, song);
+    const index = Number(item.dataset.index);
+    const song = state.songs[index];
+    if (song) openContextMenu(e.clientX, e.clientY, song, index);
   });
 
-  // 菜单交互
+  // 菜单交互：下一首播放 / 添加到播放队列 / 从播放队列移除
+  ctxPlayNext.onclick = () => {
+    const song = contextSong;
+    const queueIndex = contextQueueIndex;
+    closeContextMenu();
+    if (!song) return;
+
+    const result = moveSongToNext(song, queueIndex);
+    if (result === 'current') showToast(t('queue.playingNow'));
+    else if (result === 'alreadyNext') showToast(t('queue.alreadyNext'));
+    else if (result === 'moved' || result === 'added') showToast(t('queue.addedNext'));
+  };
+
+  ctxAddToQueue.onclick = () => {
+    const song = contextSong;
+    closeContextMenu();
+    if (!song) return;
+
+    if (addSongToQueueEnd(song) === 'added') showToast(t('queue.added'));
+  };
+
+  ctxRemoveFromQueue.onclick = () => {
+    const song = contextSong;
+    const queueIndex = contextQueueIndex;
+    closeContextMenu();
+    if (!song) return;
+
+    const result = removeSongFromQueue(song, queueIndex);
+    if (result === 'current') showToast(t('queue.playingCannotRemove'));
+    else if (result === 'removed') showToast(t('queue.removed'));
+  };
+
   ctxAddToPlaylist.onclick = openAddToPlaylistSubmenu;
   document.addEventListener('click', (e) => {
     if (contextMenu.classList.contains('open') && !contextMenu.contains(e.target))

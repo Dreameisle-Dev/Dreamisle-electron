@@ -4,6 +4,8 @@ contextBridge.exposeInMainWorld('dreamApi', {
   loadSavedMusic: () => ipcRenderer.invoke('app:loadSavedMusic'),
   savePlaybackState: (state) => ipcRenderer.invoke('app:savePlaybackState', state),
   loadPlaybackState: () => ipcRenderer.invoke('app:loadPlaybackState'),
+  getPlayQueue: () => ipcRenderer.invoke('queue:get'),
+  savePlayQueue: (queue) => ipcRenderer.send('queue:set', queue),
   syncFolder: () => ipcRenderer.invoke('app:syncFolder'),
 
   getCover: async (path) => {

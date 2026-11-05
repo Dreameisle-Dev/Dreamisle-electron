@@ -240,8 +240,8 @@
             </svg>
           </button>
 
-          <!-- 列表开关（放在右侧独立分组，与控制键拉开距离） -->
-          <button class="ctrl-sm" id="btnPlaylist" title="播放列表" data-i18n-title="btn.playlist">
+          <!-- 播放队列开关（带队列数量角标） -->
+          <button class="ctrl-sm" id="btnPlaylist" title="播放队列" data-i18n-title="queue.title">
             <svg
               width="22"
               height="22"
@@ -269,8 +269,11 @@
     <!-- 播放列表抽屉 -->
     <div class="playlist-drawer" id="playlistDrawer">
       <div class="playlist-header">
-        <span data-i18n="playlist.nowPlaying">正在播放</span>
+        <span data-i18n="queue.title">播放队列</span>
         <span id="playlistCount" style="font-size: 12px; opacity: 0.5; margin-left: 10px"></span>
+        <button class="queue-clear-btn" id="btnClearQueue" data-i18n="queue.clear" hidden>
+          清空
+        </button>
       </div>
 
       <!-- 搜索框 -->
@@ -285,7 +288,7 @@
       </div>
 
       <!-- 排序控制栏 -->
-      <div class="sort-container">
+      <div class="sort-container" id="sortContainer">
         <span class="sort-label" data-i18n="playlist.sortLabel">排序:</span>
         <button
           class="sort-btn active"
@@ -401,6 +404,21 @@
 
     <!-- 歌曲右键菜单 -->
     <div class="context-menu" id="contextMenu">
+      <button class="context-menu-item" id="ctxPlayNext" data-i18n="queue.playNext">
+        下一首播放
+      </button>
+      <button class="context-menu-item" id="ctxAddToQueue" data-i18n="queue.addToQueue">
+        添加到播放队列
+      </button>
+      <button
+        class="context-menu-item"
+        id="ctxRemoveFromQueue"
+        data-i18n="queue.remove"
+        style="display: none"
+      >
+        从播放队列移除
+      </button>
+      <div class="context-menu-sep"></div>
       <button class="context-menu-item" id="ctxAddToPlaylist" data-i18n="playlists.addTo">
         添加到歌单
       </button>

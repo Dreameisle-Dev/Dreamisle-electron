@@ -15,6 +15,8 @@ import {
   setEqualizer,
   getTaskbarLyricsStyle,
   setTaskbarLyricsStyle,
+  getPlayQueue,
+  setPlayQueue,
   applyLanguage,
   clampPercent,
   DEFAULT_LYRICS_STYLE,
@@ -149,6 +151,12 @@ export function registerIpcHandlers() {
 
   ipcMain.handle('app:loadPlaybackState', async () => {
     return store.get('playbackState') || null;
+  });
+
+  // 播放队列快照：渲染进程整体推送当前队列，主进程只做校验与落盘
+  ipcMain.handle('queue:get', () => getPlayQueue());
+  ipcMain.on('queue:set', (event, queue) => {
+    setPlayQueue(queue);
   });
 
   ipcMain.handle('app:getLyrics', async (event, audioPath) => {

@@ -6,6 +6,9 @@ export const playlistEl = document.getElementById('playlist');
 export const playlistCountEl = document.getElementById('playlistCount');
 export const searchInput = document.getElementById('searchInput');
 export const letterIndexEl = document.getElementById('letterIndex');
+// 播放队列（右侧列表头部清空按钮；手动排序的队列隐藏排序栏）
+export const btnClearQueue = document.getElementById('btnClearQueue');
+export const sortContainer = document.getElementById('sortContainer');
 
 export const coverContainer = document.getElementById('coverContainer');
 export const coverImg = document.getElementById('coverImg');
@@ -114,6 +117,9 @@ export const playlistsSongListEl = document.getElementById('playlistsSongList');
 
 // 歌曲右键菜单元素
 export const contextMenu = document.getElementById('contextMenu');
+export const ctxPlayNext = document.getElementById('ctxPlayNext');
+export const ctxRemoveFromQueue = document.getElementById('ctxRemoveFromQueue');
+export const ctxAddToQueue = document.getElementById('ctxAddToQueue');
 export const ctxAddToPlaylist = document.getElementById('ctxAddToPlaylist');
 export const ctxPlaylistOptions = document.getElementById('ctxPlaylistOptions');
 
