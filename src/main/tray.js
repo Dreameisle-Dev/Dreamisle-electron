@@ -9,6 +9,25 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 let tray = null;
 
+// 菜单栏歌词（macOS）由 menubar-lyrics 模块注册；托盘只负责展示开关，
+// 不反向 import 该模块，避免 menubar → tray 的循环依赖。
+let menubarLyricsControls = null;
+
+export function registerMenubarLyricsControls(controls) {
+  menubarLyricsControls = controls;
+}
+
+// 菜单栏歌词文字：Tray.setTitle 仅 macOS 支持；调用时机可能早于托盘创建，需要容错。
+export function setTrayTitle(title) {
+  if (process.platform !== 'darwin' || !tray) return;
+  tray.setTitle(typeof title === 'string' ? title : '');
+}
+
+export function getTrayTitle() {
+  if (process.platform !== 'darwin' || !tray) return '';
+  return tray.getTitle();
+}
+
 function buildTrayMenuTemplate() {
   const template = [
     {
@@ -46,6 +65,25 @@ function buildTrayMenuTemplate() {
       },
       {
         label: t('tray.taskbarLyricsHotkey'),
+        enabled: false,
+      }
+    );
+  }
+
+  // macOS 菜单栏歌词：文字显示在托盘图标旁，菜单里放开关和快捷键提示。
+  if (process.platform === 'darwin' && menubarLyricsControls) {
+    template.push(
+      {
+        type: 'checkbox',
+        label: t('tray.menubarLyrics'),
+        checked: menubarLyricsControls.isEnabled(),
+        click: (item) => {
+          menubarLyricsControls.setEnabled(item.checked);
+          rebuildTrayMenu();
+        },
+      },
+      {
+        label: t('tray.menubarLyricsHotkey'),
         enabled: false,
       }
     );

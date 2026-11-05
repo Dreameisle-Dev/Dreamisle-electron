@@ -129,6 +129,17 @@ window.addEventListener('DOMContentLoaded', async () => {
     const lyricsKeys = document.querySelectorAll('#helpDesktopLyricsKeys kbd');
     if (lyricsKeys[0]) lyricsKeys[0].textContent = '⌘';
     if (lyricsKeys[1]) lyricsKeys[1].textContent = '⌥';
+
+    // 长按触发的修饰键：Windows 的 Alt/Ctrl/Shift 在 macOS 上分别是 ⌥/⌃/⇧
+    const macKeys = [
+      ['#helpPlaylistKeys kbd', '⌥'],
+      ['#helpPlaylistsKeys kbd', '⌃'],
+      ['#helpStatsKeys kbd', '⇧'],
+    ];
+    for (const [selector, symbol] of macKeys) {
+      const key = document.querySelector(selector);
+      if (key) key.textContent = symbol;
+    }
   }
 
   // 绑定自绘标题栏按钮点击事件

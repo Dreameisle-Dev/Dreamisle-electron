@@ -454,21 +454,21 @@
             </div>
             <div class="help-row">
               <span class="help-desc" data-i18n="help.playlistToggle">呼出 / 折叠播放列表</span
-              ><span class="help-keys"
+              ><span class="help-keys" id="helpPlaylistKeys"
                 ><kbd>Alt</kbd
                 ><span class="help-key-hint" data-i18n="help.holdHint">长按 0.5 秒</span></span
               >
             </div>
             <div class="help-row">
               <span class="help-desc" data-i18n="help.playlistsToggle">呼出 / 折叠歌单</span
-              ><span class="help-keys"
+              ><span class="help-keys" id="helpPlaylistsKeys"
                 ><kbd>Ctrl</kbd
                 ><span class="help-key-hint" data-i18n="help.holdHint">长按 0.5 秒</span></span
               >
             </div>
             <div class="help-row">
               <span class="help-desc" data-i18n="help.statsToggle">呼出 / 折叠播放统计</span
-              ><span class="help-keys"
+              ><span class="help-keys" id="helpStatsKeys"
                 ><kbd>Shift</kbd
                 ><span class="help-key-hint" data-i18n="help.holdHint">长按 0.5 秒</span></span
               >
@@ -485,6 +485,10 @@
             <div class="help-row windows-only">
               <span class="help-desc" data-i18n="help.taskbarLyrics">任务栏歌词</span
               ><span class="help-keys"><kbd>Ctrl</kbd><kbd>Alt</kbd><kbd>T</kbd></span>
+            </div>
+            <div class="help-row macos-only">
+              <span class="help-desc" data-i18n="help.menubarLyrics">菜单栏歌词</span
+              ><span class="help-keys"><kbd>⌘</kbd><kbd>⌥</kbd><kbd>T</kbd></span>
             </div>
             <div class="help-row">
               <span class="help-desc" data-i18n="help.settings">打开设置</span
@@ -631,7 +635,7 @@
               <!-- 桌面歌词样式：同属外观设置，和主题放在同一个分区里 -->
               <p class="settings-group-title" data-i18n="settings.lyricsStyle">桌面歌词</p>
               <p class="settings-desc" data-i18n="settings.lyricsStyleDesc">
-                屏幕上的浮动歌词，按 Ctrl+Alt+L 可以显示或隐藏。
+                屏幕上的浮动歌词；快捷键可在帮助中查看。
               </p>
               <div class="style-label-row">
                 <span data-i18n="settings.desktopLyricsClickThrough">鼠标穿透</span>

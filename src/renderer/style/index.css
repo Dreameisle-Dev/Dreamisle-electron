@@ -1276,6 +1276,11 @@ body:not(.platform-win32) .windows-only {
   display: none !important;
 }
 
+/* macOS 专属功能（菜单栏歌词）：其他平台不渲染入口。 */
+body:not(.platform-darwin) .macos-only {
+  display: none !important;
+}
+
 /* 小窗口模式适配：在小窗下直接隐藏标题栏 */
 body.mini-mode .custom-titlebar {
   display: none !important;

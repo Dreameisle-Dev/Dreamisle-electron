@@ -24,6 +24,7 @@ import {
   disposeTaskbarLyrics,
   setTaskbarLyricsEnabled,
 } from '../taskbar/taskbar-lyrics.js';
+import { initMenubarLyrics, disposeMenubarLyrics } from '../menubar/menubar-lyrics.js';
 import { isRightAltOrCtrlDown } from '../taskbar/taskbar-win32.js';
 import { logTaskbar } from '../taskbar/taskbar-log.js';
 
@@ -121,6 +122,8 @@ app.whenReady().then(() => {
   notifyStoreRecovery(getMainWindow()); // 配置被重置过就告知用户备份位置
   if (skipTray) console.log('[Dreamisle] tray disabled by --no-tray');
   else createTray();
+  // macOS 菜单栏歌词：托盘创建后再初始化，菜单项与已存开关才能立即生效。
+  initMenubarLyrics();
   setLyricsStyle(getLyricsStyle()); // 同步已存歌词样式
   setLyricsLang(getLanguage()); // 同步已存语言
   registerLyricsHotkey();
@@ -140,4 +143,5 @@ app.on('before-quit', () => {
   globalShortcut.unregister(TASKBAR_LYRICS_HOTKEY);
   disposeLyrics();
   disposeTaskbarLyrics();
+  disposeMenubarLyrics();
 });

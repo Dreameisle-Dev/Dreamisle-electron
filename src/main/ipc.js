@@ -44,6 +44,10 @@ import {
   updateTaskbarLyricsTranslation,
   refreshTaskbarLyricsConfig,
 } from '../taskbar/taskbar-lyrics.js';
+import {
+  updateMenubarLyricsText,
+  updateMenubarLyricsDocument,
+} from '../menubar/menubar-lyrics.js';
 import { emptyStats, recordPlay, pruneStats } from '../shared/stats.js';
 import { refreshPlaylistsMetadata } from './playlists.js';
 
@@ -230,7 +234,10 @@ export function registerIpcHandlers() {
   });
 
   ipcMain.handle('app:updateDesktopLyrics', (event, text) => {
-    setLyricsText(typeof text === 'string' ? text : '');
+    const value = typeof text === 'string' ? text : '';
+    setLyricsText(value);
+    // 菜单栏歌词复用桌面歌词的当前行文本，两者永远保持一致
+    updateMenubarLyricsText(value);
     return true;
   });
 
@@ -238,6 +245,8 @@ export function registerIpcHandlers() {
   // 用 send/on 而不是 invoke：timeupdate 4Hz 的频率不值得为每次推送建 Promise。
   ipcMain.on('app:setTaskbarLyricsDocument', (event, doc) => {
     updateTaskbarLyricsDocument(doc);
+    // 同一份文档也用于菜单栏的“无歌词时显示歌名/歌手”兜底
+    updateMenubarLyricsDocument(doc);
   });
 
   ipcMain.on('app:updateTaskbarLyricsPlayback', (event, playback) => {

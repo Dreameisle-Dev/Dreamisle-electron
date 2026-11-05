@@ -121,6 +121,16 @@ export function setTaskbarLyricsSetting(enabled) {
   return !!enabled;
 }
 
+// 菜单栏歌词：macOS 专属，默认关闭；开启后在托盘图标旁显示当前歌词行。
+export function getMenubarLyricsSetting() {
+  return store.get('settings.menubarLyrics') === true;
+}
+
+export function setMenubarLyricsSetting(enabled) {
+  store.set('settings.menubarLyrics', !!enabled);
+  return !!enabled;
+}
+
 // 任务栏歌词外观：{ fontFamily, fontWeight, textColor }。读写两侧都归一化，
 // 防止配置文件被手改后把非法字重/颜色灌进渲染进程。
 export function getTaskbarLyricsStyle() {
