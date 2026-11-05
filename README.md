@@ -1,6 +1,6 @@
 # 音梦屿
 
-音梦屿（Dreamisle）是一个使用 Electron 构建的本地音乐播放器，支持 Windows 10/11。
+音梦屿（Dreamisle）是一个使用 Electron 构建的本地音乐播放器，支持 Windows 10/11 和 macOS（任务栏歌词仅 Windows）。
 
 中文 | [English](./README/README.en.md)
 
@@ -33,15 +33,15 @@
 | 长按左 Ctrl 0.5s | 显示 / 隐藏歌单 |
 | 长按左 Shift 0.5s | 显示 / 隐藏播放统计 |
 | F5 | 切换小窗模式 |
-| Ctrl + , | 打开设置 |
-| Ctrl + Alt + L | 显示 / 隐藏桌面歌词 |
-| Ctrl + Alt + T | 显示 / 隐藏任务栏歌词 |
+| Ctrl + , / Cmd + , | 打开设置 |
+| Ctrl + Alt + L / Cmd + Alt + L | 显示 / 隐藏桌面歌词 |
+| Ctrl + Alt + T | 显示 / 隐藏任务栏歌词（仅 Windows） |
 | H | 打开 / 关闭帮助 |
 | Esc | 依次关闭菜单 / 浮层 / 抽屉 |
 | 封面区域滚轮 | 调节音量 |
 | 点击歌词行 | 跳转到对应播放位置 |
 
-任务栏歌词的 `Ctrl+Alt+T` 只响应左侧 Ctrl/Alt，避免与 AltGr 冲突。
+Windows 上任务栏歌词的 `Ctrl+Alt+T` 只响应左侧 Ctrl/Alt，避免与 AltGr 冲突。
 
 ## 技术栈
 
@@ -60,10 +60,11 @@
 npm install
 npm start          # 启动开发版
 npm run build:win  # 构建 Windows 安装包
+npm run build:mac  # 构建 macOS 安装包（需在 macOS 上运行）
 npm run format     # Prettier 格式化
 ```
 
-安装器使用 NSIS，桌面快捷方式为可选项，默认不创建；静默更新不会修改桌面图标。
+Windows 安装器使用 NSIS，桌面快捷方式为可选项，默认不创建；静默更新不会修改桌面图标。macOS 使用 DMG，需要配置签名和公证后再分发。
 
 ## 项目结构
 
@@ -71,7 +72,7 @@ npm run format     # Prettier 格式化
 Dreamisle-electron/
 ├── README.md                  # 中文说明
 ├── README/README.en.md        # 英文说明
-├── build/installer.nsh        # NSIS 安装器自定义（桌面快捷方式选项）
+├── build/installer.nsh        # Windows NSIS 安装器自定义（桌面快捷方式选项）
 ├── img/                       # 文档截图
 └── src/
     ├── main/                  # 主进程：窗口、托盘、曲库、歌单、持久化、IPC

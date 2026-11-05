@@ -10,7 +10,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 let tray = null;
 
 function buildTrayMenuTemplate() {
-  return [
+  const template = [
     {
       label: t('tray.playPause'),
       click: () => {
@@ -30,19 +30,28 @@ function buildTrayMenuTemplate() {
       },
     },
     { type: 'separator' },
-    {
-      type: 'checkbox',
-      label: t('tray.taskbarLyrics'),
-      checked: isTaskbarLyricsEnabled(),
-      click: (item) => {
-        setTaskbarLyricsEnabled(item.checked);
-        rebuildTrayMenu();
+  ];
+
+  // 任务栏歌词是 Windows 专属功能；macOS/Linux 不显示这个入口。
+  if (process.platform === 'win32') {
+    template.push(
+      {
+        type: 'checkbox',
+        label: t('tray.taskbarLyrics'),
+        checked: isTaskbarLyricsEnabled(),
+        click: (item) => {
+          setTaskbarLyricsEnabled(item.checked);
+          rebuildTrayMenu();
+        },
       },
-    },
-    {
-      label: t('tray.taskbarLyricsHotkey'),
-      enabled: false,
-    },
+      {
+        label: t('tray.taskbarLyricsHotkey'),
+        enabled: false,
+      }
+    );
+  }
+
+  template.push(
     {
       label: t('tray.showWindow'),
       click: () => {
@@ -59,8 +68,10 @@ function buildTrayMenuTemplate() {
         app.isQuitting = true;
         app.quit();
       },
-    },
-  ];
+    }
+  );
+
+  return template;
 }
 
 export function rebuildTrayMenu() {
@@ -70,10 +81,20 @@ export function rebuildTrayMenu() {
 }
 
 export function createTray() {
-  const iconPath = path.join(__dirname, '../assets/app_icon.ico');
-  const trayIcon = nativeImage.createFromPath(iconPath);
+  const iconName =
+    process.platform === 'win32'
+      ? 'app_icon.ico'
+      : process.platform === 'darwin'
+        ? 'trayTemplate.png'
+        : 'icon_32x32.png';
+  const iconPath = path.join(__dirname, '../assets', iconName);
+  let trayIcon = nativeImage.createFromPath(iconPath);
+  // Windows 的 ICO 需要缩到托盘尺寸；macOS/Linux 直接用标准图标。
+  // macOS 使用黑色透明模板，系统会按菜单栏明暗自动反色。
+  if (process.platform === 'win32') trayIcon = trayIcon.resize({ width: 16, height: 16 });
+  if (process.platform === 'darwin') trayIcon.setTemplateImage(true);
 
-  tray = new Tray(trayIcon.resize({ width: 16, height: 16 }));
+  tray = new Tray(trayIcon);
 
   const contextMenu = Menu.buildFromTemplate(buildTrayMenuTemplate());
 

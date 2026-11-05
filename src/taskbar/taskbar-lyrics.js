@@ -1142,7 +1142,9 @@ function bindIpcOnce() {
 
 export function initTaskbarLyrics() {
   try {
+    // IPC 仍要绑定：渲染进程会一直发送歌词文档/播放状态，没有任务栏窗口时这些调用是空操作。
     bindIpcOnce();
+    if (process.platform !== 'win32') return;
     if (!getTaskbarLyricsSetting()) return;
     // 启动恢复：失败只记日志，保持持久化设置不变，也不弹窗
     enableRuntime({ notifyUser: false });
@@ -1157,10 +1159,12 @@ export function initTaskbarLyrics() {
 
 // 开关/托盘展示的是持久化偏好：本次运行启动失败不改写用户的选择。
 export function isTaskbarLyricsEnabled() {
-  return getTaskbarLyricsSetting();
+  return process.platform === 'win32' && getTaskbarLyricsSetting();
 }
 
 export function setTaskbarLyricsEnabled(value) {
+  // 非 Windows 上没有任务栏歌词；不写设置、不弹失败对话框。
+  if (process.platform !== 'win32') return false;
   const next = !!value;
   // 先记录用户意图；失败时绝不把它改回去
   setTaskbarLyricsSetting(next);

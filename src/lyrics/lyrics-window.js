@@ -8,6 +8,8 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const WINDOW_WIDTH = 760;
 const WINDOW_HEIGHT = 72;
 const BOTTOM_MARGIN = 80; // 默认位置距任务栏上方的间距
+// macOS 使用 Cmd+Option+L；其他平台保持 Ctrl+Alt+L。
+const LYRICS_HOTKEY = process.platform === 'darwin' ? 'Command+Alt+L' : 'Control+Alt+L';
 
 let lyricsWindow = null;
 let lastText = '';
@@ -158,12 +160,14 @@ export function toggleDesktopLyrics() {
 }
 
 export function registerLyricsHotkey() {
-  const ok = globalShortcut.register('Control+Alt+L', toggleDesktopLyrics);
-  if (!ok) console.warn('[Dreamisle] 全局快捷键 Control+Alt+L 注册失败，桌面歌词功能不可用');
+  const ok = globalShortcut.register(LYRICS_HOTKEY, toggleDesktopLyrics);
+  if (!ok) {
+    console.warn(`[Dreamisle] 全局快捷键 ${LYRICS_HOTKEY} 注册失败，桌面歌词功能不可用`);
+  }
 }
 
 export function disposeLyrics() {
   clearTimeout(saveBoundsTimer);
   destroyLyricsWindow();
-  globalShortcut.unregister('Control+Alt+L');
+  globalShortcut.unregister(LYRICS_HOTKEY);
 }

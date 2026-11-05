@@ -72,7 +72,7 @@ const dict = {
     'settings.languageDesc': '切换后界面和托盘菜单立即更新，不需要重启。',
     'settings.foldersDesc':
       '可以添加多个文件夹，歌曲会合并显示；移除文件夹不会删除磁盘上的音乐文件。',
-    'settings.lyricsStyleDesc': '屏幕上的浮动歌词，按 Ctrl+Alt+L 可以显示或隐藏。',
+    'settings.lyricsStyleDesc': '屏幕上的浮动歌词；快捷键可在帮助中查看。',
     'settings.desktopLyricsClickThrough': '鼠标穿透',
     'settings.desktopLyricsClickThroughDesc': '开启后点击会穿过歌词窗；关闭后才能拖动调整位置。',
     'settings.addFolder': '添加文件夹',
@@ -228,7 +228,7 @@ const dict = {
     'settings.foldersDesc':
       'Add multiple folders and their songs are merged into one library. Removing a folder does not delete files from disk.',
     'settings.lyricsStyleDesc':
-      'The floating lyrics on your desktop. Press Ctrl+Alt+L to show or hide it.',
+      'The floating lyrics on your desktop. See Help for the show/hide shortcut.',
     'settings.desktopLyricsClickThrough': 'Click-through',
     'settings.desktopLyricsClickThroughDesc':
       'Let clicks pass through the desktop lyrics. Turn it off to drag the overlay.',

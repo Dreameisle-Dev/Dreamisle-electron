@@ -48,11 +48,7 @@ body {
   border-radius: 50%;
   filter: blur(70px) saturate(178%);
   will-change: transform;
-  background: radial-gradient(
-    circle closest-side,
-    var(--bc) 0%,
-    rgb(from var(--bc) r g b / 0) 76%
-  );
+  background: radial-gradient(circle closest-side, var(--bc) 0%, rgb(from var(--bc) r g b / 0) 76%);
 }
 
 .blob-a {
@@ -177,7 +173,6 @@ body {
   display: flex;
   flex-direction: row;
 }
-
 
 /* 黑胶：从上方和右侧出框，位置与尺寸全乘 --u（方形、宽高同源，两种窗口比例下相对位置一致）。
    旋转加在容器上而不是 .cover-disc —— 圆标和中心孔是盘面的兄弟节点。 */
@@ -1056,8 +1051,6 @@ body.bar-hidden .lyric-translation-toggle {
   text-overflow: ellipsis;
 }
 
-
-
 /* ══ 小窗模式（横排紧凑）══
    窗口固定 300×340（见 main/window.js）：封面收成 92px 圆角方图放左上，右侧三行
    （歌名/歌手/专辑）；下面依次是两行歌词、进度条+时间、控制键。
@@ -1276,6 +1269,11 @@ body.platform-darwin .titlebar-controls {
 
 body.platform-darwin .titlebar-logo {
   padding-left: 0;
+}
+
+/* Windows 专属功能（任务栏歌词）：macOS/Linux 不渲染入口。 */
+body:not(.platform-win32) .windows-only {
+  display: none !important;
 }
 
 /* 小窗口模式适配：在小窗下直接隐藏标题栏 */
@@ -2143,8 +2141,6 @@ kbd {
   font-variant-numeric: tabular-nums;
 }
 
-
-
 /* 歌单抽屉：与播放列表抽屉镜像（右侧滑入、固定 400px、内部全固定 px）。
    列表/详情两个视图由 JS 用内联 display 切换，这里只管各自的内部布局。 */
 .playlists-drawer {
@@ -2496,8 +2492,6 @@ kbd {
   background: var(--field-bg);
   color: var(--ink1);
 }
-
-
 
 @media (max-width: 600px) {
   .playlists-drawer {
@@ -3010,7 +3004,6 @@ body.mini-mode .playlists-drawer {
   font-size: 13px;
   color: var(--ink3);
 }
-
 
 @media (max-width: 760px) {
   .stats-body {

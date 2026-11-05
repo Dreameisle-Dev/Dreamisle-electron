@@ -1,6 +1,6 @@
 # Dreamisle
 
-Dreamisle (音梦屿) is a local music player built with Electron for Windows 10/11.
+Dreamisle (音梦屿) is a local music player built with Electron for Windows 10/11 and macOS (taskbar lyrics are Windows-only).
 
 [中文](../README.md) | English
 
@@ -33,15 +33,15 @@ Dreamisle (音梦屿) is a local music player built with Electron for Windows 10
 | Hold Left Ctrl 0.5s | Show / hide playlists |
 | Hold Left Shift 0.5s | Show / hide playback statistics |
 | F5 | Toggle mini mode |
-| Ctrl + , | Open settings |
-| Ctrl + Alt + L | Show / hide desktop lyrics |
-| Ctrl + Alt + T | Show / hide taskbar lyrics |
+| Ctrl + , / Cmd + , | Open settings |
+| Ctrl + Alt + L / Cmd + Alt + L | Show / hide desktop lyrics |
+| Ctrl + Alt + T | Show / hide taskbar lyrics (Windows only) |
 | H | Open / close help |
 | Esc | Close menu / overlay / drawer in order |
 | Mouse wheel over the cover | Adjust volume |
 | Click a lyric line | Seek to that position |
 
-The taskbar lyrics shortcut (`Ctrl+Alt+T`) responds only to the left Ctrl/Alt keys to avoid conflicts with AltGr.
+On Windows, the taskbar lyrics shortcut (`Ctrl+Alt+T`) responds only to the left Ctrl/Alt keys to avoid conflicts with AltGr.
 
 ## Tech Stack
 
@@ -60,10 +60,11 @@ Requirements: Node.js and npm.
 npm install
 npm start          # development
 npm run build:win  # build the Windows installer
+npm run build:mac  # build the macOS installer (run on macOS)
 npm run format     # Prettier
 ```
 
-The installer uses NSIS. The desktop shortcut is optional and disabled by default; silent updates leave desktop icons untouched.
+The Windows installer uses NSIS. The desktop shortcut is optional and disabled by default; silent updates leave desktop icons untouched. macOS uses DMG and requires signing and notarization for distribution.
 
 ## Project Structure
 
@@ -71,7 +72,7 @@ The installer uses NSIS. The desktop shortcut is optional and disabled by defaul
 Dreamisle-electron/
 ├── README.md                  # Chinese docs
 ├── README/README.en.md        # English docs
-├── build/installer.nsh        # NSIS installer customization (desktop shortcut option)
+├── build/installer.nsh        # Windows NSIS installer customization (desktop shortcut option)
 ├── img/                       # Documentation screenshots
 └── src/
     ├── main/                  # Main process: windows, tray, library, playlists, persistence, IPC

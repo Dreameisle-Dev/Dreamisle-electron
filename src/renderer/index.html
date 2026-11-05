@@ -146,7 +146,9 @@
 
         <img id="barThumb" class="bar-thumb" src="" alt="" />
         <div class="bar-title" id="barTitle">Dreamisle</div>
-        <div class="bar-artist" id="barArtist" data-i18n="app.waitingForMusic">Waiting for music...</div>
+        <div class="bar-artist" id="barArtist" data-i18n="app.waitingForMusic">
+          Waiting for music...
+        </div>
         <!-- 专辑名：只有小窗模式显示（主窗口的传输条放不下第三行） -->
         <div class="bar-album" id="barAlbum"></div>
 
@@ -239,12 +241,7 @@
           </button>
 
           <!-- 列表开关（放在右侧独立分组，与控制键拉开距离） -->
-          <button
-            class="ctrl-sm"
-            id="btnPlaylist"
-            title="播放列表"
-            data-i18n-title="btn.playlist"
-          >
+          <button class="ctrl-sm" id="btnPlaylist" title="播放列表" data-i18n-title="btn.playlist">
             <svg
               width="22"
               height="22"
@@ -290,7 +287,12 @@
       <!-- 排序控制栏 -->
       <div class="sort-container">
         <span class="sort-label" data-i18n="playlist.sortLabel">排序:</span>
-        <button class="sort-btn active" id="sortTitle" data-mode="title" data-i18n="playlist.sortTitle">
+        <button
+          class="sort-btn active"
+          id="sortTitle"
+          data-mode="title"
+          data-i18n="playlist.sortTitle"
+        >
           歌名
         </button>
         <button class="sort-btn" id="sortArtist" data-mode="artist" data-i18n="playlist.sortArtist">
@@ -436,75 +438,77 @@
         <div class="help-body">
           <p class="help-intro" data-i18n="help.intro">一款离线音乐播放器</p>
 
-        <div class="help-section">
-          <h3 data-i18n="help.shortcuts">键盘快捷键</h3>
-          <div class="help-row">
-            <span class="help-desc" data-i18n="help.playPause">播放 / 暂停</span><kbd>Space</kbd>
+          <div class="help-section">
+            <h3 data-i18n="help.shortcuts">键盘快捷键</h3>
+            <div class="help-row">
+              <span class="help-desc" data-i18n="help.playPause">播放 / 暂停</span><kbd>Space</kbd>
+            </div>
+            <div class="help-row">
+              <span class="help-desc" data-i18n="help.prev">上一曲</span><kbd>Q</kbd>
+            </div>
+            <div class="help-row">
+              <span class="help-desc" data-i18n="help.next">下一曲</span><kbd>E</kbd>
+            </div>
+            <div class="help-row">
+              <span class="help-desc" data-i18n="help.playMode">切换播放模式</span><kbd>R</kbd>
+            </div>
+            <div class="help-row">
+              <span class="help-desc" data-i18n="help.playlistToggle">呼出 / 折叠播放列表</span
+              ><span class="help-keys"
+                ><kbd>Alt</kbd
+                ><span class="help-key-hint" data-i18n="help.holdHint">长按 0.5 秒</span></span
+              >
+            </div>
+            <div class="help-row">
+              <span class="help-desc" data-i18n="help.playlistsToggle">呼出 / 折叠歌单</span
+              ><span class="help-keys"
+                ><kbd>Ctrl</kbd
+                ><span class="help-key-hint" data-i18n="help.holdHint">长按 0.5 秒</span></span
+              >
+            </div>
+            <div class="help-row">
+              <span class="help-desc" data-i18n="help.statsToggle">呼出 / 折叠播放统计</span
+              ><span class="help-keys"
+                ><kbd>Shift</kbd
+                ><span class="help-key-hint" data-i18n="help.holdHint">长按 0.5 秒</span></span
+              >
+            </div>
+            <div class="help-row">
+              <span class="help-desc" data-i18n="help.miniMode">切换小窗模式</span><kbd>F5</kbd>
+            </div>
+            <div class="help-row">
+              <span class="help-desc" data-i18n="help.desktopLyrics">桌面歌词</span
+              ><span class="help-keys" id="helpDesktopLyricsKeys"
+                ><kbd>Ctrl</kbd><kbd>Alt</kbd><kbd>L</kbd></span
+              >
+            </div>
+            <div class="help-row windows-only">
+              <span class="help-desc" data-i18n="help.taskbarLyrics">任务栏歌词</span
+              ><span class="help-keys"><kbd>Ctrl</kbd><kbd>Alt</kbd><kbd>T</kbd></span>
+            </div>
+            <div class="help-row">
+              <span class="help-desc" data-i18n="help.settings">打开设置</span
+              ><span class="help-keys" id="helpSettingsKeys"><kbd>Ctrl</kbd><kbd>,</kbd></span>
+            </div>
+            <div class="help-row">
+              <span class="help-desc" data-i18n="help.help">打开 / 关闭帮助</span><kbd>H</kbd>
+            </div>
+            <div class="help-row">
+              <span class="help-desc" data-i18n="help.closeHelp">关闭浮窗</span><kbd>Esc</kbd>
+            </div>
           </div>
-          <div class="help-row">
-            <span class="help-desc" data-i18n="help.prev">上一曲</span><kbd>Q</kbd>
-          </div>
-          <div class="help-row">
-            <span class="help-desc" data-i18n="help.next">下一曲</span><kbd>E</kbd>
-          </div>
-          <div class="help-row">
-            <span class="help-desc" data-i18n="help.playMode">切换播放模式</span><kbd>R</kbd>
-          </div>
-          <div class="help-row">
-            <span class="help-desc" data-i18n="help.playlistToggle">呼出 / 折叠播放列表</span
-            ><span class="help-keys"
-              ><kbd>Alt</kbd
-              ><span class="help-key-hint" data-i18n="help.holdHint">长按 0.5 秒</span></span
-            >
-          </div>
-          <div class="help-row">
-            <span class="help-desc" data-i18n="help.playlistsToggle">呼出 / 折叠歌单</span
-            ><span class="help-keys"
-              ><kbd>Ctrl</kbd
-              ><span class="help-key-hint" data-i18n="help.holdHint">长按 0.5 秒</span></span
-            >
-          </div>
-          <div class="help-row">
-            <span class="help-desc" data-i18n="help.statsToggle">呼出 / 折叠播放统计</span
-            ><span class="help-keys"
-              ><kbd>Shift</kbd
-              ><span class="help-key-hint" data-i18n="help.holdHint">长按 0.5 秒</span></span
-            >
-          </div>
-          <div class="help-row">
-            <span class="help-desc" data-i18n="help.miniMode">切换小窗模式</span><kbd>F5</kbd>
-          </div>
-          <div class="help-row">
-            <span class="help-desc" data-i18n="help.desktopLyrics">桌面歌词</span
-            ><span class="help-keys"><kbd>Ctrl</kbd><kbd>Alt</kbd><kbd>L</kbd></span>
-          </div>
-          <div class="help-row">
-            <span class="help-desc" data-i18n="help.taskbarLyrics">任务栏歌词</span
-            ><span class="help-keys"><kbd>Ctrl</kbd><kbd>Alt</kbd><kbd>T</kbd></span>
-          </div>
-          <div class="help-row">
-            <span class="help-desc" data-i18n="help.settings">打开设置</span
-            ><span class="help-keys"><kbd>Ctrl</kbd><kbd>,</kbd></span>
-          </div>
-          <div class="help-row">
-            <span class="help-desc" data-i18n="help.help">打开 / 关闭帮助</span><kbd>H</kbd>
-          </div>
-          <div class="help-row">
-            <span class="help-desc" data-i18n="help.closeHelp">关闭浮窗</span><kbd>Esc</kbd>
-          </div>
-        </div>
 
-        <div class="help-section">
-          <h3 data-i18n="help.mouse">鼠标操作</h3>
-          <div class="help-row">
-            <span class="help-desc" data-i18n="help.volume">调节音量</span
-            ><span class="help-desc-sub" data-i18n="help.volumeHint">封面区域滚动滚轮</span>
+          <div class="help-section">
+            <h3 data-i18n="help.mouse">鼠标操作</h3>
+            <div class="help-row">
+              <span class="help-desc" data-i18n="help.volume">调节音量</span
+              ><span class="help-desc-sub" data-i18n="help.volumeHint">封面区域滚动滚轮</span>
+            </div>
+            <div class="help-row">
+              <span class="help-desc" data-i18n="help.showHide">显示 / 隐藏窗口</span
+              ><span class="help-desc-sub" data-i18n="help.showHideHint">双击托盘图标</span>
+            </div>
           </div>
-          <div class="help-row">
-            <span class="help-desc" data-i18n="help.showHide">显示 / 隐藏窗口</span
-            ><span class="help-desc-sub" data-i18n="help.showHideHint">双击托盘图标</span>
-          </div>
-        </div>
         </div>
       </div>
     </div>
@@ -618,7 +622,9 @@
                 <button type="button" data-mode="system" data-i18n="settings.themeSystem">
                   跟随系统
                 </button>
-                <button type="button" data-mode="light" data-i18n="settings.themeLight">浅色</button>
+                <button type="button" data-mode="light" data-i18n="settings.themeLight">
+                  浅色
+                </button>
                 <button type="button" data-mode="dark" data-i18n="settings.themeDark">暗色</button>
               </div>
 
@@ -705,74 +711,77 @@
                 </div>
               </div>
 
-              <!-- 任务栏歌词：嵌在任务栏里的歌词条，外观独立于桌面歌词 -->
-              <p class="settings-group-title" data-i18n="settings.taskbarLyrics">任务栏歌词</p>
-              <p class="settings-desc" data-i18n="settings.taskbarLyricsDesc">
-                嵌在任务栏空档里的歌词条；字体和颜色与桌面歌词互不影响。按 Ctrl+Alt+T 或通过托盘菜单开关。
-              </p>
+              <!-- 任务栏歌词：Windows 专属；其他平台由 .windows-only 隐藏 -->
+              <div class="windows-only">
+                <p class="settings-group-title" data-i18n="settings.taskbarLyrics">任务栏歌词</p>
+                <p class="settings-desc" data-i18n="settings.taskbarLyricsDesc">
+                  嵌在任务栏空档里的歌词条；字体和颜色与桌面歌词互不影响。按 Ctrl+Alt+T
+                  或通过托盘菜单开关。
+                </p>
 
-              <div class="style-control">
-                <div class="style-label-row">
-                  <span data-i18n="settings.taskbarFont">字体</span>
-                </div>
-                <div class="font-select" id="taskbarFontSelectWrap">
-                  <button type="button" class="font-select-btn" id="taskbarFontSelectBtn">
-                    <span id="taskbarFontSelectValue">默认字体</span>
-                    <svg
-                      width="10"
-                      height="6"
-                      viewBox="0 0 10 6"
-                      fill="none"
-                      stroke="currentColor"
-                      stroke-width="1.2"
-                    >
-                      <path d="M1 1l4 4 4-4"></path>
-                    </svg>
-                  </button>
-                  <div class="font-select-list" id="taskbarFontSelectList">
-                    <div class="font-select-search">
-                      <input
-                        type="text"
-                        id="taskbarFontSearch"
-                        data-i18n-placeholder="settings.fontSearch"
-                        placeholder="搜索字体…"
-                      />
+                <div class="style-control">
+                  <div class="style-label-row">
+                    <span data-i18n="settings.taskbarFont">字体</span>
+                  </div>
+                  <div class="font-select" id="taskbarFontSelectWrap">
+                    <button type="button" class="font-select-btn" id="taskbarFontSelectBtn">
+                      <span id="taskbarFontSelectValue">默认字体</span>
+                      <svg
+                        width="10"
+                        height="6"
+                        viewBox="0 0 10 6"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="1.2"
+                      >
+                        <path d="M1 1l4 4 4-4"></path>
+                      </svg>
+                    </button>
+                    <div class="font-select-list" id="taskbarFontSelectList">
+                      <div class="font-select-search">
+                        <input
+                          type="text"
+                          id="taskbarFontSearch"
+                          data-i18n-placeholder="settings.fontSearch"
+                          placeholder="搜索字体…"
+                        />
+                      </div>
+                      <ul class="font-select-options" id="taskbarFontOptions"></ul>
                     </div>
-                    <ul class="font-select-options" id="taskbarFontOptions"></ul>
                   </div>
                 </div>
-              </div>
 
-              <div class="style-control">
-                <div class="style-label-row">
-                  <span data-i18n="settings.taskbarWeight">字体粗细</span>
+                <div class="style-control">
+                  <div class="style-label-row">
+                    <span data-i18n="settings.taskbarWeight">字体粗细</span>
+                  </div>
+                  <div class="theme-seg" id="taskbarWeightSeg">
+                    <button type="button" data-weight="400" data-i18n="settings.weightRegular">
+                      常规
+                    </button>
+                    <button type="button" data-weight="500" data-i18n="settings.weightMedium">
+                      中等
+                    </button>
+                    <button type="button" data-weight="600" data-i18n="settings.weightSemibold">
+                      半粗
+                    </button>
+                    <button type="button" data-weight="700" data-i18n="settings.weightBold">
+                      粗体
+                    </button>
+                  </div>
                 </div>
-                <div class="theme-seg" id="taskbarWeightSeg">
-                  <button type="button" data-weight="400" data-i18n="settings.weightRegular">
-                    常规
-                  </button>
-                  <button type="button" data-weight="500" data-i18n="settings.weightMedium">
-                    中等
-                  </button>
-                  <button type="button" data-weight="600" data-i18n="settings.weightSemibold">
-                    半粗
-                  </button>
-                  <button type="button" data-weight="700" data-i18n="settings.weightBold">
-                    粗体
-                  </button>
-                </div>
-              </div>
 
-              <div class="style-control">
-                <div class="style-label-row">
-                  <span data-i18n="settings.taskbarColor">字体颜色</span>
-                  <span class="style-row-actions">
-                    <label class="taskbar-auto-color">
-                      <input type="checkbox" id="taskbarAutoColor" checked />
-                      <span data-i18n="settings.taskbarColorAuto">跟随任务栏</span>
-                    </label>
-                    <input type="color" id="taskbarTextColor" value="#ffffff" disabled />
-                  </span>
+                <div class="style-control">
+                  <div class="style-label-row">
+                    <span data-i18n="settings.taskbarColor">字体颜色</span>
+                    <span class="style-row-actions">
+                      <label class="taskbar-auto-color">
+                        <input type="checkbox" id="taskbarAutoColor" checked />
+                        <span data-i18n="settings.taskbarColorAuto">跟随任务栏</span>
+                      </label>
+                      <input type="color" id="taskbarTextColor" value="#ffffff" disabled />
+                    </span>
+                  </div>
                 </div>
               </div>
             </section>

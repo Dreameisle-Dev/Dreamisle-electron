@@ -9,13 +9,28 @@
   "scripts": {
     "start": "electron .",
     "format": "prettier --write src/",
-    "build:win": "electron-builder --win"
+    "build:win": "electron-builder --win",
+    "build:mac": "electron-builder --mac"
   },
   "build": {
-    "asarUnpack": ["node_modules/koffi/**/*"],
+    "appId": "org.dreamisle-dev.dreamisle",
+    "asarUnpack": [
+      "node_modules/koffi/**/*"
+    ],
     "win": {
       "icon": "src/assets/app_icon.ico",
       "appId": "org.dreamisle-dev.dreamisle"
+    },
+    "mac": {
+      "target": [
+        "dmg"
+      ],
+      "category": "public.app-category.music",
+      "icon": "src/assets/icon_512x512@2x.png",
+      "extendInfo": {
+        "CFBundleDisplayName": "Dreamisle",
+        "CFBundleName": "Dreamisle"
+      }
     },
     "nsis": {
       "oneClick": false,

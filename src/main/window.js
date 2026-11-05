@@ -1,4 +1,4 @@
-import { app, BrowserWindow, Menu } from 'electron';
+import { app, BrowserWindow } from 'electron';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
@@ -16,8 +16,6 @@ export function getMainWindow() {
 }
 
 export function createWindow() {
-  Menu.setApplicationMenu(null);
-
   // 窗口重置时清空状态
   isMiniMode = false;
   normalBounds = null;
@@ -28,9 +26,12 @@ export function createWindow() {
     height: 700,
     minWidth: 800,
     minHeight: 600,
-    titleBarStyle: 'hidden', // 隐藏默认系统标题栏
+    titleBarStyle: 'hidden', // 隐藏默认系统标题栏；macOS 上保留红黄绿按钮
     backgroundColor: '#000000',
-    icon: path.join(__dirname, '../assets/app_icon.ico'),
+    icon: path.join(
+      __dirname,
+      process.platform === 'win32' ? '../assets/app_icon.ico' : '../assets/icon_256x256.png'
+    ),
     webPreferences: {
       preload: path.join(__dirname, '../preload/preload.js'),
       contextIsolation: true,
@@ -103,6 +104,12 @@ export function toggleMiniMode() {
     // 通知前端返回普通模式
     mainWindow.webContents.send('window-mode-changed', 'normal');
   }
+
+  // macOS 小窗没有自绘标题栏，隐藏红黄绿按钮，避免压在封面上；退出小窗再显示。
+  if (process.platform === 'darwin' && mainWindow.setWindowButtonVisibility) {
+    mainWindow.setWindowButtonVisibility(!isMiniMode);
+  }
+
   return isMiniMode;
 }
 

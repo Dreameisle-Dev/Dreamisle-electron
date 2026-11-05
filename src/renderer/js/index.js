@@ -122,6 +122,15 @@ window.addEventListener('DOMContentLoaded', async () => {
   const platform = window.dreamApi.getPlatform();
   document.body.classList.add(`platform-${platform}`);
 
+  // 帮助里的修饰键按平台显示：macOS 用 ⌘ / ⌥，Windows 保持 Ctrl / Alt。
+  if (platform === 'darwin') {
+    const settingsKey = document.querySelector('#helpSettingsKeys kbd');
+    if (settingsKey) settingsKey.textContent = '⌘';
+    const lyricsKeys = document.querySelectorAll('#helpDesktopLyricsKeys kbd');
+    if (lyricsKeys[0]) lyricsKeys[0].textContent = '⌘';
+    if (lyricsKeys[1]) lyricsKeys[1].textContent = '⌥';
+  }
+
   // 绑定自绘标题栏按钮点击事件
   const btnMin = document.getElementById('btnMin');
   const btnMax = document.getElementById('btnMax');
@@ -163,8 +172,8 @@ window.addEventListener('DOMContentLoaded', async () => {
       return;
     }
 
-    // Ctrl+,：打开/关闭设置（无论焦点位置）
-    if (e.ctrlKey && e.code === 'Comma') {
+    // Cmd+, / Ctrl+,：打开/关闭设置（无论焦点位置）
+    if ((platform === 'darwin' ? e.metaKey : e.ctrlKey) && e.code === 'Comma') {
       e.preventDefault();
       toggleSettings();
       return;

@@ -1,4 +1,6 @@
-import { app, globalShortcut, session, nativeTheme } from 'electron';
+import { app, globalShortcut, Menu, session, nativeTheme } from 'electron';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import {
   migrateLegacyMusicFolder,
   getLanguage,
@@ -24,6 +26,8 @@ import {
 } from '../taskbar/taskbar-lyrics.js';
 import { isRightAltOrCtrlDown } from '../taskbar/taskbar-win32.js';
 import { logTaskbar } from '../taskbar/taskbar-log.js';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // 全局开关任务栏歌词。注意 Electron 的 globalShortcut 不能区分左右 Ctrl/Alt：
 // 在把 AltGr 映射成 Ctrl+Alt 的键盘布局上，AltGr+T 也可能触发这个组合。
@@ -55,6 +59,7 @@ function registerTaskbarLyricsHotkey() {
 }
 
 app.isQuitting = false;
+if (process.platform === 'darwin') app.setName('Dreamisle');
 app.setAppUserModelId('org.dreamisle-dev.dreamisle');
 
 // 开启显卡栅格化和零拷贝以提升渲染性能
@@ -73,12 +78,29 @@ function setupPermissions() {
   );
 }
 
+// macOS 应用菜单：App / 编辑 / 窗口。编辑菜单保证输入框的复制粘贴和 Cmd+Q 等标准快捷键可用。
+// Windows 仍然使用自绘标题栏，不需要系统菜单。
+function setupApplicationMenu() {
+  if (process.platform !== 'darwin') {
+    Menu.setApplicationMenu(null);
+    return;
+  }
+  Menu.setApplicationMenu(
+    Menu.buildFromTemplate([{ role: 'appMenu' }, { role: 'editMenu' }, { role: 'windowMenu' }])
+  );
+}
+
 app.whenReady().then(() => {
   migrateLegacyMusicFolder();
   getLanguage(); // 初始化语言（createTray 依赖 t()）
   // 建窗口前先定下主题来源，否则会先以系统色绘制一帧再翻转
   nativeTheme.themeSource = getThemeMode();
   setupPermissions();
+  setupApplicationMenu();
+  // 开发时 dock 显示 Electron 默认图标；打包后使用 bundle 的 icns，不再覆盖。
+  if (process.platform === 'darwin' && app.dock && !app.isPackaged) {
+    app.dock.setIcon(path.join(__dirname, '../assets/icon_512x512.png'));
+  }
   registerIpcHandlers();
   registerPlaylistsIpc();
   createWindow();
@@ -88,7 +110,7 @@ app.whenReady().then(() => {
   setLyricsStyle(getLyricsStyle()); // 同步已存歌词样式
   setLyricsLang(getLanguage()); // 同步已存语言
   registerLyricsHotkey();
-  registerTaskbarLyricsHotkey();
+  if (process.platform === 'win32') registerTaskbarLyricsHotkey();
 });
 
 app.on('window-all-closed', () => {
