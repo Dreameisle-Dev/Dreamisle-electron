@@ -7,11 +7,15 @@ on:
       - 'v*' # 推送 v 开头的 tag 时自动构建
 
 permissions:
-  contents: read # 只需要读取权限，不再需要写权限
+  contents: read # 只读权限，不涉及 Release 发布
 
 jobs:
   build-mac:
     runs-on: macos-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [arm64, x64] # 分别构建两个架构
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -27,7 +31,7 @@ jobs:
 
       - name: Build macOS DMG (with signing & notarization)
         if: env.CSC_LINK != ''
-        run: npm run build:mac
+        run: npm run build:mac -- --${{ matrix.arch }} --publish never
         env:
           CSC_LINK: ${{ secrets.MAC_CERT_P12 }}
           CSC_KEY_PASSWORD: ${{ secrets.MAC_CERT_PASSWORD }}
@@ -37,14 +41,14 @@ jobs:
 
       - name: Build macOS DMG (unsigned)
         if: env.CSC_LINK == ''
-        run: npm run build:mac
+        run: npm run build:mac -- --${{ matrix.arch }} --publish never
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: false
 
       - name: Upload DMG Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: macos-dmg
-          path: dist/*.dmg # 请根据 electron-builder 实际输出目录调整
+          name: macos-dmg-${{ matrix.arch }}
+          path: dist/*.dmg
           if-no-files-found: error
-          retention-days: 14 # Artifact 保留 14 天，可按需调整
+          retention-days: 14
