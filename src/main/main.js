@@ -62,9 +62,22 @@ app.isQuitting = false;
 if (process.platform === 'darwin') app.setName('Dreamisle');
 app.setAppUserModelId('org.dreamisle-dev.dreamisle');
 
-// 开启显卡栅格化和零拷贝以提升渲染性能
-app.commandLine.appendSwitch('enable-gpu-rasterization');
-app.commandLine.appendSwitch('enable-zero-copy');
+// macOS 26 黑苹果/虚拟机环境下的诊断开关：
+// --safe-mode  关闭硬件加速和渲染进程 JIT（主进程 JIT 需要在命令行传 --js-flags=--jitless）
+// --no-tray    跳过托盘/模板图标创建
+const safeMode = process.argv.includes('--safe-mode');
+const skipTray = process.argv.includes('--no-tray');
+if (safeMode) {
+  app.disableHardwareAcceleration();
+  app.commandLine.appendSwitch('js-flags', '--jitless');
+  console.log('[Dreamisle] safe mode: hardware acceleration disabled, renderer JIT disabled');
+}
+
+// 这两个是 Windows 的渲染性能开关；macOS/Linux 上不需要，Hackintosh 上还可能把 GPU 路径带崩。
+if (process.platform === 'win32') {
+  app.commandLine.appendSwitch('enable-gpu-rasterization');
+  app.commandLine.appendSwitch('enable-zero-copy');
+}
 
 // 设置页"自定义字体"下拉需要读取系统字体列表（Local Font Access API）；
 // 只放行 local-fonts 权限，其余权限维持 Electron 默认拒绝
@@ -106,7 +119,8 @@ app.whenReady().then(() => {
   createWindow();
   initTaskbarLyrics();
   notifyStoreRecovery(getMainWindow()); // 配置被重置过就告知用户备份位置
-  createTray();
+  if (skipTray) console.log('[Dreamisle] tray disabled by --no-tray');
+  else createTray();
   setLyricsStyle(getLyricsStyle()); // 同步已存歌词样式
   setLyricsLang(getLanguage()); // 同步已存语言
   registerLyricsHotkey();
