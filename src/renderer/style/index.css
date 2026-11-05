@@ -2259,6 +2259,22 @@ kbd {
 }
 
 /* ⚠️ 歌单卡片左侧的通用图标已移除：每个歌单都长一样，纯装饰、零信息。 */
+/* 抽屉内的分组标题（文件夹 / 歌单） */
+.playlists-section-label {
+  padding: 14px 16px 4px;
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  color: var(--ink3);
+}
+
+/* 文件夹与歌单之间的细分隔线 */
+.playlists-section-sep {
+  height: 1px;
+  margin: 12px 16px 0;
+  background: var(--hair);
+}
+
 .playlists-card {
   position: relative;
   display: flex;
@@ -2273,6 +2289,35 @@ kbd {
 
 .playlists-card:hover {
   background: var(--row-hover);
+}
+
+/* 文件夹树：行高略矮，缩进表达层级 */
+.folder-card {
+  height: 48px;
+}
+
+.folder-caret {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--ink3);
+  font-size: 12px;
+  line-height: 18px;
+  text-align: center;
+  cursor: pointer;
+}
+
+.folder-caret:hover {
+  color: var(--ink1);
+  background: var(--row-hover);
+}
+
+.folder-caret-empty {
+  display: inline-block;
 }
 
 .playlists-card.active {

@@ -16,6 +16,7 @@ import {
   sortContainer,
 } from './dom.js';
 import { compareByInitial, buildLetterIndex } from '../../shared/initial-letter.js';
+import { folderSubtreeSongsOf } from '../../shared/folder.js';
 import { playSong, resetToEmptyLibrary } from './playback.js';
 import { saveQueueSnapshot } from './play-queue.js';
 import { resetLyrics } from './lyrics.js';
@@ -262,6 +263,11 @@ export function setQueue(songs, activeQueue) {
 // 用主进程返回的新播放列表替换本地列表:曲库上下文,同时更新曲库缓存
 export function applyPlaylistFromMain(playlist) {
   state.librarySongs = [...playlist];
+  // 文件夹视图中增删文件夹/重新扫描后，继续停留在这个文件夹（含子文件夹）
+  if (state.activeQueue.type === 'folder') {
+    setQueue(folderSubtreeSongsOf(playlist, state.activeQueue.path), state.activeQueue);
+    return;
+  }
   setQueue(playlist, { type: 'library' });
 }
 

@@ -13,7 +13,8 @@ export const state = {
   letterIndex: [], // [{ letter, index }]，按当前排序算出的每组首行下标
 
   // 自定义歌单
-  activeQueue: { type: 'library' }, // { type: 'library' } | { type: 'playlist', id } | { type: 'custom' };会话级,不持久化
+  activeQueue: { type: 'library' }, // { type: 'library' } | { type: 'playlist', id } | { type: 'custom' } | { type: 'folder', path };会话级,不持久化
+  musicFolders: [], // 设置的曲库根目录，用于左侧文件夹树
   librarySongs: [], // 曲库缓存:activeQueue 为歌单时与播放队列解耦
   playlists: [], // 歌单缓存副本(主进程为唯一数据源)
   playlistsView: 'list', // 'list' | 'detail'

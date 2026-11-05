@@ -107,6 +107,8 @@ window.addEventListener('DOMContentLoaded', async () => {
 
   // 启动时应用已存语言并刷新界面文案
   const settings = await window.dreamApi.getSettings();
+  // 文件夹树按设置的曲库根目录组织
+  state.musicFolders = (settings.musicFolders || []).map((folder) => folder.path);
   applyThemeMode(settings.themeMode || 'system');
   setLang(settings.language);
   applyLang();

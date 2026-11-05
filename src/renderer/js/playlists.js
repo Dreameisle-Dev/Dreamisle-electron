@@ -23,6 +23,7 @@ import {
   playlistEl,
 } from './dom.js';
 import { escapeHtml, showToast } from './helpers.js';
+import { buildFolderTree } from '../../shared/folder.js';
 import {
   addSongToQueueEnd,
   moveSongToNext,
@@ -30,6 +31,9 @@ import {
   setQueue,
 } from './playlist.js';
 import { playSong } from './playback.js';
+
+// 文件夹树里被折叠的节点（会话级，不持久化）
+const collapsedFolders = new Set();
 
 // 拉取主进程歌单并缓存
 export async function loadPlaylists() {
@@ -70,6 +74,80 @@ export function renderPlaylistsList() {
     renderPlaylistsList();
   };
   playlistsListEl.appendChild(allSongs);
+
+  // 文件夹树：以设置的曲库根目录为根，父文件夹包含子文件夹的歌曲
+  const folderRoots = buildFolderTree(state.librarySongs, state.musicFolders);
+  if (folderRoots.length > 0) {
+    const folderLabel = document.createElement('li');
+    folderLabel.className = 'playlists-section-label';
+    folderLabel.textContent = t('folders.section');
+    playlistsListEl.appendChild(folderLabel);
+
+    const appendFolderNode = (node, depth, isConfiguredRoot) => {
+      // 纯容器的根目录（本身没有直接歌曲）不显示，把子文件夹提上来
+      if (isConfiguredRoot && node.directSongs.length === 0) {
+        for (const child of node.children) appendFolderNode(child, depth, false);
+        return;
+      }
+
+      const active =
+        state.activeQueue.type === 'folder' && state.activeQueue.path === node.path;
+      const li = document.createElement('li');
+      li.className = `playlists-card folder-card${active ? ' active' : ''}`;
+      li.style.paddingLeft = `${16 + depth * 18}px`;
+      li.title = node.path;
+
+      const hasChildren = node.children.length > 0;
+      const collapsed = collapsedFolders.has(node.path);
+      const caret = hasChildren
+        ? `<button class="folder-caret" type="button" aria-label="${escapeHtml(
+            collapsed ? t('folders.expand') : t('folders.collapse')
+          )}" aria-expanded="${!collapsed}">${collapsed ? '▸' : '▾'}</button>`
+        : '<span class="folder-caret folder-caret-empty"></span>';
+      li.innerHTML =
+        caret +
+        `<span class="playlists-card-name">${escapeHtml(node.name)}</span>` +
+        `<span class="playlists-card-count">${t('playlist.count', { n: node.songs.length })}</span>`;
+
+      if (hasChildren) {
+        li.querySelector('.folder-caret').onclick = (e) => {
+          e.stopPropagation();
+          if (collapsedFolders.has(node.path)) collapsedFolders.delete(node.path);
+          else collapsedFolders.add(node.path);
+          renderPlaylistsList();
+        };
+      }
+
+      li.onclick = (e) => {
+        if (e.detail === 0) return; // 拖放后合成的 click(detail 0)，不是真实点击
+        if (e.target.closest('.folder-caret')) return;
+        // 当前歌曲就在这棵文件夹树里时继续播放；否则从第一首开始
+        const playingPath = state.songs[state.currentIndex]?.path;
+        const keepPlaying = node.songs.some((song) => song.path === playingPath);
+        setQueue(node.songs, { type: 'folder', path: node.path });
+        if (!keepPlaying) playSong(0);
+        renderPlaylistsList();
+      };
+
+      playlistsListEl.appendChild(li);
+
+      if (hasChildren && !collapsed) {
+        for (const child of node.children) appendFolderNode(child, depth + 1, false);
+      }
+    };
+
+    for (const root of folderRoots) appendFolderNode(root, 0, true);
+
+    // 文件夹与歌单之间用一条细线分开
+    const divider = document.createElement('li');
+    divider.className = 'playlists-section-sep';
+    playlistsListEl.appendChild(divider);
+
+    const playlistLabel = document.createElement('li');
+    playlistLabel.className = 'playlists-section-label';
+    playlistLabel.textContent = t('playlists.title');
+    playlistsListEl.appendChild(playlistLabel);
+  }
 
   for (const pl of state.playlists) {
     const li = document.createElement('li');

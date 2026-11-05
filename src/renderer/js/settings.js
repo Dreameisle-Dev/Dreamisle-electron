@@ -77,6 +77,9 @@ export async function refreshSettingsUi() {
     if (selected) langSelectValue.textContent = item.textContent;
   });
   renderFolderList(settings.musicFolders || []);
+  // 文件夹树按设置的根目录组织，根目录增删后同步刷新左侧抽屉
+  state.musicFolders = (settings.musicFolders || []).map((folder) => folder.path);
+  renderPlaylistsList();
   syncLyricsStyleUi(settings.lyricsStyle || DEFAULT_LYRICS_STYLE);
   const clickThrough = settings.desktopLyricsClickThrough !== false;
   desktopLyricsClickThroughSwitch.classList.toggle('active', clickThrough);
