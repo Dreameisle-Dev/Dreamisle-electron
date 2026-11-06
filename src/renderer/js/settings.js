@@ -22,6 +22,7 @@ import {
   btnResetStyle,
   desktopLyricsClickThroughSwitch,
   desktopLyricsLinesSeg,
+  performanceModeSwitch,
   fontSelectWrap,
   fontSelectBtn,
   fontSelectValue,
@@ -42,6 +43,7 @@ import { applyPlaylistFromMain } from './playlist.js';
 import { syncLibrary } from './library-sync.js';
 import { renderPlaylistsList } from './playlists.js';
 import { applyThemeMode } from './theme.js';
+import { applyPerformanceMode } from './performance.js';
 import { renderEqPresets, syncEqUi } from './equalizer.js';
 
 // 主题分段控件的选中态。'system'/'light'/'dark'，非法值按 system 处理。
@@ -91,6 +93,8 @@ export async function refreshSettingsUi() {
   });
   syncTaskbarLyricsStyleUi(settings.taskbarLyricsStyle || DEFAULT_TASKBAR_LYRICS_STYLE);
   syncThemeSeg(settings.themeMode);
+  performanceModeSwitch.classList.toggle('active', settings.performanceMode === true);
+  performanceModeSwitch.setAttribute('aria-checked', String(settings.performanceMode === true));
   // 均衡器状态在渲染进程里（state.equalizer 是唯一真源，主进程只负责存），
   // 这里只重建跟随语言的文案：预设胶囊名、当前曲线、前级读数
   renderEqPresets();
@@ -337,6 +341,14 @@ export function bindSettingsEvents() {
     desktopLyricsClickThroughSwitch.classList.toggle('active', next);
     desktopLyricsClickThroughSwitch.setAttribute('aria-checked', String(next));
     window.dreamApi.setDesktopLyricsClickThrough(next).catch(() => {});
+  });
+
+  performanceModeSwitch.addEventListener('click', () => {
+    const next = !performanceModeSwitch.classList.contains('active');
+    performanceModeSwitch.classList.toggle('active', next);
+    performanceModeSwitch.setAttribute('aria-checked', String(next));
+    applyPerformanceMode(next); // 立即生效，不等主进程落盘
+    window.dreamApi.setPerformanceMode(next).catch(() => {});
   });
 
   desktopLyricsLinesSeg.querySelectorAll('button').forEach((btn) => {

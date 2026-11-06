@@ -13,6 +13,8 @@ import {
   setDesktopLyricsLines,
   getThemeMode,
   setThemeMode,
+  getPerformanceMode,
+  setPerformanceMode,
   getEqualizer,
   setEqualizer,
   getTaskbarLyricsStyle,
@@ -41,6 +43,7 @@ import {
   setLyricsLang,
   setLyricsClickThrough,
   setLyricsLines,
+  refreshLyricsStyle,
 } from '../lyrics/lyrics-window.js';
 import {
   updateTaskbarLyricsDocument,
@@ -184,6 +187,7 @@ export function registerIpcHandlers() {
       desktopLyricsClickThrough: getDesktopLyricsClickThrough(),
       desktopLyricsLines: getDesktopLyricsLines(),
       themeMode: getThemeMode(),
+      performanceMode: getPerformanceMode(),
       equalizer: getEqualizer(),
       taskbarLyricsStyle: getTaskbarLyricsStyle(),
       musicFolders: folders,
@@ -216,6 +220,14 @@ export function registerIpcHandlers() {
   ipcMain.handle('settings:setThemeMode', (event, mode) => {
     const next = setThemeMode(mode);
     nativeTheme.themeSource = next;
+    return next;
+  });
+
+  // 性能模式：主窗口由渲染进程自己切 body 类；桌面歌词是独立渲染进程，
+  // 这里主动重发一次样式，让它同步关掉胶囊的毛玻璃。
+  ipcMain.handle('settings:setPerformanceMode', (event, enabled) => {
+    const next = setPerformanceMode(enabled);
+    refreshLyricsStyle();
     return next;
   });
 

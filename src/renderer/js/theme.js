@@ -172,6 +172,8 @@ export function updateProgressStyle(value) {
 // 环境光跟随鼠标缓动
 export function initMouseFollow() {
   document.addEventListener('mousemove', (e) => {
+    // 性能模式：光场保持静止（CSS 也会把 translate 钉在 0，双保险）
+    if (document.body.classList.contains('performance-mode')) return;
     state.targetMouseX = (e.clientX / window.innerWidth) * 100;
     state.targetMouseY = (e.clientY / window.innerHeight) * 100;
     if (!state.isAnimating) {

@@ -93,6 +93,16 @@ export function setThemeMode(mode) {
   return next;
 }
 
+// 性能模式：关闭背景模糊、光场/唱片/频谱动画等持续合成开销，默认关闭。
+export function getPerformanceMode() {
+  return store.get('settings.performanceMode') === true;
+}
+
+export function setPerformanceMode(enabled) {
+  store.set('settings.performanceMode', !!enabled);
+  return !!enabled;
+}
+
 export function getLyricsStyle() {
   return { ...DEFAULT_LYRICS_STYLE, ...(store.get('settings.lyricsStyle') || {}) };
 }

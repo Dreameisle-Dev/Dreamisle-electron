@@ -85,6 +85,12 @@
         -webkit-backdrop-filter: none;
       }
 
+      /* 性能模式：桌面歌词窗是独立渲染进程，由主进程随样式一起下发 */
+      body.performance-mode .capsule {
+        backdrop-filter: none;
+        -webkit-backdrop-filter: none;
+      }
+
       .capsule.placeholder #capsuleText {
         opacity: calc(var(--capsule-opacity, 1) * 0.6);
         font-size: 20px;
@@ -142,6 +148,7 @@
       window.lyricsApi.onStyle((style) => {
         const s = style || {};
         lines = s.lines === 2 ? 2 : 1;
+        document.body.classList.toggle('performance-mode', s.performance === true);
         document.documentElement.style.setProperty(
           '--capsule-bg',
           `rgba(0, 0, 0, ${(s.bgOpacity ?? 45) / 100})`

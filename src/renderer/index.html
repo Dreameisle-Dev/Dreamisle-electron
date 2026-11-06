@@ -819,6 +819,26 @@
                   </div>
                 </div>
               </div>
+
+              <!-- 性能：弱 GPU 设备可关闭持续重绘的视觉效果 -->
+              <p class="settings-group-title" data-i18n="settings.performance">性能</p>
+              <div class="style-label-row">
+                <span data-i18n="settings.performanceMode">性能模式</span>
+                <button
+                  type="button"
+                  class="eq-switch"
+                  id="performanceModeSwitch"
+                  role="switch"
+                  aria-checked="false"
+                  data-i18n-title="settings.performanceMode"
+                  title="性能模式"
+                >
+                  <span class="eq-switch-knob"></span>
+                </button>
+              </div>
+              <p class="settings-desc" data-i18n="settings.performanceModeDesc">
+                关闭背景模糊和氛围光、唱片、频谱动画，适合集成显卡或较旧的设备；可随时关闭。
+              </p>
             </section>
             <section class="settings-panel" data-panel="language">
               <p class="settings-desc" data-i18n="settings.languageDesc">

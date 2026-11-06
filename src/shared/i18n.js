@@ -108,6 +108,10 @@ const dict = {
     'settings.weightBold': '粗体',
     'settings.taskbarColor': '字体颜色',
     'settings.taskbarColorAuto': '跟随任务栏',
+    'settings.performance': '性能',
+    'settings.performanceMode': '性能模式',
+    'settings.performanceModeDesc':
+      '关闭背景模糊和氛围光、唱片、频谱动画，适合集成显卡或较旧的设备；可随时关闭。',
     'taskbarLyrics.failedTitle': '任务栏歌词启动失败',
     'taskbarLyrics.failedDetail':
       '本次运行未能创建任务栏歌词条。请确认 Windows 任务栏正常可用，然后重启音梦屿再试。你的设置不会被改动。\n\n诊断日志：%APPDATA%\\dreamisle\\taskbar-lyrics.log',
@@ -283,6 +287,10 @@ const dict = {
     'settings.weightBold': 'Bold',
     'settings.taskbarColor': 'Text color',
     'settings.taskbarColorAuto': 'Match taskbar',
+    'settings.performance': 'Performance',
+    'settings.performanceMode': 'Performance mode',
+    'settings.performanceModeDesc':
+      'Disables background blur and the ambient, disc, and spectrum animations. Use it on integrated or older GPUs; you can turn it off at any time.',
     'taskbarLyrics.failedTitle': 'Taskbar lyrics could not start',
     'taskbarLyrics.failedDetail':
       'The lyrics strip could not be created on the taskbar this time. Make sure the Windows taskbar is available, then restart Dreamisle and try again. Your setting will not be changed.\n\nDiagnostic log: %APPDATA%\\dreamisle\\taskbar-lyrics.log',

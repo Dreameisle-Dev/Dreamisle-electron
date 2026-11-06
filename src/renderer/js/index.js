@@ -43,6 +43,7 @@ import { bindLyricsEvents, setLyricsTranslationVisible } from './lyrics.js';
 import { toggleSettings, closeSettings, bindSettingsEvents } from './settings.js';
 import { toggleStats, closeStats, isStatsOpen, bindStatsEvents } from './stats.js';
 import { initMouseFollow, updateProgressStyle, applyThemeMode } from './theme.js';
+import { applyPerformanceMode } from './performance.js';
 import { initAutoHide, setAutoHideEnabled } from './autohide.js';
 import { initVisualizer, relayoutVisualizer } from './visualizer.js';
 import { initEqualizer, bindEqEvents } from './equalizer.js';
@@ -110,6 +111,8 @@ window.addEventListener('DOMContentLoaded', async () => {
   // 文件夹树按设置的曲库根目录组织
   state.musicFolders = (settings.musicFolders || []).map((folder) => folder.path);
   applyThemeMode(settings.themeMode || 'system');
+  // 性能模式尽早挂上：body 类在 initVisualizer 之前就位，首次播放不会先跑几帧频谱
+  applyPerformanceMode(settings.performanceMode === true);
   setLang(settings.language);
   applyLang();
   volumeHud.innerText = t('hud.volume', { n: Math.round(audio.volume * 100) });

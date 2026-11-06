@@ -34,6 +34,7 @@ contextBridge.exposeInMainWorld('dreamApi', {
   setEqualizer: (eq) => ipcRenderer.invoke('settings:setEqualizer', eq),
   setLyricsTranslation: (visible) => ipcRenderer.invoke('settings:setLyricsTranslation', visible),
   setThemeMode: (mode) => ipcRenderer.invoke('settings:setThemeMode', mode),
+  setPerformanceMode: (enabled) => ipcRenderer.invoke('settings:setPerformanceMode', enabled),
   addFolder: () => ipcRenderer.invoke('folders:add'),
   removeFolder: (folderPath) => ipcRenderer.invoke('folders:remove', folderPath),
 

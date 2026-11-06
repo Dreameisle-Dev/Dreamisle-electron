@@ -548,22 +548,22 @@ body.bar-hidden .lyric-translation-toggle {
   width: 0;
   height: 28px;
   overflow: hidden;
-  filter: drop-shadow(0 0 5px rgba(255, 255, 255, 0.45));
+  /* canvas 不认 currentColor，visualizer.js 从这里读解析后的颜色 */
+  color: var(--ink1);
 }
-.viz-bars i {
+
+/* 波形绘制在单块 canvas 上（见 visualizer.js 顶部注释）。
+   用透明背景、按满宽绘制，超出播放进度段的部分由 .viz-bars 的 overflow 裁掉。 */
+.viz-bars canvas {
   position: absolute;
+  left: 0;
+  top: 0;
   display: block;
-  width: 3px;
-  border-radius: 2px;
-  background: var(--ink1);
-  top: 13px;
-  height: 2px;
-  will-change: height, opacity;
 }
 
 /* 暂停时那一排竖条要「回归进度条本身」。
    光把条收到底线不够：160 根 3px 宽、间距 6.5px，收平了是一条**虚线**，看上去
-   还是一排点。所以暂停时把竖条整体淡出，改由这里画一条实线。
+   还是一排点。所以暂停时 canvas 直接清空，改由这里画一条实线。
    .viz-bars 的宽度就是播放进度（updateProgressStyle 写的），所以实线天然只覆盖
    已播放段，和 .viz-rest 那条暗线接成一条完整的进度条。 */
 .viz-bars::after {
@@ -581,14 +581,6 @@ body.bar-hidden .lyric-translation-toggle {
 
 .viz-bars.paused::after {
   opacity: 1;
-}
-
-/* 过渡只写在这里，不写在 .viz-bars i 的基类上：
-   基类上带过渡的话，播放中每帧写入的 opacity 会被 0.25s 的缓动拖住、永远追不上
-   目标值，透明度等于被压平。放在状态类里就只在淡出的这一下生效。 */
-.viz-bars.paused i {
-  opacity: 0;
-  transition: opacity 0.25s ease;
 }
 /* 播放头：高度与频谱最大高度一致（28px），原来 38px 比条高出一截 */
 .viz-head {
@@ -3105,4 +3097,81 @@ body.mini-mode .playlists-drawer {
     border-right: none;
     border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   }
+}
+
+/* ══ 性能模式 ══
+   面向集成显卡/旧设备：砍掉持续重绘的合成开销，布局和交互不变。
+   由设置里的「性能模式」开关切 body.performance-mode，切换即时生效。 */
+body.performance-mode .light-field {
+  /* 鼠标跟随会持续移动四张大色斑，进而让压在它们上面的毛玻璃每帧重新取样 */
+  translate: 0 0 !important;
+  transition: none;
+}
+
+body.performance-mode .blob {
+  /* 70px blur 让每个色斑各占一张大纹理；改成不带滤镜的扁平渐变色斑。
+     位置、颜色不变，只是边缘从「模糊光晕」变成柔和的径向渐变。 */
+  filter: none;
+  animation: none !important;
+  will-change: auto;
+  background: radial-gradient(
+    circle closest-side,
+    var(--bc) 0%,
+    rgb(from var(--bc) r g b / 0) 100%
+  );
+}
+
+/* 全屏噪点用了 mix-blend-mode，弱 GPU 上会让整屏多一次混合 */
+body.performance-mode .noise-overlay {
+  display: none;
+}
+
+/* 黑胶/统计页唱片停转：旋转本身不贵，但那是一整张 1000 设计单位的大纹理 */
+body.performance-mode .album-art-container,
+body.performance-mode .stats-overlay.playing .stats-vinyl {
+  animation: none !important;
+}
+
+/* 超长歌词的水平往返滚动画在文字层上，停掉；长行直接被裁剪 */
+body.performance-mode .lyric-text.overflowing,
+body.performance-mode .lyric-translation.overflowing {
+  animation: none !important;
+}
+
+/* 歌词的逐行模糊滤镜：换行时会重建滤镜图层，弱 GPU 上开销明显 */
+body.performance-mode .lyric-line {
+  filter: none !important;
+  transition:
+    color 0.2s ease,
+    opacity 0.2s ease;
+}
+
+/* 大面积毛玻璃：播放条、左右抽屉、设置/帮助/统计浮层。
+   去掉 backdrop-filter 的同时必须换成实底，否则文字会直接压在封面和色斑上。 */
+body.performance-mode .player-bar,
+body.performance-mode .playlist-drawer,
+body.performance-mode .playlists-drawer,
+body.performance-mode .help-card,
+body.performance-mode .stats-card {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  background: var(--base);
+}
+
+/* 小窗模式的传输条铺满整窗，封面和四行歌词都在它下面；性能模式给播放条加的
+   实色底会把它们整块盖住，这里必须还原成透明（mini-mode 的布局规则在文件更早处，
+   同特异度会被上面的 background: var(--base) 覆盖，所以再加上 .mini-mode 提高特异度）。 */
+body.performance-mode.mini-mode .player-bar {
+  background: none;
+}
+
+/* 小面积浮层：去掉模糊即可，原有半透明底色已经足够 */
+body.performance-mode .lyric-translation-toggle,
+body.performance-mode .volume-hud,
+body.performance-mode .sync-toast,
+body.performance-mode .context-menu,
+body.performance-mode .help-overlay,
+body.performance-mode .stats-overlay {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
 }

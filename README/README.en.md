@@ -27,6 +27,7 @@ Dreamisle is a local music player built with Electron. It plays local audio file
 - **Mini mode**: `F5` toggles a 300×340 fixed window with cover, track info, current/next lyric, progress, and controls.
 - **System media controls (Windows)**: SMTC media keys and the system media flyout (cover, track info, progress).
 - **Interface**: Cover-driven background and glow; auto-hiding playback bar; mouse wheel over the cover adjusts volume.
+- **Performance mode**: Disables background blur and the ambient, disc, and spectrum animations, reducing load on integrated or older GPUs.
 - **Chinese/English UI**: Interface copy and help are available in both languages.
 
 ## Requirements

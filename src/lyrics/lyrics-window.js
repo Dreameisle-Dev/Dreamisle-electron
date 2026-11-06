@@ -1,7 +1,7 @@
 import { BrowserWindow, globalShortcut, screen } from 'electron';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { store, getDesktopLyricsClickThrough } from '../main/store.js';
+import { store, getDesktopLyricsClickThrough, getPerformanceMode } from '../main/store.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -24,8 +24,17 @@ function windowHeight() {
 
 function sendStyle() {
   if (isLyricsWindowVisible()) {
-    lyricsWindow.webContents.send('lyrics:style', { ...lastStyle, lines });
+    lyricsWindow.webContents.send('lyrics:style', {
+      ...lastStyle,
+      lines,
+      performance: getPerformanceMode(),
+    });
   }
+}
+
+// 性能模式切换时重发样式：桌面歌词窗是独立渲染进程，不会跟着主窗口的 body 类走
+export function refreshLyricsStyle() {
+  sendStyle();
 }
 
 export function isLyricsWindowVisible() {
