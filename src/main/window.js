@@ -1,8 +1,11 @@
-import { app, BrowserWindow } from 'electron';
+import { app, BrowserWindow, screen } from 'electron';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+const DEFAULT_WIDTH = 1200;
+const DEFAULT_HEIGHT = 760;
 
 let mainWindow = null;
 
@@ -21,9 +24,13 @@ export function createWindow() {
   normalBounds = null;
   wasMaximized = false;
 
+  // 默认窗口比旧版更高；小屏（如 768p）按工作区高度收敛，避免超出屏幕
+  const { workArea } = screen.getPrimaryDisplay();
+  const defaultHeight = Math.min(DEFAULT_HEIGHT, Math.max(700, workArea.height - 40));
+
   mainWindow = new BrowserWindow({
-    width: 1200,
-    height: 700,
+    width: DEFAULT_WIDTH,
+    height: defaultHeight,
     minWidth: 800,
     minHeight: 600,
     titleBarStyle: 'hidden', // 隐藏默认系统标题栏；macOS 上保留红黄绿按钮
