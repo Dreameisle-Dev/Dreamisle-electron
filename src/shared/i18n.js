@@ -87,6 +87,9 @@ const dict = {
     'settings.lyricsStyleDesc': '屏幕上的浮动歌词；快捷键可在帮助中查看。',
     'settings.desktopLyricsClickThrough': '鼠标穿透',
     'settings.desktopLyricsClickThroughDesc': '开启后点击会穿过歌词窗；关闭后才能拖动调整位置。',
+    'settings.desktopLyricsLines': '显示行数',
+    'settings.desktopLyricsSingle': '单行',
+    'settings.desktopLyricsDouble': '双行',
     'settings.addFolder': '添加文件夹',
     'settings.noFolders': '尚未添加文件夹',
     'settings.removeFolder': '移除',
@@ -257,6 +260,9 @@ const dict = {
     'settings.lyricsStyleDesc':
       'The floating lyrics on your desktop. See Help for the show/hide shortcut.',
     'settings.desktopLyricsClickThrough': 'Click-through',
+    'settings.desktopLyricsLines': 'Lines',
+    'settings.desktopLyricsSingle': 'Single line',
+    'settings.desktopLyricsDouble': 'Double line',
     'settings.desktopLyricsClickThroughDesc':
       'Let clicks pass through the desktop lyrics. Turn it off to drag the overlay.',
     'settings.addFolder': 'Add folder',

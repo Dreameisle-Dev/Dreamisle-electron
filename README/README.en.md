@@ -18,7 +18,7 @@ Dreamisle is a local music player built with Electron. It plays local audio file
 - **Playlists**: Create, rename, and delete playlists; add songs via the context menu and drag to reorder; clicking a playlist uses its songs as the play queue.
 - **Folder view**: Builds a folder tree from the configured library roots; a parent folder includes the songs of its subfolders. Clicking a folder uses its entire subtree as the play queue without creating a playlist.
 - **Lyrics**: Prefers an adjacent same-name `.lrc`, then embedded lyrics; supports same-timestamp bilingual lines, `[offset:]`, a translation toggle, click-to-seek, and horizontal scrolling for long lines.
-- **Desktop lyrics**: Always-on-top overlay; adjustable background/text opacity, color, and font; optional click-through, which can be disabled to drag the window; toggle with `Ctrl+Alt+L` / `Cmd+Option+L`.
+- **Desktop lyrics**: Always-on-top overlay; adjustable background/text opacity, color, and font; single-line or double-line display (the second line prefers the translation and falls back to the next lyric); optional click-through, which can be disabled to drag the window; toggle with `Ctrl+Alt+L` / `Cmd+Option+L`.
 - **Taskbar lyrics (Windows 10/11)**: Shows cover art and two lyric lines in free taskbar space; font, weight, and color are configurable; toggle with `Ctrl+Alt+T` or the tray menu.
 - **Menu bar lyrics (macOS)**: Shows the current lyric line next to the status item; falls back to title/artist when there are no timed lyrics; long lines are truncated; toggle with `Cmd+Option+T` or the tray menu.
 - **Search and sorting**: Sort by title/artist or shuffle; real-time filtering; an A-Z# index (Chinese sorted by pinyin) in title/artist modes.
@@ -77,7 +77,7 @@ Note: on Windows, the taskbar lyrics shortcut (`Ctrl+Alt+T`) responds only to th
 
 - Windows taskbar lyrics rely on Win32 / UIA positioning; heavily customized or third-party taskbars may not support embedding. A failed embed does not change the setting, and the feature can still be toggled from the tray menu or settings.
 - macOS menu bar lyrics are a single line and truncate long lyrics; they do not show translations or per-word highlighting.
-- Desktop and menu bar lyrics show the original text only; translations are shown in the main lyrics view.
+- Desktop lyrics show the original text on the first line; the second line prefers the translation (subject to the translation toggle) and falls back to the next lyric. Menu bar lyrics show the original text only.
 - The equalizer affects only the app's playback path, not system audio.
 - There is no auto-update; replace the installer manually.
 

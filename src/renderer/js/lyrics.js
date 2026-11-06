@@ -248,10 +248,11 @@ export function syncLyrics(currentTime) {
     }
 
     if (state.currentLyrics[activeIndex]) {
-      // 小窗与桌面歌词只显示原文,不含翻译
-      const text = state.currentLyrics[activeIndex].text || '';
+      // 小窗只显示原文；桌面歌词第一行原文，第二行优先翻译、没有翻译时显示下一句
+      const line = state.currentLyrics[activeIndex];
+      const next = state.currentLyrics[activeIndex + 1];
       setMiniLyrics(activeIndex);
-      pushDesktopLyrics(text);
+      pushDesktopLyrics(line.text || '', desktopSecondText(line, next));
     }
   } else {
     setMiniLyrics();
@@ -267,6 +268,8 @@ export function setLyricsTranslationVisible(visible) {
     state.showLyricsTranslation ? 'lyrics.translationHide' : 'lyrics.translationShow'
   );
   renderLyricsToDom();
+  // 翻译开关会影响桌面歌词第二行：翻译或下一句，立即重推
+  pushCurrentDesktopLyrics();
 }
 
 export function toggleLyricsTranslation() {
@@ -304,11 +307,30 @@ function setupLineMarquee(lineEl) {
   }
 }
 
-// 向主进程推送桌面歌词文本（含翻译行合并、去重）
-export function pushDesktopLyrics(text) {
-  if (text === state.lastDesktopText) return;
-  state.lastDesktopText = text;
-  window.dreamApi.updateDesktopLyrics(text);
+// 桌面歌词第二行：有翻译时显示翻译（受翻译开关控制），否则显示下一句
+function desktopSecondText(line, next) {
+  const translation = state.showLyricsTranslation ? line.translation || '' : '';
+  return translation || (next ? next.text || '' : '');
+}
+
+// 向主进程推送桌面歌词：当前行 + 第二行（双行模式用），两者都变化时才推送
+export function pushDesktopLyrics(text, secondText = '') {
+  const key = `${text}\u0000${secondText}`;
+  if (key === state.lastDesktopText) return;
+  state.lastDesktopText = key;
+  window.dreamApi.updateDesktopLyrics({ text, secondText });
+}
+
+// 翻译开关变化后立即重推当前行，让桌面歌词第二行同步切换
+function pushCurrentDesktopLyrics() {
+  const index = state.currentLineIndex;
+  const line = index >= 0 ? state.currentLyrics[index] : null;
+  if (!line) {
+    pushDesktopLyrics('');
+    return;
+  }
+  const next = state.currentLyrics[index + 1];
+  pushDesktopLyrics(line.text || '', desktopSecondText(line, next));
 }
 
 export function bindLyricsEvents() {

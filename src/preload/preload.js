@@ -18,7 +18,7 @@ contextBridge.exposeInMainWorld('dreamApi', {
   },
 
   getLyrics: (path) => ipcRenderer.invoke('app:getLyrics', path),
-  updateDesktopLyrics: (text) => ipcRenderer.invoke('app:updateDesktopLyrics', text),
+  updateDesktopLyrics: (payload) => ipcRenderer.invoke('app:updateDesktopLyrics', payload),
   // 任务栏歌词数据流（fire-and-forget，避免高频 invoke 的 Promise 开销）
   setTaskbarLyricsDocument: (doc) => ipcRenderer.send('app:setTaskbarLyricsDocument', doc),
   updateTaskbarLyricsPlayback: (playback) =>
@@ -29,6 +29,7 @@ contextBridge.exposeInMainWorld('dreamApi', {
   setLyricsStyle: (style) => ipcRenderer.invoke('settings:setLyricsStyle', style),
   setDesktopLyricsClickThrough: (enabled) =>
     ipcRenderer.invoke('settings:setDesktopLyricsClickThrough', enabled),
+  setDesktopLyricsLines: (lines) => ipcRenderer.invoke('settings:setDesktopLyricsLines', lines),
   setTaskbarLyricsStyle: (style) => ipcRenderer.invoke('settings:setTaskbarLyricsStyle', style),
   setEqualizer: (eq) => ipcRenderer.invoke('settings:setEqualizer', eq),
   setLyricsTranslation: (visible) => ipcRenderer.invoke('settings:setLyricsTranslation', visible),

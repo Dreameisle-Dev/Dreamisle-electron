@@ -111,6 +111,17 @@ export function setDesktopLyricsClickThrough(enabled) {
   return !!enabled;
 }
 
+// 桌面歌词显示行数：1 = 单行，2 = 当前行 + 下一行；默认单行
+export function getDesktopLyricsLines() {
+  return store.get('settings.desktopLyricsLines') === 2 ? 2 : 1;
+}
+
+export function setDesktopLyricsLines(lines) {
+  const next = lines === 2 ? 2 : 1;
+  store.set('settings.desktopLyricsLines', next);
+  return next;
+}
+
 // 任务栏歌词：默认关闭，开启后主进程会在任务栏里嵌入歌词条窗口
 export function getTaskbarLyricsSetting() {
   return store.get('settings.taskbarLyrics') === true;

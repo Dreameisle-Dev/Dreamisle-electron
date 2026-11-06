@@ -48,16 +48,34 @@
         font-weight: 600;
         letter-spacing: 0.01em;
         line-height: 1.4;
-        white-space: nowrap;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 2px;
         overflow: hidden;
-        text-overflow: ellipsis;
         pointer-events: none;
       }
 
       .capsule span {
+        display: block;
+        max-width: 100%;
         color: var(--capsule-color, #fff);
         opacity: var(--capsule-opacity, 1);
         text-shadow: 0 1px 4px rgba(0, 0, 0, 0.6);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      /* 双行模式的第二行（翻译或下一句）：字号更小、透明度更低 */
+      .capsule .second {
+        font-size: 17px;
+        font-weight: 500;
+        opacity: calc(var(--capsule-opacity, 1) * 0.55);
+      }
+
+      .capsule .second[hidden] {
+        display: none;
       }
 
       .capsule.placeholder {
@@ -67,7 +85,7 @@
         -webkit-backdrop-filter: none;
       }
 
-      .capsule.placeholder span {
+      .capsule.placeholder #capsuleText {
         opacity: calc(var(--capsule-opacity, 1) * 0.6);
         font-size: 20px;
       }
@@ -77,19 +95,41 @@
   <body>
     <div class="capsule placeholder" id="capsule">
       <span id="capsuleText" data-i18n="lyrics.noLyricsShort">暂无歌词</span>
+      <span class="second" id="capsuleSecond" hidden></span>
     </div>
     <script type="module">
       import { setLang, applyLang } from '../shared/i18n.js';
 
       const capsule = document.getElementById('capsule');
       const capsuleText = document.getElementById('capsuleText');
+      const capsuleSecond = document.getElementById('capsuleSecond');
 
-      // 用 textContent 渲染，防止 LRC 文本注入 HTML
-      window.lyricsApi.onText((text) => {
-        const hasText = text && text.trim() !== '';
-        capsuleText.textContent = hasText ? text : '';
+      let currentText = '';
+      let secondText = '';
+      let lines = 1; // 1 = 单行，2 = 双行
+
+      function render() {
+        const hasText = currentText && currentText.trim() !== '';
+        capsuleText.textContent = hasText ? currentText : '';
         capsule.classList.toggle('placeholder', !hasText);
+
+        const showSecond = hasText && lines === 2 && secondText && secondText.trim() !== '';
+        capsuleSecond.textContent = showSecond ? secondText : '';
+        capsuleSecond.hidden = !showSecond;
+
         if (!hasText) applyLang(); // 重新套用"暂无歌词"占位文案
+      }
+
+      // 用 textContent 渲染，防止 LRC 文本注入 HTML；payload = { text, secondText }
+      window.lyricsApi.onText((payload) => {
+        if (typeof payload === 'string') {
+          currentText = payload;
+          secondText = '';
+        } else {
+          currentText = payload?.text || '';
+          secondText = payload?.secondText || '';
+        }
+        render();
       });
 
       // 语言切换：重刷占位文案（仅在占位状态下刷新，避免覆盖正在显示的歌词）
@@ -98,9 +138,10 @@
         if (capsule.classList.contains('placeholder')) applyLang();
       });
 
-      // 样式设置：映射到 CSS 变量
+      // 样式设置：映射到 CSS 变量；lines 控制单/双行
       window.lyricsApi.onStyle((style) => {
         const s = style || {};
+        lines = s.lines === 2 ? 2 : 1;
         document.documentElement.style.setProperty(
           '--capsule-bg',
           `rgba(0, 0, 0, ${(s.bgOpacity ?? 45) / 100})`
@@ -116,6 +157,7 @@
         } else {
           document.documentElement.style.removeProperty('--capsule-font-family');
         }
+        render();
       });
     </script>
   </body>

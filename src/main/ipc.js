@@ -9,6 +9,8 @@ import {
   setLyricsTranslation,
   getDesktopLyricsClickThrough,
   setDesktopLyricsClickThrough,
+  getDesktopLyricsLines,
+  setDesktopLyricsLines,
   getThemeMode,
   setThemeMode,
   getEqualizer,
@@ -34,10 +36,11 @@ import {
 import { toggleMiniMode, minimizeWindow, maximizeWindow, closeWindow } from './window.js';
 import { rebuildTrayMenu } from './tray.js';
 import {
-  setLyricsText,
+  setLyricsContent,
   setLyricsStyle,
   setLyricsLang,
   setLyricsClickThrough,
+  setLyricsLines,
 } from '../lyrics/lyrics-window.js';
 import {
   updateTaskbarLyricsDocument,
@@ -179,6 +182,7 @@ export function registerIpcHandlers() {
       lyricsStyle: getLyricsStyle(),
       lyricsTranslation: getLyricsTranslation(),
       desktopLyricsClickThrough: getDesktopLyricsClickThrough(),
+      desktopLyricsLines: getDesktopLyricsLines(),
       themeMode: getThemeMode(),
       equalizer: getEqualizer(),
       taskbarLyricsStyle: getTaskbarLyricsStyle(),
@@ -195,6 +199,13 @@ export function registerIpcHandlers() {
   ipcMain.handle('settings:setDesktopLyricsClickThrough', (event, enabled) => {
     const next = setDesktopLyricsClickThrough(!!enabled);
     setLyricsClickThrough(next);
+    return next;
+  });
+
+  // 桌面歌词单/双行（双行 = 当前行 + 下一行）
+  ipcMain.handle('settings:setDesktopLyricsLines', (event, lines) => {
+    const next = setDesktopLyricsLines(lines === 2 ? 2 : 1);
+    setLyricsLines(next);
     return next;
   });
 
@@ -241,11 +252,12 @@ export function registerIpcHandlers() {
     return next;
   });
 
-  ipcMain.handle('app:updateDesktopLyrics', (event, text) => {
-    const value = typeof text === 'string' ? text : '';
-    setLyricsText(value);
+  ipcMain.handle('app:updateDesktopLyrics', (event, payload) => {
+    const text = typeof payload === 'string' ? payload : payload?.text || '';
+    const secondText = typeof payload === 'string' ? '' : payload?.secondText || '';
+    setLyricsContent(text, secondText);
     // 菜单栏歌词复用桌面歌词的当前行文本，两者永远保持一致
-    updateMenubarLyricsText(value);
+    updateMenubarLyricsText(text);
     return true;
   });
 

@@ -62,6 +62,7 @@ export const btnResetStyle = document.getElementById('btnResetStyle');
 export const desktopLyricsClickThroughSwitch = document.getElementById(
   'desktopLyricsClickThroughSwitch'
 );
+export const desktopLyricsLinesSeg = document.getElementById('desktopLyricsLinesSeg');
 export const fontSelectWrap = document.getElementById('fontSelectWrap');
 export const fontSelectBtn = document.getElementById('fontSelectBtn');
 export const fontSelectValue = document.getElementById('fontSelectValue');

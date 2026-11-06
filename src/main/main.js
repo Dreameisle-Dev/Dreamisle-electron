@@ -5,6 +5,7 @@ import {
   migrateLegacyMusicFolder,
   getLanguage,
   getLyricsStyle,
+  getDesktopLyricsLines,
   getTaskbarLyricsSetting,
   getThemeMode,
   notifyStoreRecovery,
@@ -18,6 +19,7 @@ import {
   disposeLyrics,
   setLyricsStyle,
   setLyricsLang,
+  setLyricsLines,
 } from '../lyrics/lyrics-window.js';
 import {
   initTaskbarLyrics,
@@ -126,6 +128,7 @@ app.whenReady().then(() => {
   initMenubarLyrics();
   setLyricsStyle(getLyricsStyle()); // 同步已存歌词样式
   setLyricsLang(getLanguage()); // 同步已存语言
+  setLyricsLines(getDesktopLyricsLines()); // 同步单/双行设置
   registerLyricsHotkey();
   if (process.platform === 'win32') registerTaskbarLyricsHotkey();
 });

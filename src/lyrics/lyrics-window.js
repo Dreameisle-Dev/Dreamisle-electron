@@ -7,13 +7,26 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const WINDOW_WIDTH = 760;
 const WINDOW_HEIGHT = 72;
+const WINDOW_HEIGHT_DOUBLE = 112; // 双行歌词（当前行 + 下一行）
 const BOTTOM_MARGIN = 80; // 默认位置距任务栏上方的间距
 // macOS 使用 Cmd+Option+L；其他平台保持 Ctrl+Alt+L。
 const LYRICS_HOTKEY = process.platform === 'darwin' ? 'Command+Alt+L' : 'Control+Alt+L';
 
 let lyricsWindow = null;
 let lastText = '';
+let lastSecondText = '';
+let lines = 1; // 1 = 单行，2 = 双行
 let saveBoundsTimer = null;
+
+function windowHeight() {
+  return lines === 2 ? WINDOW_HEIGHT_DOUBLE : WINDOW_HEIGHT;
+}
+
+function sendStyle() {
+  if (isLyricsWindowVisible()) {
+    lyricsWindow.webContents.send('lyrics:style', { ...lastStyle, lines });
+  }
+}
 
 export function isLyricsWindowVisible() {
   return lyricsWindow !== null && !lyricsWindow.isDestroyed();
@@ -24,10 +37,14 @@ export function setLyricsClickThrough(enabled) {
   if (isLyricsWindowVisible()) lyricsWindow.setIgnoreMouseEvents(!!enabled);
 }
 
-export function setLyricsText(text) {
-  lastText = text;
+export function setLyricsContent(text, secondText = '') {
+  lastText = typeof text === 'string' ? text : '';
+  lastSecondText = typeof secondText === 'string' ? secondText : '';
   if (isLyricsWindowVisible()) {
-    lyricsWindow.webContents.send('lyrics:text', text);
+    lyricsWindow.webContents.send('lyrics:text', {
+      text: lastText,
+      secondText: lastSecondText,
+    });
   }
 }
 
@@ -36,9 +53,21 @@ let lastLang = 'zh-CN';
 
 export function setLyricsStyle(style) {
   lastStyle = { ...lastStyle, ...(style || {}) };
-  if (isLyricsWindowVisible()) {
-    lyricsWindow.webContents.send('lyrics:style', lastStyle);
+  sendStyle();
+}
+
+// 切换单/双行：保持窗口底边位置不变，避免歌词条向上跳
+export function setLyricsLines(value) {
+  lines = value === 2 ? 2 : 1;
+  if (!isLyricsWindowVisible()) return;
+
+  const [x, y] = lyricsWindow.getPosition();
+  const [width, height] = lyricsWindow.getSize();
+  const nextHeight = windowHeight();
+  if (height !== nextHeight) {
+    lyricsWindow.setBounds({ x, y: y + height - nextHeight, width, height: nextHeight });
   }
+  sendStyle();
 }
 
 export function setLyricsLang(lang) {
@@ -54,7 +83,7 @@ function defaultBounds() {
   const { workArea } = screen.getPrimaryDisplay();
   return {
     x: Math.round(workArea.x + (workArea.width - WINDOW_WIDTH) / 2),
-    y: Math.round(workArea.y + workArea.height - WINDOW_HEIGHT - BOTTOM_MARGIN),
+    y: Math.round(workArea.y + workArea.height - windowHeight() - BOTTOM_MARGIN),
   };
 }
 
@@ -78,18 +107,27 @@ function savedBounds() {
 function scheduleBoundsSave() {
   if (!isLyricsWindowVisible()) return;
   const [x, y] = lyricsWindow.getPosition();
+  const [, height] = lyricsWindow.getSize();
   clearTimeout(saveBoundsTimer);
   saveBoundsTimer = setTimeout(() => {
-    store.set('desktopLyricsBounds', { x, y });
+    store.set('desktopLyricsBounds', { x, y, height });
   }, 500); // 拖动期间防抖写入
 }
 
 function createLyricsWindow() {
-  const bounds = savedBounds() || defaultBounds();
+  const saved = savedBounds();
+  const height = windowHeight();
+  // 底边对齐：旧版本保存的 bounds 没有 height 字段时按单行高度处理
+  const bounds = saved
+    ? {
+        x: saved.x,
+        y: saved.y + (Number.isFinite(saved.height) ? saved.height : WINDOW_HEIGHT) - height,
+      }
+    : defaultBounds();
 
   lyricsWindow = new BrowserWindow({
     width: WINDOW_WIDTH,
-    height: WINDOW_HEIGHT,
+    height,
     x: bounds.x,
     y: bounds.y,
     frame: false,
@@ -126,8 +164,8 @@ function createLyricsWindow() {
 
   lyricsWindow.webContents.on('did-finish-load', () => {
     lyricsWindow.webContents.send('lyrics:lang', lastLang);
-    lyricsWindow.webContents.send('lyrics:style', lastStyle);
-    lyricsWindow.webContents.send('lyrics:text', lastText);
+    sendStyle();
+    lyricsWindow.webContents.send('lyrics:text', { text: lastText, secondText: lastSecondText });
     lyricsWindow.showInactive(); // 显示但不获取焦点
   });
 
@@ -144,7 +182,8 @@ function createLyricsWindow() {
 function destroyLyricsWindow() {
   if (!isLyricsWindowVisible()) return;
   const [x, y] = lyricsWindow.getPosition();
-  store.set('desktopLyricsBounds', { x, y });
+  const [, height] = lyricsWindow.getSize();
+  store.set('desktopLyricsBounds', { x, y, height });
   clearTimeout(saveBoundsTimer);
   lyricsWindow.destroy();
   lyricsWindow = null;
