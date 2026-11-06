@@ -15,6 +15,7 @@ import { escapeHtml } from './helpers.js';
 import { updatePlayButton } from './playback.js';
 import universalLyricParser from '../../shared/universal-lyric-parser.js';
 import { parseLyricsText, parseSyncLyrics } from '../../shared/lyrics-parse.js';
+import { stripSongHeader } from '../../shared/lyrics-credits.js';
 import { buildLyricDocument } from '../../shared/taskbar-lyrics-document.js';
 
 // 小窗四行：上一句 / 当前句 / 后两句。只显示原文，不含翻译（与桌面歌词一致）。
@@ -106,6 +107,8 @@ export async function loadAndRenderLyrics(song) {
     }
   }
 
+  // 去掉内嵌歌词常见的「歌名 - 歌手」头部；制作信息已在解析阶段剔除
+  state.currentLyrics = stripSongHeader(state.currentLyrics, song);
   renderLyricsToDom();
   // 解析完成后再推完整文档；此时任务栏可从占位（歌名/歌手）切到歌词行
   pushTaskbarLyricsDocument(song, state.currentLyrics);

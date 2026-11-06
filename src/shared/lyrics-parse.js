@@ -1,6 +1,25 @@
 // 歌词解析入口:通用解析器 + 无时间戳纯文本歌词的静态降级。
 // 无 Electron 依赖,可被 node --test 直接测试。
 import universalLyricParser from './universal-lyric-parser.js';
+import { isCreditLine } from './lyrics-credits.js';
+
+// 剔除制作信息行；翻译本身若是 credits（例如同一时间戳的 "Lyrics by …"）也一并清掉，
+// 但不能因为翻译是制作信息就把原文歌词整行删掉。
+function stripCreditLines(lines) {
+  const cleaned = [];
+
+  for (const line of lines) {
+    if (isCreditLine(line.text)) continue;
+    if (!line.text && line.translation && isCreditLine(line.translation)) continue;
+    if (line.translation && isCreditLine(line.translation)) {
+      line.translation = undefined;
+    }
+    if (!line.text && !line.translation) continue;
+    cleaned.push(line);
+  }
+
+  return cleaned;
+}
 
 export function parseLyricsText(lrcText) {
   if (!lrcText || typeof lrcText !== 'string') {
@@ -8,13 +27,18 @@ export function parseLyricsText(lrcText) {
   }
 
   const parsed = universalLyricParser.parse(lrcText);
-  if (parsed.lines.length > 0) return parsed;
+  // 只要解析出过带时间戳的行，就不再走静态降级：
+  // 即使这些行全是 credits，也应该返回空歌词，而不是把带时间戳的 credits 当正文。
+  if (parsed.lines.length > 0) {
+    return { metadata: parsed.metadata, lines: stripCreditLines(parsed.lines) };
+  }
 
   // 无时间戳的纯文本歌词:降级为静态行(渲染时不可点击跳转)
   const staticLines = lrcText
     .split(/\r?\n/)
     .map((line) => line.trim())
     .filter((line) => line.length > 0 && !/^\[.*?\]$/.test(line))
+    .filter((line) => !isCreditLine(line))
     .map((text) => ({ time: 0, text, isStatic: true }));
 
   return { metadata: parsed.metadata, lines: staticLines };

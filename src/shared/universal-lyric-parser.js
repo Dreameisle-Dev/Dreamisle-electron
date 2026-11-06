@@ -1,12 +1,12 @@
 // 通用 LRC 歌词解析器(ESM 化版本,解析逻辑与 universal-lyric-parser.js 一致)
+import { isCreditLine } from './lyrics-credits.js';
+
 class universalLyricParser {
   static TIME_REGEX = /\[(\d{1,2}):(\d{2})(?:[.:](\d{1,3}))?\]/g;
   // 逐字（增强型）LRC 的词级时间戳 <mm:ss.xxx>。它跟在每个字/词前面，
   // 不属于歌词文本，必须在取文本时剥掉 —— 否则会原样显示在歌词里。
   static WORD_TIME_REGEX = /<\d{1,3}:\d{2}(?:[.:]\d{1,3})?>/g;
   static META_TAG_REGEX = /^\[(ti|ar|al|by|offset):(.*)\]$/i;
-  static META_TEXT_REGEX =
-    /^(作词|作曲|编曲|制作|混音|吉他|贝斯|鼓|键盘|录音|母带|和声|监制|企划|发行|Lyricist|Composer|Arranger|Producer|Vocals|Mixed|Mastered)\s*[:：]/i;
   static BRACKET_REGEX = /^(.+?)\s*[（\(\[\{【]([\p{L}\p{N}\s\p{P}]+?)[）\)\]\}】]$/u;
   // 汉字 / 假名 / 谚文：用来判断括号内外是不是「换了文字体系」
   static HAN_KANA_HANGUL_REGEX = /[\p{sc=Han}\p{sc=Hiragana}\p{sc=Katakana}\p{sc=Hangul}]/u;
@@ -92,8 +92,27 @@ class universalLyricParser {
         text: splitResult.original,
         translation: splitResult.translation,
       };
+      const currentIsCredit =
+        isCreditLine(currentItem.text) || isCreditLine(currentItem.translation);
 
-      const existingIndex = result.findIndex((r) => Math.abs(r.time - time) <= timeToleranceMs);
+      // 制作信息不参与同时间戳的双语合并。否则「[00:00]作词：张三」会把同一时间戳
+      // 的第一句歌词当成 translation 吃掉，随后整行又被上层当作 credits 删除，
+      // 第一句歌词就跟着丢了。
+      if (currentIsCredit) {
+        result.push(currentItem);
+        continue;
+      }
+
+      // 只在同时间戳的**非制作信息**行里找可合并的原行；从后往前找，
+      // 后面的那行才是当前原文（制作信息可能夹在中间）。
+      let existingIndex = -1;
+      for (let i = result.length - 1; i >= 0; i--) {
+        const candidate = result[i];
+        if (Math.abs(candidate.time - time) <= timeToleranceMs && !isCreditLine(candidate.text)) {
+          existingIndex = i;
+          break;
+        }
+      }
 
       if (existingIndex !== -1) {
         const existing = result[existingIndex];
@@ -140,7 +159,7 @@ class universalLyricParser {
     let matchedLines = 0;
 
     for (const text of texts) {
-      if (!text || text === '//' || this.META_TEXT_REGEX.test(text)) continue;
+      if (!text || text === '//' || isCreditLine(text)) continue;
       validLines++;
 
       if (
@@ -162,7 +181,7 @@ class universalLyricParser {
   static _splitInline(text, enableSpaceSplit) {
     if (!text) return { original: '' };
 
-    if (this.META_TEXT_REGEX.test(text)) {
+    if (isCreditLine(text)) {
       return { original: text };
     }
 
