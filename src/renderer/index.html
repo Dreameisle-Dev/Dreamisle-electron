@@ -146,7 +146,7 @@
 
         <img id="barThumb" class="bar-thumb" src="" alt="" />
         <div class="bar-title" id="barTitle">Dreamisle</div>
-        <div class="bar-artist" id="barArtist" data-i18n="app.waitingForMusic">
+        <div class="bar-artist" id="barArtist">
           Waiting for music...
         </div>
         <!-- 专辑名：只有小窗模式显示（主窗口的传输条放不下第三行） -->
@@ -560,366 +560,516 @@
             data-i18n-title="common.close"
             title="关闭"
           >
-            <svg width="12" height="12" viewBox="0 0 10 10">
-              <line x1="1" y1="1" x2="9" y2="9" stroke="currentColor" stroke-width="1.2" />
-              <line x1="9" y1="1" x2="1" y2="9" stroke="currentColor" stroke-width="1.2" />
+            <svg width="12" height="12" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.2">
+              <line x1="1" y1="1" x2="9" y2="9" />
+              <line x1="9" y1="1" x2="1" y2="9" />
             </svg>
           </button>
         </div>
 
         <div class="settings-body">
-          <nav class="settings-nav">
-            <button class="settings-nav-item active" data-section="appearance">
-              <svg
-                width="14"
-                height="14"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="1.5"
-                stroke-linecap="round"
-              >
-                <circle cx="12" cy="12" r="9"></circle>
-                <path d="M12 3v18"></path>
-                <path d="M12 12a9 9 0 0 0 0-9z" fill="currentColor" stroke="none"></path>
+          <nav class="settings-nav" aria-label="设置分区">
+            <button class="settings-nav-item active" type="button" data-section="general" aria-current="page">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round">
+                <path d="M4 7h10M18 7h2M4 12h3M11 12h9M4 17h8M16 17h4"></path>
+                <circle cx="16" cy="7" r="2"></circle>
+                <circle cx="9" cy="12" r="2"></circle>
+                <circle cx="14" cy="17" r="2"></circle>
               </svg>
-              <span data-i18n="settings.appearance">外观</span>
+              <span data-i18n="settings.general">通用</span>
             </button>
-            <button class="settings-nav-item" data-section="language">
-              <svg
-                width="14"
-                height="14"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="1.5"
-              >
-                <circle cx="12" cy="12" r="9"></circle>
-                <path d="M3 12h18"></path>
-                <path d="M12 3a15 15 0 0 1 0 18a15 15 0 0 1 0-18"></path>
+
+            <button class="settings-nav-item" type="button" data-section="library">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round">
+                <path d="M3 7a2 2 0 0 1 2-2h4l2 3h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
               </svg>
-              <span data-i18n="settings.language">语言</span>
+              <span data-i18n="settings.library">音乐库</span>
+              <span
+                class="settings-nav-badge"
+                id="settingsLibraryBadge"
+                data-i18n-title="settings.folderUnavailableBadge"
+                hidden
+              ></span>
             </button>
-            <button class="settings-nav-item" data-section="folders">
-              <svg
-                width="14"
-                height="14"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="1.5"
-              >
-                <path
-                  d="M3 7a2 2 0 0 1 2-2h4l2 3h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"
-                ></path>
+
+            <button class="settings-nav-item" type="button" data-section="lyrics">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round">
+                <path d="M9 18V6l10-2v12"></path>
+                <circle cx="6" cy="18" r="3"></circle>
+                <circle cx="16" cy="16" r="3"></circle>
               </svg>
-              <span data-i18n="settings.folders">音乐文件夹</span>
+              <span data-i18n="settings.lyrics">歌词</span>
             </button>
-            <button class="settings-nav-item" data-section="equalizer">
-              <svg
-                width="14"
-                height="14"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="1.5"
-                stroke-linecap="round"
-              >
-                <path d="M6 4v16"></path>
-                <path d="M12 4v16"></path>
-                <path d="M18 4v16"></path>
-                <path d="M3 9h6"></path>
-                <path d="M9 15h6"></path>
-                <path d="M15 8h6"></path>
+
+            <button class="settings-nav-item" type="button" data-section="equalizer">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round">
+                <path d="M6 4v16M12 4v16M18 4v16"></path>
+                <path d="M3 9h6M9 15h6M15 8h6"></path>
               </svg>
               <span data-i18n="settings.equalizer">均衡器</span>
             </button>
           </nav>
+
           <div class="settings-content">
-            <section class="settings-panel active" data-panel="appearance">
-              <p class="settings-desc" data-i18n="settings.themeDesc">
-                跟随系统时会随 Windows 的浅色/深色模式自动切换；也可以固定为浅色或暗色。
-              </p>
-              <div class="theme-seg" id="themeSeg">
-                <button type="button" data-mode="system" data-i18n="settings.themeSystem">
-                  跟随系统
-                </button>
-                <button type="button" data-mode="light" data-i18n="settings.themeLight">
-                  浅色
-                </button>
-                <button type="button" data-mode="dark" data-i18n="settings.themeDark">暗色</button>
+            <section class="settings-panel active" data-panel="general">
+              <div class="settings-page-head">
+                <div class="settings-eyebrow" data-i18n="settings.generalEyebrow">偏好设置</div>
+                <h2 class="settings-page-title" data-i18n="settings.general">通用</h2>
               </div>
 
-              <!-- 桌面歌词样式：同属外观设置，和主题放在同一个分区里 -->
-              <p class="settings-group-title" data-i18n="settings.lyricsStyle">桌面歌词</p>
-              <p class="settings-desc" data-i18n="settings.lyricsStyleDesc">
-                屏幕上的浮动歌词；快捷键可在帮助中查看。
-              </p>
-              <div class="style-label-row">
-                <span data-i18n="settings.desktopLyricsClickThrough">鼠标穿透</span>
-                <button
-                  type="button"
-                  class="eq-switch"
-                  id="desktopLyricsClickThroughSwitch"
-                  role="switch"
-                  aria-checked="true"
-                  data-i18n-title="settings.desktopLyricsClickThrough"
-                  title="鼠标穿透"
-                >
-                  <span class="eq-switch-knob"></span>
-                </button>
-              </div>
-              <p class="settings-desc" data-i18n="settings.desktopLyricsClickThroughDesc">
-                开启后点击会穿过歌词窗；关闭后才能拖动调整位置。
-              </p>
-              <div class="style-control">
-                <div class="style-label-row">
-                  <span data-i18n="settings.desktopLyricsLines">显示行数</span>
+              <div class="settings-group">
+                <div class="settings-group-head">
+                  <span class="settings-group-label" data-i18n="settings.appearance">外观</span>
+                  <span class="settings-group-note" data-i18n="settings.immediate">即时生效</span>
                 </div>
-                <div class="theme-seg" id="desktopLyricsLinesSeg">
-                  <button type="button" data-lines="1" data-i18n="settings.desktopLyricsSingle">
-                    单行
-                  </button>
-                  <button type="button" data-lines="2" data-i18n="settings.desktopLyricsDouble">
-                    双行
-                  </button>
-                </div>
-              </div>
-              <div class="style-control">
-                <div class="style-label-row">
-                  <span data-i18n="settings.bgOpacity">背景不透明度</span>
-                  <span class="style-value" id="bgOpacityVal">45%</span>
-                </div>
-                <input type="range" id="bgOpacity" min="0" max="100" step="1" />
-              </div>
-              <div class="style-control">
-                <div class="style-label-row">
-                  <span data-i18n="settings.textOpacity">字体不透明度</span>
-                  <span class="style-value" id="textOpacityVal">100%</span>
-                </div>
-                <input type="range" id="textOpacity" min="0" max="100" step="1" />
-              </div>
-              <div class="style-control">
-                <div class="style-label-row">
-                  <span data-i18n="settings.fontFamily">自定义字体</span>
-                </div>
-                <div class="font-select" id="fontSelectWrap">
-                  <button type="button" class="font-select-btn" id="fontSelectBtn">
-                    <span id="fontSelectValue">默认字体</span>
-                    <svg
-                      width="10"
-                      height="6"
-                      viewBox="0 0 10 6"
-                      fill="none"
-                      stroke="currentColor"
-                      stroke-width="1.2"
-                    >
-                      <path d="M1 1l4 4 4-4"></path>
-                    </svg>
-                  </button>
-                  <div class="font-select-list" id="fontSelectList">
-                    <div class="font-select-search">
-                      <input
-                        type="text"
-                        id="fontSearch"
-                        data-i18n-placeholder="settings.fontSearch"
-                        placeholder="搜索字体…"
-                      />
+                <div class="settings-row">
+                  <div class="settings-row-copy">
+                    <div class="settings-row-title" data-i18n="settings.theme">主题</div>
+                    <div class="settings-row-desc" data-i18n="settings.themeDesc">
+                      跟随系统时会随 Windows 的浅色/深色模式自动切换。
                     </div>
-                    <ul class="font-select-options" id="fontOptions"></ul>
+                  </div>
+                  <div class="settings-row-control">
+                    <div class="theme-seg" id="themeSeg" role="group" aria-label="主题">
+                      <button type="button" data-mode="system" data-i18n="settings.themeSystem">跟随系统</button>
+                      <button type="button" data-mode="light" data-i18n="settings.themeLight">浅色</button>
+                      <button type="button" data-mode="dark" data-i18n="settings.themeDark">暗色</button>
+                    </div>
                   </div>
                 </div>
               </div>
-              <div class="style-control">
-                <div class="style-label-row">
-                  <span data-i18n="settings.textColor">字体颜色</span>
-                  <span class="style-row-actions">
-                    <input type="color" id="textColor" value="#ffffff" />
+
+              <div class="settings-group">
+                <div class="settings-group-head">
+                  <span class="settings-group-label" data-i18n="settings.language">语言</span>
+                </div>
+                <div class="settings-row">
+                  <div class="settings-row-copy">
+                    <div class="settings-row-title" data-i18n="settings.uiLanguage">界面语言</div>
+                    <div class="settings-row-desc" data-i18n="settings.languageDesc">
+                      切换后界面和托盘菜单立即更新，不需要重启。
+                    </div>
+                  </div>
+                  <div class="settings-row-control">
+                    <div class="lang-select" id="langSelectWrap">
+                      <button type="button" class="lang-select-btn" id="langSelectBtn">
+                        <span id="langSelectValue">中文</span>
+                        <svg width="10" height="6" viewBox="0 0 10 6" fill="none" stroke="currentColor" stroke-width="1.2">
+                          <path d="M1 1l4 4 4-4"></path>
+                        </svg>
+                      </button>
+                      <ul class="lang-select-list" id="langSelectList">
+                        <li class="lang-select-option" data-value="zh-CN">中文</li>
+                        <li class="lang-select-option" data-value="en">English</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="settings-group">
+                <div class="settings-group-head">
+                  <span class="settings-group-label" data-i18n="settings.performance">性能</span>
+                </div>
+                <div class="settings-row">
+                  <div class="settings-row-copy">
+                    <div class="settings-row-title" data-i18n="settings.performanceMode">性能模式</div>
+                    <div class="settings-row-desc" data-i18n="settings.performanceModeDesc">
+                      关闭背景模糊和氛围光、唱片、频谱动画，适合集成显卡或较旧设备。
+                    </div>
+                  </div>
+                  <div class="settings-row-control">
                     <button
-                      class="settings-reset-btn"
-                      id="btnResetStyle"
-                      data-i18n="settings.reset"
-                    >
-                      重置默认
-                    </button>
-                  </span>
+                      class="settings-switch"
+                      id="performanceModeSwitch"
+                      type="button"
+                      role="switch"
+                      aria-checked="false"
+                      data-i18n-title="settings.performanceMode"
+                      aria-label="性能模式"
+                    ></button>
+                  </div>
                 </div>
               </div>
+            </section>
 
-              <!-- 任务栏歌词：Windows 专属；其他平台由 .windows-only 隐藏 -->
-              <div class="windows-only">
-                <p class="settings-group-title" data-i18n="settings.taskbarLyrics">任务栏歌词</p>
-                <p class="settings-desc" data-i18n="settings.taskbarLyricsDesc">
-                  嵌在任务栏空档里的歌词条；字体和颜色与桌面歌词互不影响。按 Ctrl+Alt+T
-                  或通过托盘菜单开关。
+            <section class="settings-panel" data-panel="library">
+              <div class="settings-page-head">
+                <div class="settings-eyebrow" data-i18n="settings.libraryEyebrow">曲库</div>
+                <h2 class="settings-page-title" data-i18n="settings.library">音乐库</h2>
+                <p class="settings-page-lede" data-i18n="settings.libraryDesc">
+                  添加或移除音乐文件夹；移除不会删除磁盘上的文件。
                 </p>
+              </div>
 
-                <div class="style-control">
-                  <div class="style-label-row">
-                    <span data-i18n="settings.taskbarFont">字体</span>
-                  </div>
-                  <div class="font-select" id="taskbarFontSelectWrap">
-                    <button type="button" class="font-select-btn" id="taskbarFontSelectBtn">
-                      <span id="taskbarFontSelectValue">默认字体</span>
-                      <svg
-                        width="10"
-                        height="6"
-                        viewBox="0 0 10 6"
-                        fill="none"
-                        stroke="currentColor"
-                        stroke-width="1.2"
-                      >
-                        <path d="M1 1l4 4 4-4"></path>
-                      </svg>
-                    </button>
-                    <div class="font-select-list" id="taskbarFontSelectList">
-                      <div class="font-select-search">
-                        <input
-                          type="text"
-                          id="taskbarFontSearch"
-                          data-i18n-placeholder="settings.fontSearch"
-                          placeholder="搜索字体…"
-                        />
-                      </div>
-                      <ul class="font-select-options" id="taskbarFontOptions"></ul>
-                    </div>
-                  </div>
+              <div class="settings-group">
+                <div class="settings-group-head">
+                  <span class="settings-group-label" data-i18n="folders.section">文件夹</span>
+                  <span class="settings-group-note" id="folderSummary"></span>
+                </div>
+                <ul class="folder-list" id="folderList"></ul>
+                <div class="folder-actions">
+                  <button class="settings-add-btn" id="btnAddFolder" data-i18n="settings.addFolder">
+                    添加文件夹
+                  </button>
+                  <button class="settings-rescan-btn" id="btnRescanLibrary" data-i18n="settings.rescan">
+                    重新扫描
+                  </button>
+                </div>
+              </div>
+            </section>
+
+            <section class="settings-panel" data-panel="lyrics">
+              <div class="settings-page-head">
+                <div class="settings-eyebrow" data-i18n="settings.lyricsEyebrow">播放体验</div>
+                <h2 class="settings-page-title" data-i18n="settings.lyrics">歌词</h2>
+                <p class="settings-page-lede" data-i18n="settings.lyricsDesc">
+                  桌面歌词、任务栏歌词和菜单栏歌词。开关和样式都集中在这里，不用记快捷键。
+                </p>
+              </div>
+
+              <div class="settings-group">
+                <div class="settings-group-head">
+                  <span class="settings-group-label" data-i18n="settings.lyricsStyle">桌面歌词</span>
+                  <span class="settings-group-note" data-i18n="settings.preview">样式预览</span>
                 </div>
 
-                <div class="style-control">
-                  <div class="style-label-row">
-                    <span data-i18n="settings.taskbarWeight">字体粗细</span>
+                <div class="settings-preview" id="desktopLyricsPreview">
+                  <img class="settings-preview-cover" id="desktopPreviewCover" alt="" hidden />
+                  <div class="settings-preview-top">
+                    <span data-i18n="settings.preview">样式预览</span>
+                    <span
+                      class="settings-preview-status"
+                      id="desktopPreviewStatus"
+                      data-i18n="settings.previewExample"
+                    >示例</span>
                   </div>
-                  <div class="theme-seg" id="taskbarWeightSeg">
-                    <button type="button" data-weight="400" data-i18n="settings.weightRegular">
-                      常规
-                    </button>
-                    <button type="button" data-weight="500" data-i18n="settings.weightMedium">
-                      中等
-                    </button>
-                    <button type="button" data-weight="600" data-i18n="settings.weightSemibold">
-                      半粗
-                    </button>
-                    <button type="button" data-weight="700" data-i18n="settings.weightBold">
-                      粗体
-                    </button>
-                  </div>
-                </div>
-
-                <div class="style-control">
-                  <div class="style-label-row">
-                    <span data-i18n="settings.taskbarColor">字体颜色</span>
-                    <span class="style-row-actions">
-                      <label class="taskbar-auto-color">
-                        <input type="checkbox" id="taskbarAutoColor" checked />
-                        <span data-i18n="settings.taskbarColorAuto">跟随任务栏</span>
-                      </label>
-                      <input type="color" id="taskbarTextColor" value="#ffffff" disabled />
+                  <div class="settings-lyric-capsule" id="desktopLyricsCapsule">
+                    <span class="settings-preview-line" id="desktopPreviewLine" data-i18n="settings.previewLine1">
+                      我情愿这是幻觉
+                    </span>
+                    <span class="settings-preview-next" id="desktopPreviewNext" data-i18n="settings.previewLine2">
+                      也不愿是种告别
                     </span>
                   </div>
+                  <div class="settings-preview-caption" data-i18n="settings.previewCaption">
+                    当前行清晰，下一行轻微变虚；远处逐行淡化。
+                  </div>
                 </div>
+
+                <div class="settings-row">
+                  <div class="settings-row-copy">
+                    <div class="settings-row-title" data-i18n="settings.displayDesktopLyrics">显示桌面歌词</div>
+                    <div class="settings-row-desc" data-i18n="settings.displayDesktopLyricsDesc">
+                      也可以用快捷键随时开关。
+                    </div>
+                  </div>
+                  <div class="settings-row-control">
+                    <button
+                      class="settings-switch"
+                      id="desktopLyricsEnabledSwitch"
+                      type="button"
+                      role="switch"
+                      aria-checked="false"
+                      data-i18n-title="settings.displayDesktopLyrics"
+                      aria-label="显示桌面歌词"
+                    ></button>
+                  </div>
+                </div>
+
+                <div class="settings-row">
+                  <div class="settings-row-copy">
+                    <div class="settings-row-title" data-i18n="settings.desktopLyricsLines">显示行数</div>
+                    <div class="settings-row-desc" data-i18n="settings.desktopLyricsLinesDesc">
+                      双行时第二行优先显示翻译，没有翻译时显示下一句。
+                    </div>
+                  </div>
+                  <div class="settings-row-control">
+                    <div class="theme-seg" id="desktopLyricsLinesSeg" role="group" aria-label="显示行数">
+                      <button type="button" data-lines="1" data-i18n="settings.desktopLyricsSingle">单行</button>
+                      <button type="button" data-lines="2" data-i18n="settings.desktopLyricsDouble">双行</button>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="settings-row">
+                  <div class="settings-row-copy">
+                    <div class="settings-row-title" data-i18n="settings.desktopLyricsClickThrough">鼠标穿透</div>
+                    <div class="settings-row-desc" data-i18n="settings.desktopLyricsClickThroughDesc">
+                      开启后点击会穿过歌词窗；关闭后才能拖动调整位置。
+                    </div>
+                  </div>
+                  <div class="settings-row-control">
+                    <button
+                      class="settings-switch active"
+                      id="desktopLyricsClickThroughSwitch"
+                      type="button"
+                      role="switch"
+                      aria-checked="true"
+                      data-i18n-title="settings.desktopLyricsClickThrough"
+                      aria-label="鼠标穿透"
+                    ></button>
+                  </div>
+                </div>
+
+                <details class="settings-details" id="desktopLyricsStyleDetails">
+                  <summary>
+                    <span data-i18n="settings.moreStyle">更多样式</span>
+                    <span class="settings-summary-value" id="desktopLyricsStyleSummary"></span>
+                    <svg width="10" height="6" viewBox="0 0 10 6" fill="none" stroke="currentColor" stroke-width="1.4">
+                      <path d="M1 1l4 4 4-4"></path>
+                    </svg>
+                  </summary>
+                  <div class="settings-details-body">
+                    <div class="style-control">
+                      <div class="style-label-row">
+                        <span data-i18n="settings.bgOpacity">背景不透明度</span>
+                        <span class="style-value" id="bgOpacityVal">45%</span>
+                      </div>
+                      <input type="range" id="bgOpacity" min="0" max="100" step="1" />
+                    </div>
+                    <div class="style-control">
+                      <div class="style-label-row">
+                        <span data-i18n="settings.textOpacity">字体不透明度</span>
+                        <span class="style-value" id="textOpacityVal">100%</span>
+                      </div>
+                      <input type="range" id="textOpacity" min="0" max="100" step="1" />
+                    </div>
+                    <div class="style-control">
+                      <div class="style-label-row">
+                        <span data-i18n="settings.fontFamily">自定义字体</span>
+                      </div>
+                      <div class="font-select" id="fontSelectWrap">
+                        <button type="button" class="font-select-btn" id="fontSelectBtn">
+                          <span id="fontSelectValue">默认字体</span>
+                          <svg width="10" height="6" viewBox="0 0 10 6" fill="none" stroke="currentColor" stroke-width="1.2">
+                            <path d="M1 1l4 4 4-4"></path>
+                          </svg>
+                        </button>
+                        <div class="font-select-list" id="fontSelectList">
+                          <div class="font-select-search">
+                            <input
+                              type="text"
+                              id="fontSearch"
+                              data-i18n-placeholder="settings.fontSearch"
+                              placeholder="搜索字体…"
+                            />
+                          </div>
+                          <ul class="font-select-options" id="fontOptions"></ul>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="style-control">
+                      <div class="style-label-row">
+                        <span data-i18n="settings.textColor">字体颜色</span>
+                        <span class="style-row-actions">
+                          <input type="color" id="textColor" value="#ffffff" />
+                          <button class="settings-reset-btn" id="btnResetStyle" data-i18n="settings.reset">
+                            重置默认
+                          </button>
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </details>
               </div>
 
-              <!-- 性能：弱 GPU 设备可关闭持续重绘的视觉效果 -->
-              <p class="settings-group-title" data-i18n="settings.performance">性能</p>
-              <div class="style-label-row">
-                <span data-i18n="settings.performanceMode">性能模式</span>
-                <button
-                  type="button"
-                  class="eq-switch"
-                  id="performanceModeSwitch"
-                  role="switch"
-                  aria-checked="false"
-                  data-i18n-title="settings.performanceMode"
-                  title="性能模式"
+              <div class="settings-group windows-only">
+                <div class="settings-group-head">
+                  <span class="settings-group-label" data-i18n="settings.taskbarLyrics">任务栏歌词</span>
+                  <span class="settings-group-note">Windows</span>
+                </div>
+
+                <div
+                  class="settings-taskbar-preview"
+                  id="taskbarLyricsPreview"
+                  role="img"
+                  aria-label="任务栏歌词预览"
                 >
-                  <span class="eq-switch-knob"></span>
-                </button>
+                  <span class="settings-tb-cover">
+                    <img id="taskbarPreviewCover" alt="" hidden />
+                  </span>
+                  <span class="settings-tb-lines">
+                    <span class="settings-tb-main" id="taskbarPreviewLine" data-i18n="settings.previewLine1">
+                      我情愿这是幻觉
+                    </span>
+                    <span class="settings-tb-sub" id="taskbarPreviewNext" data-i18n="settings.previewLine2">
+                      也不愿是种告别
+                    </span>
+                  </span>
+                  <span class="settings-tb-time">19:55</span>
+                </div>
+
+                <div class="settings-row">
+                  <div class="settings-row-copy">
+                    <div class="settings-row-title" data-i18n="settings.displayTaskbarLyrics">显示任务栏歌词</div>
+                    <div class="settings-row-desc" data-i18n="settings.displayTaskbarLyricsDesc">
+                      按 Ctrl+Alt+T 或通过托盘菜单也可以开关。
+                    </div>
+                  </div>
+                  <div class="settings-row-control">
+                    <button
+                      class="settings-switch"
+                      id="taskbarLyricsEnabledSwitch"
+                      type="button"
+                      role="switch"
+                      aria-checked="false"
+                      data-i18n-title="settings.displayTaskbarLyrics"
+                      aria-label="显示任务栏歌词"
+                    ></button>
+                  </div>
+                </div>
+
+                <div class="settings-row">
+                  <div class="settings-row-copy">
+                    <div class="settings-row-title" data-i18n="settings.taskbarColorAuto">跟随任务栏</div>
+                    <div class="settings-row-desc" data-i18n="settings.taskbarColorAutoDesc">
+                      浅色任务栏用深色文字，深色任务栏用浅色文字。
+                    </div>
+                  </div>
+                  <div class="settings-row-control">
+                    <input type="checkbox" id="taskbarAutoColor" checked class="settings-hidden-checkbox" />
+                    <button
+                      class="settings-switch"
+                      id="taskbarAutoColorSwitch"
+                      type="button"
+                      role="switch"
+                      aria-checked="true"
+                      data-i18n-title="settings.taskbarColorAuto"
+                      aria-label="跟随任务栏"
+                    ></button>
+                  </div>
+                </div>
+
+                <p class="settings-status-warning" id="taskbarLyricsStatus" hidden data-i18n="settings.taskbarLyricsNotRunning">
+                  本次运行未能启动任务栏歌词，请检查任务栏或查看诊断日志。
+                </p>
+
+                <details class="settings-details" id="taskbarLyricsStyleDetails">
+                  <summary>
+                    <span data-i18n="settings.moreStyle">更多样式</span>
+                    <span class="settings-summary-value" id="taskbarLyricsStyleSummary"></span>
+                    <svg width="10" height="6" viewBox="0 0 10 6" fill="none" stroke="currentColor" stroke-width="1.4">
+                      <path d="M1 1l4 4 4-4"></path>
+                    </svg>
+                  </summary>
+                  <div class="settings-details-body">
+                    <div class="style-control">
+                      <div class="style-label-row">
+                        <span data-i18n="settings.taskbarFont">字体</span>
+                      </div>
+                      <div class="font-select" id="taskbarFontSelectWrap">
+                        <button type="button" class="font-select-btn" id="taskbarFontSelectBtn">
+                          <span id="taskbarFontSelectValue">默认字体</span>
+                          <svg width="10" height="6" viewBox="0 0 10 6" fill="none" stroke="currentColor" stroke-width="1.2">
+                            <path d="M1 1l4 4 4-4"></path>
+                          </svg>
+                        </button>
+                        <div class="font-select-list" id="taskbarFontSelectList">
+                          <div class="font-select-search">
+                            <input
+                              type="text"
+                              id="taskbarFontSearch"
+                              data-i18n-placeholder="settings.fontSearch"
+                              placeholder="搜索字体…"
+                            />
+                          </div>
+                          <ul class="font-select-options" id="taskbarFontOptions"></ul>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="style-control">
+                      <div class="style-label-row">
+                        <span data-i18n="settings.taskbarWeight">字体粗细</span>
+                      </div>
+                      <div class="theme-seg" id="taskbarWeightSeg" role="group" aria-label="字体粗细">
+                        <button type="button" data-weight="400" data-i18n="settings.weightRegular">常规</button>
+                        <button type="button" data-weight="500" data-i18n="settings.weightMedium">中等</button>
+                        <button type="button" data-weight="600" data-i18n="settings.weightSemibold">半粗</button>
+                        <button type="button" data-weight="700" data-i18n="settings.weightBold">粗体</button>
+                      </div>
+                    </div>
+                    <div class="style-control">
+                      <div class="style-label-row">
+                        <span data-i18n="settings.taskbarColor">字体颜色</span>
+                      </div>
+                      <input type="color" id="taskbarTextColor" value="#ffffff" disabled />
+                    </div>
+                  </div>
+                </details>
               </div>
-              <p class="settings-desc" data-i18n="settings.performanceModeDesc">
-                关闭背景模糊和氛围光、唱片、频谱动画，适合集成显卡或较旧的设备；可随时关闭。
-              </p>
-            </section>
-            <section class="settings-panel" data-panel="language">
-              <p class="settings-desc" data-i18n="settings.languageDesc">
-                切换后界面和托盘菜单立即更新，不需要重启。
-              </p>
-              <div class="lang-select" id="langSelectWrap">
-                <button type="button" class="lang-select-btn" id="langSelectBtn">
-                  <span id="langSelectValue">中文</span>
-                  <svg
-                    width="10"
-                    height="6"
-                    viewBox="0 0 10 6"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="1.2"
-                  >
-                    <path d="M1 1l4 4 4-4"></path>
-                  </svg>
-                </button>
-                <ul class="lang-select-list" id="langSelectList">
-                  <li class="lang-select-option" data-value="zh-CN">中文</li>
-                  <li class="lang-select-option" data-value="en">English</li>
-                </ul>
+
+              <div class="settings-group macos-only">
+                <div class="settings-group-head">
+                  <span class="settings-group-label" data-i18n="settings.menubarLyrics">菜单栏歌词</span>
+                  <span class="settings-group-note">macOS</span>
+                </div>
+                <div class="settings-row">
+                  <div class="settings-row-copy">
+                    <div class="settings-row-title" data-i18n="settings.displayMenubarLyrics">显示菜单栏歌词</div>
+                    <div class="settings-row-desc" data-i18n="settings.displayMenubarLyricsDesc">
+                      文字样式由系统菜单栏控制。
+                    </div>
+                  </div>
+                  <div class="settings-row-control">
+                    <button
+                      class="settings-switch"
+                      id="menubarLyricsEnabledSwitch"
+                      type="button"
+                      role="switch"
+                      aria-checked="false"
+                      data-i18n-title="settings.displayMenubarLyrics"
+                      aria-label="显示菜单栏歌词"
+                    ></button>
+                  </div>
+                </div>
               </div>
             </section>
-            <section class="settings-panel" data-panel="folders">
-              <p class="settings-desc" data-i18n="settings.foldersDesc">
-                可以添加多个文件夹，歌曲会合并显示；移除文件夹不会删除磁盘上的音乐文件。
-              </p>
-              <ul class="folder-list" id="folderList"></ul>
-              <div class="folder-actions">
-                <button class="settings-add-btn" id="btnAddFolder" data-i18n="settings.addFolder">
-                  添加文件夹
-                </button>
-                <button
-                  class="settings-rescan-btn"
-                  id="btnRescanLibrary"
-                  data-i18n="settings.rescan"
-                >
-                  重新扫描
-                </button>
-              </div>
-            </section>
+
             <section class="settings-panel" data-panel="equalizer">
-              <p class="settings-desc" data-i18n="settings.equalizerDesc">
-                开启后所有播放都会经过均衡器；关闭时保持原始音质。
-              </p>
-
-              <div class="style-label-row eq-enable-row">
-                <span data-i18n="settings.eqEnable">启用均衡器</span>
-                <button
-                  type="button"
-                  class="eq-switch"
-                  id="eqEnable"
-                  role="switch"
-                  aria-checked="false"
-                  data-i18n-title="settings.eqEnable"
-                  title="启用均衡器"
-                >
-                  <span class="eq-switch-knob"></span>
-                </button>
+              <div class="settings-page-head">
+                <div class="settings-eyebrow" data-i18n="settings.equalizerEyebrow">声音</div>
+                <h2 class="settings-page-title" data-i18n="settings.equalizer">均衡器</h2>
+                <p class="settings-page-lede" data-i18n="settings.equalizerDesc">
+                  开启后所有播放都会经过均衡器；关闭时保持原始音质。
+                </p>
               </div>
 
-              <div class="eq-presets" id="eqPresets"></div>
-
-              <div class="eq-bank">
-                <div class="eq-scale">
-                  <span>+12</span>
-                  <span>0</span>
-                  <span>−12</span>
+              <div class="settings-group">
+                <div class="style-label-row eq-enable-row">
+                  <span data-i18n="settings.eqEnable">启用均衡器</span>
+                  <button
+                    type="button"
+                    class="eq-switch"
+                    id="eqEnable"
+                    role="switch"
+                    aria-checked="false"
+                    data-i18n-title="settings.eqEnable"
+                    title="启用均衡器"
+                  >
+                    <span class="eq-switch-knob"></span>
+                  </button>
                 </div>
-                <div class="eq-faders" id="eqFaders"></div>
-              </div>
 
-              <div class="eq-foot">
-                <span class="eq-status" id="eqStatus"></span>
-                <button class="settings-reset-btn" id="eqReset" data-i18n="settings.eqReset">
-                  重置为平直
-                </button>
+                <div class="eq-presets" id="eqPresets"></div>
+
+                <div class="eq-bank">
+                  <div class="eq-scale">
+                    <span>+12</span>
+                    <span>0</span>
+                    <span>−12</span>
+                  </div>
+                  <div class="eq-faders" id="eqFaders"></div>
+                </div>
+
+                <div class="eq-foot">
+                  <span class="eq-status" id="eqStatus"></span>
+                  <button class="settings-reset-btn" id="eqReset" data-i18n="settings.eqReset">
+                    重置为平直
+                  </button>
+                </div>
+                <p class="eq-preamp" id="eqPreamp"></p>
               </div>
-              <p class="eq-preamp" id="eqPreamp"></p>
             </section>
           </div>
         </div>

@@ -76,7 +76,28 @@ export const taskbarFontSearchInput = document.getElementById('taskbarFontSearch
 export const taskbarFontOptions = document.getElementById('taskbarFontOptions');
 export const taskbarWeightSeg = document.getElementById('taskbarWeightSeg');
 export const taskbarAutoColor = document.getElementById('taskbarAutoColor');
+export const taskbarAutoColorSwitch = document.getElementById('taskbarAutoColorSwitch');
 export const taskbarTextColor = document.getElementById('taskbarTextColor');
+
+// 新设置页：歌词开关 / 预览 / 导航徽标 / 文件夹摘要
+export const settingsLibraryBadge = document.getElementById('settingsLibraryBadge');
+export const desktopLyricsEnabledSwitch = document.getElementById('desktopLyricsEnabledSwitch');
+export const taskbarLyricsEnabledSwitch = document.getElementById('taskbarLyricsEnabledSwitch');
+export const menubarLyricsEnabledSwitch = document.getElementById('menubarLyricsEnabledSwitch');
+export const taskbarLyricsStatus = document.getElementById('taskbarLyricsStatus');
+export const folderSummaryEl = document.getElementById('folderSummary');
+export const desktopLyricsPreview = document.getElementById('desktopLyricsPreview');
+export const desktopLyricsCapsule = document.getElementById('desktopLyricsCapsule');
+export const desktopPreviewLine = document.getElementById('desktopPreviewLine');
+export const desktopPreviewNext = document.getElementById('desktopPreviewNext');
+export const desktopPreviewCover = document.getElementById('desktopPreviewCover');
+export const desktopPreviewStatus = document.getElementById('desktopPreviewStatus');
+export const desktopLyricsStyleSummary = document.getElementById('desktopLyricsStyleSummary');
+export const taskbarLyricsPreview = document.getElementById('taskbarLyricsPreview');
+export const taskbarPreviewLine = document.getElementById('taskbarPreviewLine');
+export const taskbarPreviewNext = document.getElementById('taskbarPreviewNext');
+export const taskbarPreviewCover = document.getElementById('taskbarPreviewCover');
+export const taskbarLyricsStyleSummary = document.getElementById('taskbarLyricsStyleSummary');
 
 // 均衡器面板元素（推子与预设胶囊由 equalizer.js 动态生成）
 export const eqEnableSwitch = document.getElementById('eqEnable');

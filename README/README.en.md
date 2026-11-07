@@ -18,9 +18,9 @@ Dreamisle is a local music player built with Electron. It plays local audio file
 - **Playlists**: Create, rename, and delete playlists; add songs via the context menu and drag to reorder; clicking a playlist uses its songs as the play queue.
 - **Folder view**: Builds a folder tree from the configured library roots; a parent folder includes the songs of its subfolders. Clicking a folder uses its entire subtree as the play queue without creating a playlist.
 - **Lyrics**: Prefers an adjacent same-name `.lrc`, then embedded lyrics; supports same-timestamp bilingual lines, `[offset:]`, a translation toggle, click-to-seek, and horizontal scrolling for long lines. Credit lines (lyricist, composer, producer, sponsors, copyright and platform translation notices), along with song title/artist headers, are hidden automatically, leaving only lyrics and translations.
-- **Desktop lyrics**: Always-on-top overlay; adjustable background/text opacity, color, and font; single-line or double-line display (the second line prefers the translation and falls back to the next lyric); optional click-through, which can be disabled to drag the window; toggle with `Ctrl+Alt+L` / `Cmd+Option+L`.
-- **Taskbar lyrics (Windows 10/11)**: Shows cover art and two lyric lines in free taskbar space; font, weight, and color are configurable; toggle with `Ctrl+Alt+T` or the tray menu.
-- **Menu bar lyrics (macOS)**: Shows the current lyric line next to the status item; falls back to title/artist when there are no timed lyrics; long lines are truncated; toggle with `Cmd+Option+T` or the tray menu.
+- **Desktop lyrics**: Always-on-top overlay; adjustable background/text opacity, color, and font; single-line or double-line display (the second line prefers the translation and falls back to the next lyric); optional click-through, which can be disabled to drag the window; toggle with `Ctrl+Alt+L` / `Cmd+Option+L` or from Settings.
+- **Taskbar lyrics (Windows 10/11)**: Shows cover art and two lyric lines in free taskbar space; font, weight, and color are configurable; toggle with `Ctrl+Alt+T`, the tray menu, or Settings.
+- **Menu bar lyrics (macOS)**: Shows the current lyric line next to the status item; falls back to title/artist when there are no timed lyrics; long lines are truncated; toggle with `Cmd+Option+T`, the tray menu, or Settings.
 - **Search and sorting**: Sort by title/artist or shuffle; real-time filtering; an A-Z# index (Chinese sorted by pinyin) in title/artist modes.
 - **Playback statistics**: Hold Left `Shift` for 0.5s; shows quality tiers (Hi-Res / SQ / HQ), full-play/loop counts, total plays, daily average, and a song ranking.
 - **10-band equalizer**: 31 Hz–16 kHz, ±12 dB, 9 presets and an auto preamp; bypassed when disabled.
@@ -50,7 +50,7 @@ This project does not currently publish official binary releases. Installers are
 1. On first launch, add one or more music folders when prompted.
 2. Use the list button in the player bar to open the play queue; right-click a song to add it to the queue or a playlist.
 3. Hold Left `Ctrl` to open playlists and the folder view; hold Left `Alt` to open the play queue.
-4. Settings provide language, theme, lyric style, equalizer, and music folder options.
+4. Settings let you toggle lyrics, switch language/theme/lyric style, and manage the equalizer and music folders.
 
 ## Shortcuts
 

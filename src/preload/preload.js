@@ -30,6 +30,12 @@ contextBridge.exposeInMainWorld('dreamApi', {
   setDesktopLyricsClickThrough: (enabled) =>
     ipcRenderer.invoke('settings:setDesktopLyricsClickThrough', enabled),
   setDesktopLyricsLines: (lines) => ipcRenderer.invoke('settings:setDesktopLyricsLines', lines),
+  setDesktopLyricsEnabled: (enabled) =>
+    ipcRenderer.invoke('settings:setDesktopLyricsEnabled', enabled),
+  setTaskbarLyricsEnabled: (enabled) =>
+    ipcRenderer.invoke('settings:setTaskbarLyricsEnabled', enabled),
+  setMenubarLyricsEnabled: (enabled) =>
+    ipcRenderer.invoke('settings:setMenubarLyricsEnabled', enabled),
   setTaskbarLyricsStyle: (style) => ipcRenderer.invoke('settings:setTaskbarLyricsStyle', style),
   setEqualizer: (eq) => ipcRenderer.invoke('settings:setEqualizer', eq),
   setLyricsTranslation: (visible) => ipcRenderer.invoke('settings:setLyricsTranslation', visible),

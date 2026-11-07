@@ -2,6 +2,7 @@ import { t, setLang, applyLang } from '../../shared/i18n.js';
 import { state } from './state.js';
 import {
   audio,
+  artistEl,
   volumeHud,
   playlistDrawer,
   playlistsDrawer,
@@ -115,6 +116,8 @@ window.addEventListener('DOMContentLoaded', async () => {
   applyPerformanceMode(settings.performanceMode === true);
   setLang(settings.language);
   applyLang();
+  // barArtist 由播放状态驱动，不能再挂 data-i18n；空库文案在这里补
+  if (state.currentIndex === -1) artistEl.innerText = t('app.waitingForMusic');
   volumeHud.innerText = t('hud.volume', { n: Math.round(audio.volume * 100) });
   setLyricsTranslationVisible(settings.lyricsTranslation !== false);
 

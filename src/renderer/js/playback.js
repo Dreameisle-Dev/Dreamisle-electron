@@ -95,6 +95,14 @@ function setTrackInfo(song) {
   albumEl.innerText = song.album || '';
 }
 
+// 切语言后恢复动态曲目信息：barArtist 不再挂 data-i18n，避免被 applyLang 覆盖；
+// 空库则回到当前语言的“等待音乐中”。
+window.addEventListener('dreamisle:language-changed', () => {
+  const song = state.songs[state.currentIndex];
+  if (song) setTrackInfo(song);
+  else artistEl.innerText = t('app.waitingForMusic');
+});
+
 export function initSongInfo(index) {
   if (index < 0 || index >= state.songs.length) return;
   state.currentIndex = index;

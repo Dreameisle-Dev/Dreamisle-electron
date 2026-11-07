@@ -1162,6 +1162,12 @@ export function isTaskbarLyricsEnabled() {
   return process.platform === 'win32' && getTaskbarLyricsSetting();
 }
 
+// 设置页要区分「用户想开」和「本次运行真的在跑」：启动失败时偏好仍是 true，
+// 但 enabled/win 没起来，界面需要提示。
+export function isTaskbarLyricsRunning() {
+  return process.platform === 'win32' && enabled && isWindowAlive(win);
+}
+
 export function setTaskbarLyricsEnabled(value) {
   // 非 Windows 上没有任务栏歌词；不写设置、不弹失败对话框。
   if (process.platform !== 'win32') return false;

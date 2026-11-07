@@ -19,6 +19,8 @@ import {
   setEqualizer,
   getTaskbarLyricsStyle,
   setTaskbarLyricsStyle,
+  getTaskbarLyricsSetting,
+  getMenubarLyricsSetting,
   getPlayQueue,
   setPlayQueue,
   applyLanguage,
@@ -44,6 +46,8 @@ import {
   setLyricsClickThrough,
   setLyricsLines,
   refreshLyricsStyle,
+  isLyricsWindowVisible,
+  toggleDesktopLyrics,
 } from '../lyrics/lyrics-window.js';
 import {
   updateTaskbarLyricsDocument,
@@ -51,10 +55,13 @@ import {
   updateTaskbarLyricsStyle,
   updateTaskbarLyricsTranslation,
   refreshTaskbarLyricsConfig,
+  isTaskbarLyricsRunning,
+  setTaskbarLyricsEnabled,
 } from '../taskbar/taskbar-lyrics.js';
 import {
   updateMenubarLyricsText,
   updateMenubarLyricsDocument,
+  setMenubarLyricsEnabled,
 } from '../menubar/menubar-lyrics.js';
 import { emptyStats, recordPlay, pruneStats } from '../shared/stats.js';
 import { refreshPlaylistsMetadata } from './playlists.js';
@@ -186,6 +193,10 @@ export function registerIpcHandlers() {
       lyricsTranslation: getLyricsTranslation(),
       desktopLyricsClickThrough: getDesktopLyricsClickThrough(),
       desktopLyricsLines: getDesktopLyricsLines(),
+      desktopLyricsVisible: isLyricsWindowVisible(),
+      taskbarLyricsEnabled: getTaskbarLyricsSetting(),
+      taskbarLyricsRunning: isTaskbarLyricsRunning(),
+      menubarLyricsEnabled: getMenubarLyricsSetting(),
       themeMode: getThemeMode(),
       performanceMode: getPerformanceMode(),
       equalizer: getEqualizer(),
@@ -210,6 +221,31 @@ export function registerIpcHandlers() {
   ipcMain.handle('settings:setDesktopLyricsLines', (event, lines) => {
     const next = setDesktopLyricsLines(lines === 2 ? 2 : 1);
     setLyricsLines(next);
+    return next;
+  });
+
+  // 桌面歌词是运行态，不落盘：设置页开关直接开/关当前悬浮窗
+  ipcMain.handle('settings:setDesktopLyricsEnabled', (event, enabled) => {
+    if (!!enabled !== isLyricsWindowVisible()) toggleDesktopLyrics();
+    return isLyricsWindowVisible();
+  });
+
+  // 任务栏歌词是持久化偏好；启动失败不改写偏好，界面通过 running 区分
+  ipcMain.handle('settings:setTaskbarLyricsEnabled', (event, enabled) => {
+    if (process.platform !== 'win32') return { enabled: false, running: false };
+    setTaskbarLyricsEnabled(!!enabled);
+    rebuildTrayMenu();
+    return {
+      enabled: getTaskbarLyricsSetting(),
+      running: isTaskbarLyricsRunning(),
+    };
+  });
+
+  // macOS 菜单栏歌词：设置页开关与托盘/快捷键共用同一份偏好
+  ipcMain.handle('settings:setMenubarLyricsEnabled', (event, enabled) => {
+    if (process.platform !== 'darwin') return false;
+    const next = setMenubarLyricsEnabled(!!enabled);
+    rebuildTrayMenu();
     return next;
   });
 
