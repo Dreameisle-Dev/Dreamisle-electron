@@ -98,11 +98,9 @@ if (safeMode) {
   console.log('[Dreamisle] safe mode: hardware acceleration disabled, renderer JIT disabled');
 }
 
-// 这两个是 Windows 的渲染性能开关；macOS/Linux 上不需要，Hackintosh 上还可能把 GPU 路径带崩。
-if (process.platform === 'win32') {
-  app.commandLine.appendSwitch('enable-gpu-rasterization');
-  app.commandLine.appendSwitch('enable-zero-copy');
-}
+// GPU 加速保持 Electron/Chromium 默认，Windows 与 macOS 一致：
+// 不再强制 enable-gpu-rasterization / enable-zero-copy。纯音频播放没有零拷贝收益，
+// 强制 GPU 光栅化还会抬高 GPU 占用，并可能在部分驱动上引入兼容问题。
 
 // 设置页"自定义字体"下拉需要读取系统字体列表（Local Font Access API）；
 // 只放行 local-fonts 权限，其余权限维持 Electron 默认拒绝
