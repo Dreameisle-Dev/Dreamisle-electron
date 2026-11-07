@@ -65,6 +65,28 @@ app.isQuitting = false;
 if (process.platform === 'darwin') app.setName('Dreamisle');
 app.setAppUserModelId('org.dreamisle-dev.dreamisle');
 
+// 单实例锁：歌单、统计和播放队列都写在同一份 config.json 里，
+// 两个实例同时运行会互相覆盖。第二个实例只负责把已有实例唤到前台，然后退出。
+const gotSingleInstanceLock = app.requestSingleInstanceLock();
+
+if (gotSingleInstanceLock) {
+  app.on('second-instance', () => {
+    const mainWindow = getMainWindow();
+    if (!mainWindow || mainWindow.isDestroyed()) {
+      // 主窗口还没建：应用已 ready 时补建；未 ready 时由 whenReady 创建。
+      if (app.isReady()) createWindow();
+      return;
+    }
+    // macOS 下窗口可能还处在 Cmd+H 隐藏状态，先让应用本身回到前台。
+    if (process.platform === 'darwin') app.show();
+    if (mainWindow.isMinimized()) mainWindow.restore();
+    if (!mainWindow.isVisible()) mainWindow.show();
+    mainWindow.focus();
+  });
+} else {
+  app.quit();
+}
+
 // macOS 26 黑苹果/虚拟机环境下的诊断开关：
 // --safe-mode  关闭硬件加速和渲染进程 JIT（主进程 JIT 需要在命令行传 --js-flags=--jitless）
 // --no-tray    跳过托盘/模板图标创建
@@ -106,45 +128,47 @@ function setupApplicationMenu() {
   );
 }
 
-app.whenReady().then(() => {
-  migrateLegacyMusicFolder();
-  getLanguage(); // 初始化语言（createTray 依赖 t()）
-  // 建窗口前先定下主题来源，否则会先以系统色绘制一帧再翻转
-  nativeTheme.themeSource = getThemeMode();
-  setupPermissions();
-  setupApplicationMenu();
-  // 开发时 dock 显示 Electron 默认图标；打包后使用 bundle 的 icns，不再覆盖。
-  if (process.platform === 'darwin' && app.dock && !app.isPackaged) {
-    app.dock.setIcon(path.join(__dirname, '../assets/icon_512x512.png'));
-  }
-  registerIpcHandlers();
-  registerPlaylistsIpc();
-  createWindow();
-  initTaskbarLyrics();
-  notifyStoreRecovery(getMainWindow()); // 配置被重置过就告知用户备份位置
-  if (skipTray) console.log('[Dreamisle] tray disabled by --no-tray');
-  else createTray();
-  // macOS 菜单栏歌词：托盘创建后再初始化，菜单项与已存开关才能立即生效。
-  initMenubarLyrics();
-  setLyricsStyle(getLyricsStyle()); // 同步已存歌词样式
-  setLyricsLang(getLanguage()); // 同步已存语言
-  setLyricsLines(getDesktopLyricsLines()); // 同步单/双行设置
-  registerLyricsHotkey();
-  if (process.platform === 'win32') registerTaskbarLyricsHotkey();
-});
+if (gotSingleInstanceLock) {
+  app.whenReady().then(() => {
+    migrateLegacyMusicFolder();
+    getLanguage(); // 初始化语言（createTray 依赖 t()）
+    // 建窗口前先定下主题来源，否则会先以系统色绘制一帧再翻转
+    nativeTheme.themeSource = getThemeMode();
+    setupPermissions();
+    setupApplicationMenu();
+    // 开发时 dock 显示 Electron 默认图标；打包后使用 bundle 的 icns，不再覆盖。
+    if (process.platform === 'darwin' && app.dock && !app.isPackaged) {
+      app.dock.setIcon(path.join(__dirname, '../assets/icon_512x512.png'));
+    }
+    registerIpcHandlers();
+    registerPlaylistsIpc();
+    createWindow();
+    initTaskbarLyrics();
+    notifyStoreRecovery(getMainWindow()); // 配置被重置过就告知用户备份位置
+    if (skipTray) console.log('[Dreamisle] tray disabled by --no-tray');
+    else createTray();
+    // macOS 菜单栏歌词：托盘创建后再初始化，菜单项与已存开关才能立即生效。
+    initMenubarLyrics();
+    setLyricsStyle(getLyricsStyle()); // 同步已存歌词样式
+    setLyricsLang(getLanguage()); // 同步已存语言
+    setLyricsLines(getDesktopLyricsLines()); // 同步单/双行设置
+    registerLyricsHotkey();
+    if (process.platform === 'win32') registerTaskbarLyricsHotkey();
+  });
 
-app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') {
-  }
-});
-app.on('activate', () => {
-  if (getMainWindow() === null) createWindow();
-  else getMainWindow().show();
-});
-app.on('before-quit', () => {
-  app.isQuitting = true;
-  globalShortcut.unregister(TASKBAR_LYRICS_HOTKEY);
-  disposeLyrics();
-  disposeTaskbarLyrics();
-  disposeMenubarLyrics();
-});
+  app.on('window-all-closed', () => {
+    if (process.platform !== 'darwin') {
+    }
+  });
+  app.on('activate', () => {
+    if (getMainWindow() === null) createWindow();
+    else getMainWindow().show();
+  });
+  app.on('before-quit', () => {
+    app.isQuitting = true;
+    globalShortcut.unregister(TASKBAR_LYRICS_HOTKEY);
+    disposeLyrics();
+    disposeTaskbarLyrics();
+    disposeMenubarLyrics();
+  });
+}
