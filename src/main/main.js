@@ -10,7 +10,7 @@ import {
   getThemeMode,
   notifyStoreRecovery,
 } from './store.js';
-import { createWindow, getMainWindow } from './window.js';
+import { createWindow, getMainWindow, flushWindowBounds } from './window.js';
 import { createTray, rebuildTrayMenu } from './tray.js';
 import { registerIpcHandlers } from './ipc.js';
 import { registerPlaylistsIpc } from './playlists.js';
@@ -166,6 +166,7 @@ if (gotSingleInstanceLock) {
   });
   app.on('before-quit', () => {
     app.isQuitting = true;
+    flushWindowBounds();
     globalShortcut.unregister(TASKBAR_LYRICS_HOTKEY);
     disposeLyrics();
     disposeTaskbarLyrics();
