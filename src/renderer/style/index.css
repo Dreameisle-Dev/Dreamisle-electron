@@ -296,10 +296,12 @@ body {
    是按条高也缩放算的，用 bottom 避开这个基准冲突。 */
 .lyrics-container {
   position: absolute;
-  left: calc(92 * var(--u));
+  /* 左右各留 20px 给模糊的光晕：文字位置不变，只是把裁剪盒向外扩，
+     避免第一/最后一个字的光晕在容器边缘被硬切。 */
+  left: calc(92 * var(--u) - 20px);
   top: calc(34 * var(--u));
   bottom: 160px;
-  width: calc(960 * var(--u));
+  width: calc(960 * var(--u) + 40px);
   z-index: 4;
   overflow: hidden;
   -webkit-app-region: no-drag;
@@ -315,6 +317,9 @@ body.bar-hidden .lyrics-container {
 
 .lyrics-scroll {
   height: 100%;
+  box-sizing: border-box;
+  /* 左右留出与容器相同的 20px，让首字/末字的光晕有地方可以散开 */
+  padding: 0 20px;
   display: flex;
   flex-direction: column;
   /* safe center：内容溢出时退回 start。普通 center 会让溢出的 flex 列两端都够不着，
@@ -324,6 +329,21 @@ body.bar-hidden .lyrics-container {
   overflow-y: auto;
   scrollbar-width: none;
   scroll-behavior: smooth;
+  /* 上下渐隐：容器是 overflow:hidden 的，滚到边缘的模糊行会被硬边切断。
+     用遮罩让上下两端淡出，避免出现一条突兀的横切线。 */
+  --lyrics-fade: linear-gradient(
+    to bottom,
+    transparent 0,
+    #000 12%,
+    #000 88%,
+    transparent 100%
+  );
+  -webkit-mask-image: var(--lyrics-fade);
+  -webkit-mask-repeat: no-repeat;
+  -webkit-mask-size: 100% 100%;
+  mask-image: var(--lyrics-fade);
+  mask-repeat: no-repeat;
+  mask-size: 100% 100%;
 }
 
 .lyrics-scroll::-webkit-scrollbar {
