@@ -1,7 +1,7 @@
 // 统计面板的音质分级与格式化,供渲染层使用
 
 const LOSSLESS_CODECS = /flac|alac|pcm/i;
-const LOSSLESS_EXTS = new Set(['.flac', '.wav']);
+const LOSSLESS_EXTS = new Set(['.flac', '.wav', '.wave']);
 
 // 分级:Hi-Res / SQ / HQ / Other
 // 无损 = FLAC/WAV/ALAC;Hi-Res = 无损且采样率 > 44.1kHz 或位深 > 16bit;HQ = 有损且码率 >= 192kbps

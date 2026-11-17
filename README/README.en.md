@@ -12,7 +12,7 @@ Dreamisle is a local music player built with Electron. It plays local audio file
 
 ## Features
 
-- **Local library**: Recursively scans configured music folders; supports MP3, FLAC, WAV, OGG, and M4A; reads title, artist, album, bitrate, sample rate, bit depth, and embedded cover art via `music-metadata`.
+- **Local library**: Recursively scans configured music folders; supports MP3, FLAC, WAV (`.wav`/`.wave`), OGG (`.ogg`/`.oga`), Opus, M4A/M4B, AAC, WebM Audio (`.weba`), and Matroska Audio (`.mka`); reads title, artist, album, bitrate, sample rate, bit depth, and embedded cover art via `music-metadata`.
 - **Playback**: List loop, single loop, and shuffle; persists volume, playback progress, and play mode.
 - **Play queue**: The button in the player bar opens the current queue. Right-click a song for Play next / Add to queue / Remove from queue; drag to reorder and clear the queue; the queue is restored on restart.
 - **Playlists**: Create, rename, and delete playlists; add songs via the context menu and drag to reorder; clicking a playlist uses its songs as the play queue.

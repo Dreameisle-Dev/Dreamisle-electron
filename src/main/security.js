@@ -4,7 +4,20 @@ import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { getMainWindow } from './window.js';
 
-export const AUDIO_EXTENSIONS = ['.mp3', '.flac', '.wav', '.ogg', '.m4a'];
+export const AUDIO_EXTENSIONS = [
+  '.mp3',
+  '.flac',
+  '.wav',
+  '.wave',
+  '.ogg',
+  '.oga',
+  '.opus',
+  '.m4a',
+  '.m4b',
+  '.aac',
+  '.weba',
+  '.mka',
+];
 
 const MAX_PATH_LENGTH = 4096;
 const MAIN_HTML_PATH = path.resolve(
