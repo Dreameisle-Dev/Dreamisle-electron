@@ -7,6 +7,16 @@ export const DEFAULT_TASKBAR_LYRICS_STYLE = {
 };
 
 const ALLOWED_WEIGHTS = new Set([400, 500, 600, 700]);
+const MAX_FONT_FAMILY_LEN = 128;
+
+// 过滤可能跳出 CSS font-family 引号或注入声明的字符，保留真实系统字体名
+export function sanitizeFontFamily(value) {
+  if (typeof value !== 'string') return '';
+  return value
+    .replace(/[\u0000-\u001f\u007f"'\\;{}<>]/g, '')
+    .trim()
+    .slice(0, MAX_FONT_FAMILY_LEN);
+}
 
 function normalizeWeight(value) {
   const weight = Number(value);
@@ -23,7 +33,7 @@ function normalizeColor(value) {
 export function normalizeTaskbarLyricsStyle(raw) {
   const source = raw && typeof raw === 'object' ? raw : {};
   return {
-    fontFamily: typeof source.fontFamily === 'string' ? source.fontFamily.trim() : '',
+    fontFamily: sanitizeFontFamily(source.fontFamily),
     fontWeight: normalizeWeight(source.fontWeight),
     textColor: normalizeColor(source.textColor),
   };

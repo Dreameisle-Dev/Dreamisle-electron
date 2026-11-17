@@ -2,6 +2,7 @@
 // 主进程只转发文档/播放状态；这里用本地时钟推算当前时间，rAF 里跨行边界，
 // 不必依赖主窗口 timeupdate 的频率。只有显示内容真正变化时才改 DOM。
 import { resolveDisplay } from './taskbar-gap.js';
+import { sanitizeFontFamily } from '../shared/taskbar-style.js';
 
 const strip = document.getElementById('strip');
 const coverEl = document.getElementById('cover');
@@ -213,7 +214,8 @@ function applyConfig(next) {
   document.body.classList.toggle('fixed-length', config.fixedLength === true);
   document.body.classList.toggle('fixed-start', config.fixedAlign === 'start');
 
-  strip.style.fontFamily = config.fontFamily ? `"${config.fontFamily}"` : '';
+  const safeFont = sanitizeFontFamily(config.fontFamily);
+  strip.style.fontFamily = safeFont ? `"${safeFont}"` : '';
   applyTextStyle();
 
   // 翻译开关/字体/粗细/颜色/兜底文案都可能变化，强制重新渲染一次

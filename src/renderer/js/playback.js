@@ -157,7 +157,10 @@ export function playNext(auto = false) {
   playSong(next);
 }
 
+let coverRequestToken = 0;
+
 export async function updateCoverAndColor(song) {
+  const token = ++coverRequestToken;
   coverImg.style.display = 'none';
   defaultCover.style.display = 'flex';
   updateThemeColor(null);
@@ -168,6 +171,10 @@ export async function updateCoverAndColor(song) {
   }
 
   const coverUrl = await window.dreamApi.getCover(song.path);
+  if (token !== coverRequestToken) {
+    if (coverUrl) URL.revokeObjectURL(coverUrl);
+    return;
+  }
   if (coverUrl) {
     state.currentCoverBlobUrl = coverUrl;
     coverImg.src = coverUrl;
@@ -261,6 +268,7 @@ function registerMediaSessionHandlers() {
 
 // 空库复位（如移除最后一个文件夹）：停止播放并复位界面与封面状态
 export function resetToEmptyLibrary() {
+  coverRequestToken++;
   audio.pause();
   updatePlayButton(false);
   titleEl.innerText = 'Dreamisle';

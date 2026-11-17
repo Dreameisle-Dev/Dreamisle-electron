@@ -198,10 +198,10 @@ function renderChart(stats) {
           <div class="stats-chart-song">
             <div class="stats-chart-song-top">
               <span class="stats-chart-name">${escapeHtml(title)}</span>
-              <span class="stats-chart-count"><b>${r.total}</b> ${t('stats.timesUnit')}</span>
+              <span class="stats-chart-count"><b>${escapeHtml(r.total)}</b> ${t('stats.timesUnit')}</span>
             </div>
             <div class="stats-chart-artist">${escapeHtml(artist)}</div>
-            <div class="stats-chart-bar"><i style="--w:${width}%"></i></div>
+            <div class="stats-chart-bar"><i style="--w:${Number(width) || 4}%"></i></div>
           </div>
         </li>`;
     })

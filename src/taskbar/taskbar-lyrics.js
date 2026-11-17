@@ -3,9 +3,11 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { getMainWindow } from '../main/window.js';
 import { readCover } from '../main/music-library.js';
+import { hardenWebContents } from '../main/security.js';
 import {
   getLanguage,
   getLyricsTranslation,
+  getMusicFolders,
   getTaskbarLyricsSetting,
   getTaskbarLyricsStyle,
   setTaskbarLyricsSetting,
@@ -919,9 +921,13 @@ function createWindow(context = {}) {
       preload: path.join(__dirname, '../preload/taskbar-preload.js'),
       contextIsolation: true,
       nodeIntegration: false,
+      sandbox: true,
       backgroundThrottling: false,
     },
   });
+
+  const taskbarHtmlPath = path.join(__dirname, 'taskbar-lyrics.html');
+  hardenWebContents(next.webContents, taskbarHtmlPath);
 
   win = next;
   // 歌词条只负责显示；鼠标穿透后，任务栏空白处/歌词条上的点击都会落到任务栏，
@@ -940,7 +946,7 @@ function createWindow(context = {}) {
   lastBounds = null;
   lastWindowKey = null;
 
-  next.loadFile(path.join(__dirname, 'taskbar-lyrics.html'));
+  next.loadFile(taskbarHtmlPath);
 
   next.webContents.on('did-finish-load', () => {
     if (win !== next || next.isDestroyed()) return;
@@ -1198,7 +1204,7 @@ export function setTaskbarLyricsEnabled(value) {
 // 用 data URL 传给渲染进程，避免 blob/临时文件的生命周期问题。
 async function loadCover(songPath, token) {
   try {
-    const cover = await readCover(songPath);
+    const cover = await readCover(songPath, getMusicFolders());
     if (token !== coverToken) return;
     if (!cover?.buffer) {
       lastCover = null;

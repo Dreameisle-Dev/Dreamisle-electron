@@ -61,9 +61,12 @@ function setMiniLyrics(activeIndex = null) {
   }, MINI_FADE_MS);
 }
 
+let lyricsRequestToken = 0;
+
 // 清空歌词状态：切换歌曲 / 空库复位时调用。
 // 传了 song 就同时推一份空行占位文档，任务栏在歌词异步加载期间先显示新歌的歌名/歌手。
 export function resetLyrics(song = null) {
+  lyricsRequestToken++;
   state.currentLyrics = [];
   state.currentLineIndex = -1;
   state.lyricDoms = [];
@@ -80,6 +83,7 @@ function pushTaskbarLyricsDocument(song, lines) {
 
 export async function loadAndRenderLyrics(song) {
   resetLyrics(song);
+  const token = lyricsRequestToken;
 
   if (lyricsScroll) {
     lyricsScroll.innerHTML = `<p class="lyric-line placeholder">${t('lyrics.loading')}</p>`;
@@ -87,6 +91,7 @@ export async function loadAndRenderLyrics(song) {
   }
 
   let lrcData = await window.dreamApi.getLyrics(song.path);
+  if (token !== lyricsRequestToken) return;
 
   if (lrcData) {
     if (typeof lrcData === 'object' && lrcData !== null) {

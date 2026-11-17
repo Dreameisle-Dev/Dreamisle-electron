@@ -1,10 +1,11 @@
-import { app, ipcMain, dialog, nativeTheme } from 'electron';
+import { app, dialog, nativeTheme } from 'electron';
 import fs from 'fs/promises';
 import {
   store,
   getMusicFolders,
   getLanguage,
   getLyricsStyle,
+  setLyricsStyleSetting,
   getLyricsTranslation,
   setLyricsTranslation,
   getDesktopLyricsClickThrough,
@@ -24,9 +25,8 @@ import {
   getPlayQueue,
   setPlayQueue,
   applyLanguage,
-  clampPercent,
-  DEFAULT_LYRICS_STYLE,
 } from './store.js';
+import { handleMainIpc, onMainIpc, isAllowedAudioPathSync } from './security.js';
 import {
   parseAudioFile,
   scanAllFolders,
@@ -76,9 +76,37 @@ function pruneStatsForLibrary(validPaths) {
   store.set('stats', pruneStats(raw, new Set(validPaths)));
 }
 
+function normalizePlaybackState(raw) {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null;
+  const currentIndex =
+    Number.isInteger(raw.currentIndex) && raw.currentIndex >= -1 ? raw.currentIndex : -1;
+  const currentSongPath =
+    typeof raw.currentSongPath === 'string' &&
+    isAllowedAudioPathSync(raw.currentSongPath, getMusicFolders())
+      ? raw.currentSongPath
+      : null;
+  const currentTime =
+    typeof raw.currentTime === 'number' && Number.isFinite(raw.currentTime) && raw.currentTime >= 0
+      ? raw.currentTime
+      : 0;
+  const volume =
+    typeof raw.volume === 'number' && Number.isFinite(raw.volume)
+      ? Math.min(1, Math.max(0, raw.volume))
+      : 1;
+  const playMode = raw.playMode === 1 || raw.playMode === 2 ? raw.playMode : 0;
+  return {
+    currentIndex,
+    currentSongPath,
+    currentTime,
+    volume,
+    playMode,
+    isPlaying: raw.isPlaying === true,
+  };
+}
+
 // 注册全部渲染进程 ↔ 主进程 IPC 通道；频道名与 preload API 一一对应
 export function registerIpcHandlers() {
-  ipcMain.handle('folders:add', async () => {
+  handleMainIpc('folders:add', async () => {
     const { canceled, filePaths } = await dialog.showOpenDialog({ properties: ['openDirectory'] });
     if (canceled) return { playlist: store.get('cachedPlaylist') || [], duplicate: false };
 
@@ -96,7 +124,8 @@ export function registerIpcHandlers() {
     return { playlist, duplicate: false };
   });
 
-  ipcMain.handle('folders:remove', async (event, folderPath) => {
+  handleMainIpc('folders:remove', async (event, folderPath) => {
+    if (typeof folderPath !== 'string') return { playlist: store.get('cachedPlaylist') || [] };
     syncGeneration++;
     const next = getMusicFolders().filter((p) => p !== folderPath);
     store.set('musicFolders', next);
@@ -106,7 +135,7 @@ export function registerIpcHandlers() {
     return { playlist };
   });
 
-  ipcMain.handle('app:loadSavedMusic', async () => {
+  handleMainIpc('app:loadSavedMusic', async () => {
     // 优先从本地 Store 获取已缓存的列表;旧版缓存(缺音质规格字段)需重扫迁移一次
     const cached = store.get('cachedPlaylist');
     if (cached && cached.length > 0 && !hasLegacyMetadata(cached)) {
@@ -126,7 +155,7 @@ export function registerIpcHandlers() {
     }
   });
 
-  ipcMain.handle('app:syncFolder', async () => {
+  handleMainIpc('app:syncFolder', async () => {
     const gen = syncGeneration;
     const folders = getMusicFolders();
     if (folders.length === 0) return null;
@@ -153,30 +182,32 @@ export function registerIpcHandlers() {
     return { added: added.length, removed: removed.length, playlist };
   });
 
-  ipcMain.handle('app:getCover', async (event, filePath) => {
-    return readCover(filePath);
+  handleMainIpc('app:getCover', async (event, filePath) => {
+    return readCover(filePath, getMusicFolders());
   });
 
-  ipcMain.handle('app:savePlaybackState', async (event, state) => {
-    store.set('playbackState', state);
+  handleMainIpc('app:savePlaybackState', async (event, state) => {
+    const normalized = normalizePlaybackState(state);
+    if (!normalized) return false;
+    store.set('playbackState', normalized);
     return true;
   });
 
-  ipcMain.handle('app:loadPlaybackState', async () => {
+  handleMainIpc('app:loadPlaybackState', async () => {
     return store.get('playbackState') || null;
   });
 
   // 播放队列快照：渲染进程整体推送当前队列，主进程只做校验与落盘
-  ipcMain.handle('queue:get', () => getPlayQueue());
-  ipcMain.on('queue:set', (event, queue) => {
+  handleMainIpc('queue:get', () => getPlayQueue());
+  onMainIpc('queue:set', (event, queue) => {
     setPlayQueue(queue);
   });
 
-  ipcMain.handle('app:getLyrics', async (event, audioPath) => {
-    return readLyrics(audioPath);
+  handleMainIpc('app:getLyrics', async (event, audioPath) => {
+    return readLyrics(audioPath, getMusicFolders());
   });
 
-  ipcMain.handle('settings:get', async () => {
+  handleMainIpc('settings:get', async () => {
     const folders = await Promise.all(
       getMusicFolders().map(async (p) => {
         let available = false;
@@ -205,33 +236,33 @@ export function registerIpcHandlers() {
     };
   });
 
-  ipcMain.handle('settings:setTaskbarLyricsStyle', (event, style) => {
+  handleMainIpc('settings:setTaskbarLyricsStyle', (event, style) => {
     const next = setTaskbarLyricsStyle(style);
     updateTaskbarLyricsStyle();
     return next;
   });
 
-  ipcMain.handle('settings:setDesktopLyricsClickThrough', (event, enabled) => {
+  handleMainIpc('settings:setDesktopLyricsClickThrough', (event, enabled) => {
     const next = setDesktopLyricsClickThrough(!!enabled);
     setLyricsClickThrough(next);
     return next;
   });
 
   // 桌面歌词单/双行（双行 = 当前行 + 下一行）
-  ipcMain.handle('settings:setDesktopLyricsLines', (event, lines) => {
+  handleMainIpc('settings:setDesktopLyricsLines', (event, lines) => {
     const next = setDesktopLyricsLines(lines === 2 ? 2 : 1);
     setLyricsLines(next);
     return next;
   });
 
   // 桌面歌词是运行态，不落盘：设置页开关直接开/关当前悬浮窗
-  ipcMain.handle('settings:setDesktopLyricsEnabled', (event, enabled) => {
+  handleMainIpc('settings:setDesktopLyricsEnabled', (event, enabled) => {
     if (!!enabled !== isLyricsWindowVisible()) toggleDesktopLyrics();
     return isLyricsWindowVisible();
   });
 
   // 任务栏歌词是持久化偏好；启动失败不改写偏好，界面通过 running 区分
-  ipcMain.handle('settings:setTaskbarLyricsEnabled', (event, enabled) => {
+  handleMainIpc('settings:setTaskbarLyricsEnabled', (event, enabled) => {
     if (process.platform !== 'win32') return { enabled: false, running: false };
     setTaskbarLyricsEnabled(!!enabled);
     rebuildTrayMenu();
@@ -242,18 +273,18 @@ export function registerIpcHandlers() {
   });
 
   // macOS 菜单栏歌词：设置页开关与托盘/快捷键共用同一份偏好
-  ipcMain.handle('settings:setMenubarLyricsEnabled', (event, enabled) => {
+  handleMainIpc('settings:setMenubarLyricsEnabled', (event, enabled) => {
     if (process.platform !== 'darwin') return false;
     const next = setMenubarLyricsEnabled(!!enabled);
     rebuildTrayMenu();
     return next;
   });
 
-  ipcMain.handle('settings:setEqualizer', (event, eq) => setEqualizer(eq));
+  handleMainIpc('settings:setEqualizer', (event, eq) => setEqualizer(eq));
 
   // 主题模式同时下发给 Chromium：themeSource 一变，渲染进程里的
   // prefers-color-scheme 就跟着变，light-dark() 与噪点透明度的媒体查询才会对。
-  ipcMain.handle('settings:setThemeMode', (event, mode) => {
+  handleMainIpc('settings:setThemeMode', (event, mode) => {
     const next = setThemeMode(mode);
     nativeTheme.themeSource = next;
     return next;
@@ -261,13 +292,13 @@ export function registerIpcHandlers() {
 
   // 性能模式：主窗口由渲染进程自己切 body 类；桌面歌词是独立渲染进程，
   // 这里主动重发一次样式，让它同步关掉胶囊的毛玻璃。
-  ipcMain.handle('settings:setPerformanceMode', (event, enabled) => {
+  handleMainIpc('settings:setPerformanceMode', (event, enabled) => {
     const next = setPerformanceMode(enabled);
     refreshLyricsStyle();
     return next;
   });
 
-  ipcMain.handle('settings:setLanguage', (event, lang) => {
+  handleMainIpc('settings:setLanguage', (event, lang) => {
     if (lang !== 'zh-CN' && lang !== 'en') return false;
     applyLanguage(lang);
     rebuildTrayMenu();
@@ -276,31 +307,19 @@ export function registerIpcHandlers() {
     return true;
   });
 
-  ipcMain.handle('settings:setLyricsTranslation', (event, visible) => {
+  handleMainIpc('settings:setLyricsTranslation', (event, visible) => {
     setLyricsTranslation(visible);
     updateTaskbarLyricsTranslation(!!visible);
     return true;
   });
 
-  ipcMain.handle('settings:setLyricsStyle', (event, style) => {
-    const next = {
-      bgOpacity: clampPercent(style && style.bgOpacity, DEFAULT_LYRICS_STYLE.bgOpacity),
-      textOpacity: clampPercent(style && style.textOpacity, DEFAULT_LYRICS_STYLE.textOpacity),
-      textColor:
-        typeof (style && style.textColor) === 'string'
-          ? style.textColor
-          : DEFAULT_LYRICS_STYLE.textColor,
-      fontFamily:
-        typeof (style && style.fontFamily) === 'string'
-          ? style.fontFamily.trim()
-          : DEFAULT_LYRICS_STYLE.fontFamily,
-    };
-    store.set('settings.lyricsStyle', next);
+  handleMainIpc('settings:setLyricsStyle', (event, style) => {
+    const next = setLyricsStyleSetting(style);
     setLyricsStyle(next);
     return next;
   });
 
-  ipcMain.handle('app:updateDesktopLyrics', (event, payload) => {
+  handleMainIpc('app:updateDesktopLyrics', (event, payload) => {
     const text = typeof payload === 'string' ? payload : payload?.text || '';
     const secondText = typeof payload === 'string' ? '' : payload?.secondText || '';
     setLyricsContent(text, secondText);
@@ -311,45 +330,51 @@ export function registerIpcHandlers() {
 
   // 任务栏歌词：主窗口渲染进程只推数据，主进程原样转发给任务栏窗。
   // 用 send/on 而不是 invoke：timeupdate 4Hz 的频率不值得为每次推送建 Promise。
-  ipcMain.on('app:setTaskbarLyricsDocument', (event, doc) => {
+  onMainIpc('app:setTaskbarLyricsDocument', (event, doc) => {
     updateTaskbarLyricsDocument(doc);
     // 同一份文档也用于菜单栏的“无歌词时显示歌名/歌手”兜底
     updateMenubarLyricsDocument(doc);
   });
 
-  ipcMain.on('app:updateTaskbarLyricsPlayback', (event, playback) => {
+  onMainIpc('app:updateTaskbarLyricsPlayback', (event, playback) => {
     updateTaskbarLyricsPlayback(playback);
   });
 
   // 处理小窗模式切换
-  ipcMain.handle('app:toggleMiniMode', () => {
+  handleMainIpc('app:toggleMiniMode', () => {
     return toggleMiniMode();
   });
 
   // 窗口控制 IPC
-  ipcMain.handle('window:minimize', () => {
+  handleMainIpc('window:minimize', () => {
     minimizeWindow();
   });
-  ipcMain.handle('window:maximize', () => {
+  handleMainIpc('window:maximize', () => {
     maximizeWindow();
   });
-  ipcMain.handle('window:close', () => {
+  handleMainIpc('window:close', () => {
     closeWindow();
   });
 
   // 获取应用版本号
-  ipcMain.handle('app:getVersion', () => app.getVersion());
+  handleMainIpc('app:getVersion', () => app.getVersion());
 
-  ipcMain.handle('stats:get', () => {
+  handleMainIpc('stats:get', () => {
     const stats = store.get('stats');
     return stats && stats.plays ? stats : emptyStats();
   });
 
-  ipcMain.handle('stats:recordPlay', (event, path, kind) => {
-    if (typeof path !== 'string' || (kind !== 'full' && kind !== 'loop')) return null;
+  handleMainIpc('stats:recordPlay', (event, songPath, kind) => {
+    if (
+      typeof songPath !== 'string' ||
+      (kind !== 'full' && kind !== 'loop') ||
+      !isAllowedAudioPathSync(songPath, getMusicFolders())
+    ) {
+      return null;
+    }
     const raw = store.get('stats');
-    const next = recordPlay(raw && raw.plays ? raw : emptyStats(), path, kind, Date.now());
+    const next = recordPlay(raw && raw.plays ? raw : emptyStats(), songPath, kind, Date.now());
     store.set('stats', next);
-    return next.plays[path];
+    return Object.hasOwn(next.plays, songPath) ? next.plays[songPath] : null;
   });
 }

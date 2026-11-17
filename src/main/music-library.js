@@ -2,8 +2,9 @@ import path from 'path';
 import { pathToFileURL } from 'url';
 import { parseFile } from 'music-metadata';
 import fs from 'fs/promises';
+import { AUDIO_EXTENSIONS, resolveAllowedLibraryFile } from './security.js';
 
-const AUDIO_EXTENSIONS = ['.mp3', '.flac', '.wav', '.ogg', '.m4a'];
+const MAX_LRC_BYTES = 2 * 1024 * 1024;
 
 // 旧版缓存只有 path/url/title/artist,判断是否需要迁移重扫补充音质规格字段
 export function hasLegacyMetadata(playlist) {
@@ -88,9 +89,11 @@ export async function collectDiskPaths(folderPaths) {
   return [...new Set(diskPaths)];
 }
 
-export async function readCover(filePath) {
+export async function readCover(filePath, allowedFolders) {
   try {
-    const metadata = await parseFile(filePath, { skipCovers: false, skipPostHeaders: true });
+    const safePath = await resolveAllowedLibraryFile(filePath, allowedFolders);
+    if (!safePath) return null;
+    const metadata = await parseFile(safePath, { skipCovers: false, skipPostHeaders: true });
     if (metadata.common.picture && metadata.common.picture.length > 0) {
       const pic = metadata.common.picture[0];
       return { buffer: pic.data, format: pic.format };
@@ -100,15 +103,26 @@ export async function readCover(filePath) {
 }
 
 // 优先读取同目录同名 .lrc 文件，其次读取内嵌歌词
-export async function readLyrics(audioPath) {
+export async function readLyrics(audioPath, allowedFolders) {
+  const safeAudioPath = await resolveAllowedLibraryFile(audioPath, allowedFolders);
+  if (!safeAudioPath) return null;
+
   try {
-    const lrcPath = audioPath.substring(0, audioPath.lastIndexOf('.')) + '.lrc';
-    await fs.access(lrcPath);
-    return await fs.readFile(lrcPath, 'utf-8');
+    const ext = path.extname(safeAudioPath);
+    const lrcCandidate = safeAudioPath.slice(0, safeAudioPath.length - ext.length) + '.lrc';
+    const safeLrcPath = await resolveAllowedLibraryFile(lrcCandidate, allowedFolders, {
+      allowLrcSibling: true,
+    });
+    if (safeLrcPath) {
+      const stat = await fs.stat(safeLrcPath);
+      if (stat.isFile() && stat.size <= MAX_LRC_BYTES) {
+        return await fs.readFile(safeLrcPath, 'utf-8');
+      }
+    }
   } catch (e) {}
 
   try {
-    const metadata = await parseFile(audioPath);
+    const metadata = await parseFile(safeAudioPath, { skipCovers: true });
     if (metadata.common && metadata.common.lyrics && metadata.common.lyrics.length > 0) {
       return metadata.common.lyrics[0];
     }

@@ -6,9 +6,23 @@ export function emptyStats() {
 
 // 记录一次播放:kind 为 'full'(完整播放)或 'loop'(单曲循环重播)。返回新对象,不修改入参。
 export function recordPlay(stats, path, kind, now) {
-  const prev = stats.plays[path] || { full: 0, loop: 0 };
-  const plays = { ...stats.plays, [path]: { ...prev, [kind]: prev[kind] + 1 } };
-  return { plays, firstPlayDate: stats.firstPlayDate ?? now };
+  if (typeof path !== 'string' || (kind !== 'full' && kind !== 'loop')) return stats;
+  const rawPlays = stats && stats.plays && typeof stats.plays === 'object' ? stats.plays : {};
+  const prev =
+    Object.hasOwn(rawPlays, path) && rawPlays[path] ? rawPlays[path] : { full: 0, loop: 0 };
+  const prevFull = Number.isFinite(prev.full) ? prev.full : 0;
+  const prevLoop = Number.isFinite(prev.loop) ? prev.loop : 0;
+  const plays = { ...rawPlays };
+  Object.defineProperty(plays, path, {
+    value: {
+      full: prevFull + (kind === 'full' ? 1 : 0),
+      loop: prevLoop + (kind === 'loop' ? 1 : 0),
+    },
+    enumerable: true,
+    writable: true,
+    configurable: true,
+  });
+  return { plays, firstPlayDate: stats?.firstPlayDate ?? now };
 }
 
 // 清理已不在音乐库中的歌曲记录

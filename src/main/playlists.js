@@ -1,9 +1,11 @@
-import { ipcMain } from 'electron';
-import { store } from './store.js';
+import { store, getMusicFolders } from './store.js';
 import { t } from '../shared/i18n.js';
 import { mergeSongsByPath } from '../shared/song-metadata.js';
+import { handleMainIpc, isAllowedAudioPathSync, sanitizeAudioUrl } from './security.js';
 
 const KEY = 'playlists';
+const MAX_PLAYLISTS = 500;
+const MAX_SONGS_PER_PLAYLIST = 10000;
 
 // 读取全部歌单(存储损坏时按空列表处理)
 function loadPlaylists() {
@@ -35,6 +37,9 @@ function nextAutoName(playlists) {
 
 function createPlaylist(name) {
   const playlists = loadPlaylists();
+  if (playlists.length >= MAX_PLAYLISTS) {
+    throw new Error('Playlist limit reached');
+  }
   let finalName = sanitizeName(name);
   if (!isValidName(finalName)) finalName = nextAutoName(playlists);
   const playlist = {
@@ -48,6 +53,7 @@ function createPlaylist(name) {
 }
 
 function renamePlaylist(id, name) {
+  if (typeof id !== 'string') return { ok: false };
   const playlists = loadPlaylists();
   const cleaned = sanitizeName(name);
   if (!isValidName(cleaned)) return { ok: false };
@@ -59,39 +65,61 @@ function renamePlaylist(id, name) {
 }
 
 function deletePlaylist(id) {
+  if (typeof id !== 'string') return { ok: false };
   savePlaylists(loadPlaylists().filter((p) => p.id !== id));
   return { ok: true };
 }
 
+function sanitizePlaylistSong(song) {
+  if (!song || typeof song !== 'object' || Array.isArray(song)) return null;
+  if (!isAllowedAudioPathSync(song.path, getMusicFolders())) return null;
+  const entry = {
+    path: song.path,
+    title: typeof song.title === 'string' ? song.title.slice(0, 500) : '',
+    artist: typeof song.artist === 'string' ? song.artist.slice(0, 500) : '',
+    url: sanitizeAudioUrl(song.path),
+  };
+  if (typeof song.album === 'string') entry.album = song.album.slice(0, 500);
+  if (Number.isFinite(song.bitrate)) entry.bitrate = song.bitrate;
+  if (Number.isFinite(song.sampleRate)) entry.sampleRate = song.sampleRate;
+  if (Number.isFinite(song.bitsPerSample)) entry.bitsPerSample = song.bitsPerSample;
+  if (typeof song.codec === 'string') entry.codec = song.codec.slice(0, 64);
+  return entry;
+}
+
 function addSongToPlaylist(id, song) {
+  if (typeof id !== 'string') return { ok: false, duplicate: false, playlist: null };
   const playlists = loadPlaylists();
   const pl = playlists.find((p) => p.id === id);
-  if (!pl || !song || typeof song.path !== 'string')
-    return { ok: false, duplicate: false, playlist: pl || null };
-  if (pl.songs.some((s) => s.path === song.path))
+  const entry = sanitizePlaylistSong(song);
+  if (!pl || !entry) return { ok: false, duplicate: false, playlist: pl || null };
+  if (pl.songs.some((s) => s.path === entry.path)) {
     return { ok: true, duplicate: true, playlist: pl };
-  // 保留渲染层传入的全部字段(含音质规格),核心字段做类型兜底
-  pl.songs.push({
-    ...(song && typeof song === 'object' ? song : {}),
-    path: song.path,
-    title: typeof song.title === 'string' ? song.title : '',
-    artist: typeof song.artist === 'string' ? song.artist : '',
-    url: typeof song.url === 'string' ? song.url : '',
-  });
+  }
+  if (pl.songs.length >= MAX_SONGS_PER_PLAYLIST) {
+    return { ok: false, duplicate: false, playlist: pl };
+  }
+  pl.songs.push(entry);
   savePlaylists(playlists);
   return { ok: true, duplicate: false, playlist: pl };
 }
 
-function removeSongFromPlaylist(id, path) {
+function removeSongFromPlaylist(id, songPath) {
+  if (typeof id !== 'string' || typeof songPath !== 'string') {
+    return { ok: false, playlist: null };
+  }
   const playlists = loadPlaylists();
   const pl = playlists.find((p) => p.id === id);
   if (!pl) return { ok: false, playlist: null };
-  pl.songs = pl.songs.filter((s) => s.path !== path);
+  pl.songs = pl.songs.filter((s) => s.path !== songPath);
   savePlaylists(playlists);
   return { ok: true, playlist: pl };
 }
 
 function reorderPlaylist(id, from, to) {
+  if (typeof id !== 'string' || !Number.isInteger(from) || !Number.isInteger(to)) {
+    return { ok: false, playlist: null };
+  }
   const playlists = loadPlaylists();
   const pl = playlists.find((p) => p.id === id);
   if (!pl || from < 0 || from >= pl.songs.length || to < 0 || to >= pl.songs.length)
@@ -103,7 +131,9 @@ function reorderPlaylist(id, from, to) {
 }
 
 function prunePlaylists(validPaths) {
-  const valid = new Set(Array.isArray(validPaths) ? validPaths : []);
+  const valid = new Set(
+    Array.isArray(validPaths) ? validPaths.filter((p) => typeof p === 'string') : []
+  );
   const playlists = loadPlaylists();
   let pruned = 0;
   for (const pl of playlists) {
@@ -130,12 +160,12 @@ export function refreshPlaylistsMetadata() {
 }
 
 export function registerPlaylistsIpc() {
-  ipcMain.handle('playlists:list', () => loadPlaylists());
-  ipcMain.handle('playlists:create', (event, name) => ({ playlist: createPlaylist(name) }));
-  ipcMain.handle('playlists:rename', (event, id, name) => renamePlaylist(id, name));
-  ipcMain.handle('playlists:delete', (event, id) => deletePlaylist(id));
-  ipcMain.handle('playlists:addSong', (event, id, song) => addSongToPlaylist(id, song));
-  ipcMain.handle('playlists:removeSong', (event, id, path) => removeSongFromPlaylist(id, path));
-  ipcMain.handle('playlists:reorder', (event, id, from, to) => reorderPlaylist(id, from, to));
-  ipcMain.handle('playlists:prune', (event, validPaths) => prunePlaylists(validPaths));
+  handleMainIpc('playlists:list', () => loadPlaylists());
+  handleMainIpc('playlists:create', (event, name) => ({ playlist: createPlaylist(name) }));
+  handleMainIpc('playlists:rename', (event, id, name) => renamePlaylist(id, name));
+  handleMainIpc('playlists:delete', (event, id) => deletePlaylist(id));
+  handleMainIpc('playlists:addSong', (event, id, song) => addSongToPlaylist(id, song));
+  handleMainIpc('playlists:removeSong', (event, id, path) => removeSongFromPlaylist(id, path));
+  handleMainIpc('playlists:reorder', (event, id, from, to) => reorderPlaylist(id, from, to));
+  handleMainIpc('playlists:prune', (event, validPaths) => prunePlaylists(validPaths));
 }

@@ -2,6 +2,7 @@ import { app, BrowserWindow, screen } from 'electron';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { store } from './store.js';
+import { hardenWebContents } from './security.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -122,9 +123,12 @@ export function createWindow() {
       preload: path.join(__dirname, '../preload/preload.js'),
       contextIsolation: true,
       nodeIntegration: false,
-      webSecurity: false,
+      sandbox: true,
     },
   });
+
+  const mainHtmlPath = path.join(__dirname, '../renderer/index.html');
+  hardenWebContents(mainWindow.webContents, mainHtmlPath);
 
   if (savedBounds?.maximized) mainWindow.maximize();
 
@@ -134,7 +138,7 @@ export function createWindow() {
   mainWindow.on('maximize', scheduleBoundsSave);
   mainWindow.on('unmaximize', scheduleBoundsSave);
 
-  mainWindow.loadFile(path.join(__dirname, '../renderer/index.html'));
+  mainWindow.loadFile(mainHtmlPath);
 
   mainWindow.on('close', (event) => {
     if (!app.isQuitting) {

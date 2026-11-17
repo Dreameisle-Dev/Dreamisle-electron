@@ -8,7 +8,7 @@ export function formatTime(s) {
 }
 
 export function escapeHtml(unsafe) {
-  return unsafe
+  return String(unsafe ?? '')
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')

@@ -2,7 +2,9 @@ import { t, setLang, applyLang } from '../../shared/i18n.js';
 import {
   DEFAULT_TASKBAR_LYRICS_STYLE,
   normalizeTaskbarLyricsStyle,
+  sanitizeFontFamily,
 } from '../../shared/taskbar-style.js';
+import { normalizeLyricsStyle } from '../../shared/lyrics-style.js';
 import { state, DEFAULT_LYRICS_STYLE } from './state.js';
 import {
   audio,
@@ -120,19 +122,10 @@ function restoreSettingsPanel() {
 
 function syncDesktopLyricsPreview() {
   if (!desktopLyricsCapsule) return;
-  const style = state.currentLyricsStyle;
-  desktopLyricsCapsule.style.setProperty(
-    '--preview-bg',
-    `rgba(0, 0, 0, ${(style.bgOpacity ?? DEFAULT_LYRICS_STYLE.bgOpacity) / 100})`
-  );
-  desktopLyricsCapsule.style.setProperty(
-    '--preview-opacity',
-    String((style.textOpacity ?? DEFAULT_LYRICS_STYLE.textOpacity) / 100)
-  );
-  desktopLyricsCapsule.style.setProperty(
-    '--preview-color',
-    style.textColor || DEFAULT_LYRICS_STYLE.textColor
-  );
+  const style = normalizeLyricsStyle(state.currentLyricsStyle);
+  desktopLyricsCapsule.style.setProperty('--preview-bg', `rgba(0, 0, 0, ${style.bgOpacity / 100})`);
+  desktopLyricsCapsule.style.setProperty('--preview-opacity', String(style.textOpacity / 100));
+  desktopLyricsCapsule.style.setProperty('--preview-color', style.textColor);
   desktopLyricsCapsule.style.fontFamily = style.fontFamily ? `"${style.fontFamily}"` : '';
   if (desktopPreviewNext) {
     desktopPreviewNext.hidden = desktopLyricsLines !== 2 || !desktopPreviewNext.textContent;
@@ -432,7 +425,7 @@ export async function handleLanguageChange(lang) {
 }
 
 export function syncLyricsStyleUi(style) {
-  state.currentLyricsStyle = { ...DEFAULT_LYRICS_STYLE, ...style };
+  state.currentLyricsStyle = normalizeLyricsStyle(style);
   bgOpacityInput.value = state.currentLyricsStyle.bgOpacity;
   textOpacityInput.value = state.currentLyricsStyle.textOpacity;
   textColorInput.value = state.currentLyricsStyle.textColor;
@@ -517,17 +510,18 @@ function renderFontOptionsInto({ optionsEl, valueEl, wrapEl, selectedFamily, onS
   const query = (filter || '').trim().toLowerCase();
 
   const makeOption = (family, label, ownFont) => {
+    const safeFamily = sanitizeFontFamily(family);
     const li = document.createElement('li');
     li.className = 'font-select-option';
-    if (ownFont) li.style.fontFamily = `"${family}"`;
+    if (ownFont && safeFamily) li.style.fontFamily = `"${safeFamily}"`;
     li.textContent = label;
-    li.dataset.value = family;
-    if (family === (selectedFamily || '')) li.classList.add('selected');
+    li.dataset.value = safeFamily;
+    if (safeFamily === (selectedFamily || '')) li.classList.add('selected');
     li.addEventListener('click', () => {
       valueEl.textContent = label;
-      valueEl.style.fontFamily = ownFont ? `"${family}"` : '';
+      valueEl.style.fontFamily = ownFont && safeFamily ? `"${safeFamily}"` : '';
       wrapEl.classList.remove('open');
-      onSelect(family);
+      onSelect(safeFamily);
     });
     optionsEl.appendChild(li);
   };

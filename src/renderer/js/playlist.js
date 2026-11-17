@@ -1,5 +1,6 @@
 import { t } from '../../shared/i18n.js';
 import { state, ITEM_HEIGHT } from './state.js';
+import { escapeHtml } from './helpers.js';
 import {
   playlistDrawer,
   playlistsDrawer,
@@ -157,8 +158,8 @@ export function updateVirtualList() {
     li.innerHTML =
       `<span class="item-index">${i + 1}</span>` +
       `<div class="item-meta">` +
-      `<div class="item-title">${songInfo.title}</div>` +
-      `<div class="item-artist">${songInfo.artist}</div>` +
+      `<div class="item-title">${escapeHtml(songInfo.title)}</div>` +
+      `<div class="item-artist">${escapeHtml(songInfo.artist)}</div>` +
       `</div>`;
     li.onclick = (e) => {
       if (e.detail === 0) return; // 拖放后合成的 click(detail 0),不是真实点击

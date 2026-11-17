@@ -2,6 +2,7 @@
 // 所有权约定 —— songs/currentIndex/playMode 归 playlist 与 playback，歌词状态归 lyrics.js，
 // currentLyricsStyle/systemFonts 归 settings.js，equalizer 归 equalizer.js。
 import { DEFAULT_EQ } from '../../shared/equalizer.js';
+import { DEFAULT_LYRICS_STYLE } from '../../shared/lyrics-style.js';
 
 export const state = {
   // 播放列表
@@ -54,7 +55,7 @@ export const state = {
   isMiniMode: false,
 
   // 设置
-  currentLyricsStyle: { bgOpacity: 45, textOpacity: 100, textColor: '#ffffff', fontFamily: '' },
+  currentLyricsStyle: { ...DEFAULT_LYRICS_STYLE },
   systemFonts: null,
   fontsLoadFailed: false,
   equalizer: { ...DEFAULT_EQ, gains: [...DEFAULT_EQ.gains] }, // 启动时由主进程配置覆盖
@@ -63,10 +64,5 @@ export const state = {
   syncToastTimer: null,
 };
 
-export const DEFAULT_LYRICS_STYLE = {
-  bgOpacity: 45,
-  textOpacity: 100,
-  textColor: '#ffffff',
-  fontFamily: '',
-};
+export { DEFAULT_LYRICS_STYLE };
 export const ITEM_HEIGHT = 62;

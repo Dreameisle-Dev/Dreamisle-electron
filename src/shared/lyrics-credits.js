@@ -1297,28 +1297,54 @@ const CN_LABEL_RE = new RegExp(
   'i'
 );
 
-// 英文标签之间可以是空格，也可以是 & / and / 逗号等：
-// Strings Arranged & Conducted by… / Music and Lyrics:…
-const EN_LABEL_SEP = `(?:\\s*(?:[,/&+]|and)\\s*|\\s+)`;
+// 单个英文制作标签前缀（按最长优先，配合确定性逐段推进，避免嵌套量词回溯导致的 ReDoS）
+const EN_ONE_LABEL_RE = new RegExp(`^(?:${EN_PATTERN})(?=$|[\\s,:/&+：\\-–—])`, 'i');
+const EN_SEP_RE = /^(?:\s*(?:[,/&+]|\band\b)\s*|\s+)/i;
+const EN_LABEL_END_RE = /^\s*(?:[:：]|[-–—])/;
+const EN_BY_END_RE = /^\s+by\b/i;
+const EN_AT_END_RE = /^(?:recorded|mixed|mastered|produced|arranged|engineered|conducted)\s+at\b/i;
 
-// 英文标签后面跟冒号/破折号；也允许「Music & Lyrics:」这种组合
-const EN_LABEL_RE = new RegExp(
-  `^(?:${EN_PATTERN})(?:${EN_LABEL_SEP}(?:${EN_PATTERN}))*\\s*(?:[:：]|[-–—])`,
-  'i'
-);
+function matchEnLabelChain(candidate, tailRe) {
+  const first = candidate.match(EN_ONE_LABEL_RE);
+  if (!first) return false;
+  let rest = candidate.slice(first[0].length);
+
+  while (rest.length > 0) {
+    if (tailRe.test(rest)) return true;
+    const sep = rest.match(EN_SEP_RE);
+    if (!sep) return false;
+    const afterSep = rest.slice(sep[0].length);
+    const next = afterSep.match(EN_ONE_LABEL_RE);
+    if (!next) return false;
+    rest = afterSep.slice(next[0].length);
+  }
+  return false;
+}
 
 // 「Lyrics by…」「Mixed & Mastered by…」「Produced, Arranged and Mixed by…」
-const EN_BY_RE = new RegExp(
-  `^(?:${EN_PATTERN})(?:${EN_LABEL_SEP}(?:${EN_PATTERN}))*\\s+by\\b`,
-  'i'
-);
+function isEnLabelLine(candidate) {
+  return matchEnLabelChain(candidate, EN_LABEL_END_RE);
+}
+
+function isEnByLine(candidate) {
+  return matchEnLabelChain(candidate, EN_BY_END_RE);
+}
 
 // 「Recorded at…」「Vocals Recorded at…」「Strings Arranged at…」这类没有 by 的信息行。
 // 可选前缀只允许制作标签；不收 "… in"：Written in the stars / Mixed in the crowd 都是正常歌词。
-const EN_AT_RE = new RegExp(
-  `^(?:(?:${EN_PATTERN})\\s+)*(?:recorded|mixed|mastered|produced|arranged|engineered|conducted)\\s+at\\b`,
-  'i'
-);
+function isEnAtLine(candidate) {
+  let rest = candidate;
+  while (rest.length > 0) {
+    if (EN_AT_END_RE.test(rest)) return true;
+    const tok = rest.match(EN_ONE_LABEL_RE);
+    if (!tok) return false;
+    const afterTok = rest.slice(tok[0].length);
+    const ws = afterTok.match(/^\s+/);
+    if (!ws) return false;
+    rest = afterTok.slice(ws[0].length);
+  }
+  return false;
+}
 
 // 「Guitar played by…」：只接受「乐器 + played by」，不把光秃秃的 Played by 当 credit
 const EN_PLAYED_RE = new RegExp(
@@ -1450,6 +1476,8 @@ function hasCreditSuffix(candidate) {
  * 判断一行歌词是不是制作信息/版权/赞助等非歌词内容。
  * 只判断整行，不修改行内文本。
  */
+const MAX_CREDIT_LINE_LENGTH = 300;
+
 export function isCreditLine(text) {
   if (typeof text !== 'string') return false;
 
@@ -1458,7 +1486,7 @@ export function isCreditLine(text) {
     .replace(/\u00a0/g, ' ')
     .replace(/^\/+\s*/, '')
     .trim();
-  if (!trimmed) return false;
+  if (!trimmed || trimmed.length > MAX_CREDIT_LINE_LENGTH) return false;
 
   const candidates = [trimmed];
   const unwrapped = unwrapBrackets(trimmed);
@@ -1468,9 +1496,9 @@ export function isCreditLine(text) {
     if (!candidate) continue;
     if (SPECIAL_RES.some((re) => re.test(candidate))) return true;
     if (CN_LABEL_RE.test(candidate)) return true;
-    if (EN_LABEL_RE.test(candidate)) return true;
-    if (EN_BY_RE.test(candidate)) return true;
-    if (EN_AT_RE.test(candidate)) return true;
+    if (isEnLabelLine(candidate)) return true;
+    if (isEnByLine(candidate)) return true;
+    if (isEnAtLine(candidate)) return true;
     if (EN_PLAYED_RE.test(candidate)) return true;
     if (CN_ORDINAL_INSTRUMENT_RE.test(candidate)) return true;
     if (CN_SPACE_CREDIT_RE.test(candidate)) return true;

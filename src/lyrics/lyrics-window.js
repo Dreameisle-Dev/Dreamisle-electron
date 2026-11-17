@@ -2,6 +2,7 @@ import { BrowserWindow, globalShortcut, screen } from 'electron';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { store, getDesktopLyricsClickThrough, getPerformanceMode } from '../main/store.js';
+import { hardenWebContents } from '../main/security.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -149,9 +150,12 @@ function createLyricsWindow() {
       preload: path.join(__dirname, '../preload/lyrics-preload.js'),
       contextIsolation: true,
       nodeIntegration: false,
-      webSecurity: false,
+      sandbox: true,
     },
   });
+
+  const lyricsHtmlPath = path.join(__dirname, 'lyrics-window.html');
+  hardenWebContents(lyricsWindow.webContents, lyricsHtmlPath);
 
   lyricsWindow.setAlwaysOnTop(true, 'screen-saver');
   // 默认让点击穿过歌词窗；要拖动时在设置里临时关闭
@@ -169,7 +173,7 @@ function createLyricsWindow() {
     }, 120);
   });
 
-  lyricsWindow.loadFile(path.join(__dirname, 'lyrics-window.html'));
+  lyricsWindow.loadFile(lyricsHtmlPath);
 
   lyricsWindow.webContents.on('did-finish-load', () => {
     lyricsWindow.webContents.send('lyrics:lang', lastLang);

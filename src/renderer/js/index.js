@@ -98,6 +98,10 @@ function setupIpcListeners() {
 }
 
 window.addEventListener('DOMContentLoaded', async () => {
+  // 阻止向窗口拖放外部文件/链接时触发页面导航（导航后 preload 仍会挂载）
+  document.addEventListener('dragover', (e) => e.preventDefault());
+  document.addEventListener('drop', (e) => e.preventDefault());
+
   // 注册各 feature 模块的事件绑定（等价于原先脚本求值期的顶层绑定）
   bindPlaybackEvents();
   bindLyricsEvents();

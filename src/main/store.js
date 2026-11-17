@@ -4,6 +4,11 @@ import Store from 'electron-store';
 import { setLang as i18nSetLang, t } from '../shared/i18n.js';
 import { normalizeEq } from '../shared/equalizer.js';
 import { normalizeTaskbarLyricsStyle } from '../shared/taskbar-style.js';
+import {
+  DEFAULT_LYRICS_STYLE,
+  clampPercent,
+  normalizeLyricsStyle,
+} from '../shared/lyrics-style.js';
 import { openStoreWithRecovery } from './store-recovery.js';
 
 // electron-store 的默认落盘位置：userData 下的 config.json（name 默认 'config'）。
@@ -52,18 +57,14 @@ export function notifyStoreRecovery(parentWindow) {
   });
 }
 
-export const DEFAULT_LYRICS_STYLE = {
-  bgOpacity: 45,
-  textOpacity: 100,
-  textColor: '#ffffff',
-  fontFamily: '',
-};
+export { DEFAULT_LYRICS_STYLE, clampPercent };
 
 // 语言状态：默认跟随系统，用户可在设置中切换
 let currentLanguage = null;
 
 export function getMusicFolders() {
-  return store.get('musicFolders') || [];
+  const raw = store.get('musicFolders');
+  return Array.isArray(raw) ? raw.filter((p) => typeof p === 'string' && p.length > 0) : [];
 }
 
 export function getLanguage() {
@@ -104,7 +105,13 @@ export function setPerformanceMode(enabled) {
 }
 
 export function getLyricsStyle() {
-  return { ...DEFAULT_LYRICS_STYLE, ...(store.get('settings.lyricsStyle') || {}) };
+  return normalizeLyricsStyle(store.get('settings.lyricsStyle'));
+}
+
+export function setLyricsStyleSetting(raw) {
+  const next = normalizeLyricsStyle(raw);
+  store.set('settings.lyricsStyle', next);
+  return next;
 }
 
 export function getLyricsTranslation() {
@@ -159,10 +166,7 @@ function normalizeQueueEntry(song) {
 export function getPlayQueue() {
   const raw = store.get('playQueue');
   if (!Array.isArray(raw)) return [];
-  return raw
-    .map(normalizeQueueEntry)
-    .filter(Boolean)
-    .slice(0, MAX_PLAY_QUEUE_LENGTH);
+  return raw.map(normalizeQueueEntry).filter(Boolean).slice(0, MAX_PLAY_QUEUE_LENGTH);
 }
 
 export function setPlayQueue(queue) {
@@ -210,13 +214,6 @@ export function setEqualizer(raw) {
   const next = normalizeEq(raw);
   store.set('settings.equalizer', next);
   return next;
-}
-
-export function clampPercent(value, fallback) {
-  if (value === null || value === undefined) return fallback;
-  const n = Number(value);
-  if (!Number.isFinite(n)) return fallback;
-  return Math.min(100, Math.max(0, Math.round(n)));
 }
 
 // 旧版单文件夹配置迁移为文件夹列表
