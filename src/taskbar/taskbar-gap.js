@@ -283,18 +283,37 @@ export function resolveDisplay({ doc, playback }) {
       text: '',
       translation: '',
       nextText: '',
+      words: null,
     };
   }
 
   const title = doc.title || '';
   const artist = doc.artist || '';
   if (!playback || playback.songPath !== doc.songPath || doc.isStatic || !doc.lines?.length) {
-    return { mode: 'title', title, artist, lineIndex: -1, text: '', translation: '', nextText: '' };
+    return {
+      mode: 'title',
+      title,
+      artist,
+      lineIndex: -1,
+      text: '',
+      translation: '',
+      nextText: '',
+      words: null,
+    };
   }
 
   const lineIndex = findLineIndex(doc.lines, playback.currentTimeMs);
   if (lineIndex < 0) {
-    return { mode: 'title', title, artist, lineIndex: -1, text: '', translation: '', nextText: '' };
+    return {
+      mode: 'title',
+      title,
+      artist,
+      lineIndex: -1,
+      text: '',
+      translation: '',
+      nextText: '',
+      words: null,
+    };
   }
 
   const line = doc.lines[lineIndex];
@@ -303,5 +322,6 @@ export function resolveDisplay({ doc, playback }) {
   const translation = line.text ? line.translation || '' : '';
   // 参考项目行为：第二行优先译文；没有译文时显示下一句（中文歌常见）
   const nextText = next ? next.text || next.translation || '' : '';
-  return { mode: 'lyric', title, artist, lineIndex, text, translation, nextText };
+  const words = line.text && Array.isArray(line.words) && line.words.length > 0 ? line.words : null;
+  return { mode: 'lyric', title, artist, lineIndex, text, translation, nextText, words };
 }

@@ -40,7 +40,7 @@ body {
   pointer-events: none;
 }
 
-.capsule span {
+.capsule > span {
   display: block;
   max-width: 100%;
   color: var(--capsule-color, #fff);
@@ -49,6 +49,42 @@ body {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.capsule > span .lyric-word {
+  display: inline;
+  white-space: pre;
+}
+
+#capsuleText:has(.lyric-word) {
+  text-shadow: none;
+  filter: drop-shadow(0 1px 4px rgba(0, 0, 0, 0.6));
+}
+
+body.performance-mode #capsuleText:has(.lyric-word) {
+  filter: none;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.6);
+}
+
+.capsule > span .lyric-word.todo {
+  color: color-mix(in srgb, var(--capsule-color, #fff) 45%, transparent);
+}
+
+.capsule > span .lyric-word.done {
+  color: var(--capsule-color, #fff);
+}
+
+.capsule > span .lyric-word.sweeping {
+  background-image: linear-gradient(
+    90deg,
+    var(--capsule-color, #fff) 0%,
+    var(--capsule-color, #fff) var(--wp-a, 0%),
+    color-mix(in srgb, var(--capsule-color, #fff) 45%, transparent) var(--wp-b, 0%),
+    color-mix(in srgb, var(--capsule-color, #fff) 45%, transparent) 100%
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
 }
 
 /* 双行模式的第二行（翻译或下一句）：字号更小、透明度更低 */

@@ -41,6 +41,7 @@ import { toggleMiniMode, minimizeWindow, maximizeWindow, closeWindow } from './w
 import { rebuildTrayMenu } from './tray.js';
 import {
   setLyricsContent,
+  setDesktopLyricsPlayback,
   setLyricsStyle,
   setLyricsLang,
   setLyricsClickThrough,
@@ -322,7 +323,9 @@ export function registerIpcHandlers() {
   handleMainIpc('app:updateDesktopLyrics', (event, payload) => {
     const text = typeof payload === 'string' ? payload : payload?.text || '';
     const secondText = typeof payload === 'string' ? '' : payload?.secondText || '';
-    setLyricsContent(text, secondText);
+    const words = typeof payload === 'string' ? null : payload?.words || null;
+    const songPath = typeof payload === 'string' ? null : payload?.songPath || null;
+    setLyricsContent(text, secondText, words, songPath);
     // 菜单栏歌词复用桌面歌词的当前行文本，两者永远保持一致
     updateMenubarLyricsText(text);
     return true;
@@ -338,6 +341,7 @@ export function registerIpcHandlers() {
 
   onMainIpc('app:updateTaskbarLyricsPlayback', (event, playback) => {
     updateTaskbarLyricsPlayback(playback);
+    setDesktopLyricsPlayback(playback);
   });
 
   // 处理小窗模式切换

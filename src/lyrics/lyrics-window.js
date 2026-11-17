@@ -16,6 +16,9 @@ const LYRICS_HOTKEY = process.platform === 'darwin' ? 'Command+Alt+L' : 'Control
 let lyricsWindow = null;
 let lastText = '';
 let lastSecondText = '';
+let lastWords = null;
+let lastSongPath = null;
+let lastPlayback = null;
 let lines = 1; // 1 = 单行，2 = 双行
 let saveBoundsTimer = null;
 
@@ -47,14 +50,42 @@ export function setLyricsClickThrough(enabled) {
   if (isLyricsWindowVisible()) lyricsWindow.setIgnoreMouseEvents(!!enabled);
 }
 
-export function setLyricsContent(text, secondText = '') {
+function sanitizeWords(rawWords) {
+  if (!Array.isArray(rawWords) || rawWords.length === 0) return null;
+  const cleaned = [];
+  for (const w of rawWords) {
+    if (!w || typeof w !== 'object' || typeof w.text !== 'string') continue;
+    const time = Number(w.time);
+    const endTime = Number(w.endTime);
+    if (!Number.isFinite(time)) continue;
+    cleaned.push({
+      time: Math.max(0, time),
+      endTime: Number.isFinite(endTime) ? Math.max(time, endTime) : Math.max(0, time),
+      text: w.text,
+    });
+  }
+  return cleaned.length > 0 ? cleaned : null;
+}
+
+export function setLyricsContent(text, secondText = '', words = null, songPath = null) {
   lastText = typeof text === 'string' ? text : '';
   lastSecondText = typeof secondText === 'string' ? secondText : '';
+  lastWords = sanitizeWords(words);
+  lastSongPath = typeof songPath === 'string' ? songPath : null;
   if (isLyricsWindowVisible()) {
     lyricsWindow.webContents.send('lyrics:text', {
       text: lastText,
       secondText: lastSecondText,
+      words: lastWords,
+      songPath: lastSongPath,
     });
+  }
+}
+
+export function setDesktopLyricsPlayback(playback) {
+  lastPlayback = playback && typeof playback === 'object' ? playback : null;
+  if (isLyricsWindowVisible() && lastPlayback) {
+    lyricsWindow.webContents.send('lyrics:playback', lastPlayback);
   }
 }
 
@@ -178,7 +209,15 @@ function createLyricsWindow() {
   lyricsWindow.webContents.on('did-finish-load', () => {
     lyricsWindow.webContents.send('lyrics:lang', lastLang);
     sendStyle();
-    lyricsWindow.webContents.send('lyrics:text', { text: lastText, secondText: lastSecondText });
+    lyricsWindow.webContents.send('lyrics:text', {
+      text: lastText,
+      secondText: lastSecondText,
+      words: lastWords,
+      songPath: lastSongPath,
+    });
+    if (lastPlayback) {
+      lyricsWindow.webContents.send('lyrics:playback', lastPlayback);
+    }
     lyricsWindow.showInactive(); // 显示但不获取焦点
   });
 

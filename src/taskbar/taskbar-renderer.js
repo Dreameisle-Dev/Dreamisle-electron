@@ -3,6 +3,7 @@
 // 不必依赖主窗口 timeupdate 的频率。只有显示内容真正变化时才改 DOM。
 import { resolveDisplay } from './taskbar-gap.js';
 import { sanitizeFontFamily } from '../shared/taskbar-style.js';
+import { renderWordSpans, updateWordSpansProgress } from '../shared/lyric-word-dom.js';
 
 const strip = document.getElementById('strip');
 const coverEl = document.getElementById('cover');
@@ -21,6 +22,8 @@ let clock = { baseTimeMs: 0, basePerf: performance.now(), playing: false, rate: 
 // 上一次写进 DOM 的显示内容；rAF 每帧都会算，但只有变化时才动 DOM
 let lastRenderKey = '';
 let reportedWidth = -1;
+let currentWords = null;
+let currentWordSpans = [];
 
 // 用一拍播放状态重置本地时钟。切歌时即使 songPath 与文档不一致也照常记录：
 // resolveDisplay 会拒绝拿它定位旧文档的歌词行。
@@ -61,6 +64,10 @@ function replayLineTransition() {
 }
 
 function updateDisplay(display) {
+  const wordsKey =
+    display.mode === 'lyric' && Array.isArray(display.words) && display.words.length > 0
+      ? `${display.words[0].time}:${display.words.length}`
+      : '';
   const key = [
     display.mode,
     display.title,
@@ -68,6 +75,7 @@ function updateDisplay(display) {
     display.text,
     display.translation,
     display.nextText,
+    wordsKey,
   ].join('\u0000');
   if (key === lastRenderKey) return;
   lastRenderKey = key;
@@ -90,9 +98,24 @@ function updateDisplay(display) {
   }
   const showSecondary = !!secondary;
 
-  if (lineEl.textContent !== primary) {
-    lineEl.textContent = primary;
-    replayLineTransition();
+  const nextWords =
+    display.mode === 'lyric' && Array.isArray(display.words) && display.words.length > 0
+      ? display.words
+      : null;
+
+  if (nextWords) {
+    const prevText = lineEl.textContent;
+    currentWords = nextWords;
+    currentWordSpans = renderWordSpans(lineEl, nextWords, primary);
+    updateWordSpansProgress(currentWordSpans, currentWords, currentTimeMs(), { smooth: true });
+    if (prevText !== primary) replayLineTransition();
+  } else {
+    currentWords = null;
+    currentWordSpans = [];
+    if (lineEl.textContent !== primary || lineEl.childElementCount > 0) {
+      lineEl.textContent = primary;
+      replayLineTransition();
+    }
   }
 
   translationEl.textContent = showSecondary ? secondary : '';
@@ -266,9 +289,12 @@ if (document.fonts && document.fonts.ready) {
     .catch(() => {});
 }
 
-// 本地时钟主循环：本地推算时间 → resolveDisplay → 仅在变化时改 DOM
+// 本地时钟主循环：本地推算时间 → resolveDisplay → 仅在变化时改 DOM；逐字歌词同步推算进度
 function frame() {
   updateDisplay(resolveNow());
+  if (currentWords && currentWordSpans.length > 0) {
+    updateWordSpansProgress(currentWordSpans, currentWords, currentTimeMs(), { smooth: true });
+  }
   requestAnimationFrame(frame);
 }
 

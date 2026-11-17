@@ -11,12 +11,12 @@ import {
   miniLyricNext2El,
   btnLyricTranslation,
 } from './dom.js';
-import { escapeHtml } from './helpers.js';
 import { updatePlayButton } from './playback.js';
 import universalLyricParser from '../../shared/universal-lyric-parser.js';
 import { parseLyricsText, parseSyncLyrics } from '../../shared/lyrics-parse.js';
 import { stripSongHeader } from '../../shared/lyrics-credits.js';
 import { buildLyricDocument } from '../../shared/taskbar-lyrics-document.js';
+import { renderWordSpans, updateWordSpansProgress } from '../../shared/lyric-word-dom.js';
 
 // 小窗四行：上一句 / 当前句 / 后两句。只显示原文，不含翻译（与桌面歌词一致）。
 const MINI_LYRIC_SLOTS = [miniLyricPrevEl, miniLyricNowEl, miniLyricNextEl, miniLyricNext2El];
@@ -24,14 +24,41 @@ const MINI_NOW_SLOT = 1; // 当前句固定在第 2 行（用户选的「上 1 �
 const MINI_FADE_MS = 110; // 淡出、淡入各一半，整段约 220ms（只压暗到 0.35，不淡到全透明）
 
 let miniSwapTimer = null;
+let miniWordSpans = [];
+let miniActiveWords = null;
 
 // 把四行文本、当前句标记、模糊量写进 DOM（不含动画）
 function writeMiniLyrics(activeIndex) {
   MINI_LYRIC_SLOTS.forEach((el, i) => {
     if (!el) return;
     const line = activeIndex === null ? null : state.currentLyrics[activeIndex - MINI_NOW_SLOT + i];
-    el.innerText = line ? line.text || '' : '';
-    el.classList.toggle('now', activeIndex !== null && i === MINI_NOW_SLOT);
+    const isNow = activeIndex !== null && i === MINI_NOW_SLOT;
+    if (
+      isNow &&
+      line &&
+      !line.isStatic &&
+      line.text &&
+      Array.isArray(line.words) &&
+      line.words.length > 0
+    ) {
+      miniActiveWords = line.words;
+      miniWordSpans = renderWordSpans(el, line.words, line.text);
+      updateWordSpansProgress(
+        miniWordSpans,
+        miniActiveWords,
+        (Number(audio.currentTime) || 0) * 1000,
+        {
+          smooth: !isPerformanceMode(),
+        }
+      );
+    } else {
+      if (i === MINI_NOW_SLOT) {
+        miniActiveWords = null;
+        miniWordSpans = [];
+      }
+      el.textContent = line ? line.text || '' : '';
+    }
+    el.classList.toggle('now', isNow);
     // 渐变：离当前句越远越糊、也越暗（和主界面同一套折算式）。
     // 四行距离只有 0/1/2，所以实际是 0/0.35/0.70 与 1/0.88/0.76
     applyLineDepth(el, activeIndex === null ? 0 : Math.abs(i - MINI_NOW_SLOT));
@@ -62,11 +89,75 @@ function setMiniLyrics(activeIndex = null) {
 }
 
 let lyricsRequestToken = 0;
+let activeWordSpans = [];
+let activeWords = null;
+let karaokeRafId = 0;
+
+function isPerformanceMode() {
+  return document.body.classList.contains('performance-mode');
+}
+
+function stopKaraokeLoop() {
+  if (karaokeRafId) {
+    cancelAnimationFrame(karaokeRafId);
+    karaokeRafId = 0;
+  }
+}
+
+function syncActiveLineWords(timeSec = audio.currentTime) {
+  const timeMs = (Number(timeSec) || 0) * 1000;
+  const smooth = !isPerformanceMode();
+  if (activeWords && activeWordSpans.length > 0) {
+    updateWordSpansProgress(activeWordSpans, activeWords, timeMs, { smooth });
+  }
+  if (miniActiveWords && miniWordSpans.length > 0) {
+    updateWordSpansProgress(miniWordSpans, miniActiveWords, timeMs, { smooth });
+  }
+}
+
+function refreshActiveWordRefs() {
+  const index = state.currentLineIndex;
+  const line = index >= 0 ? state.currentLyrics[index] : null;
+  const dom = index >= 0 ? state.lyricDoms[index] : null;
+  if (
+    line &&
+    !line.isStatic &&
+    line.text &&
+    Array.isArray(line.words) &&
+    line.words.length > 0 &&
+    dom
+  ) {
+    activeWords = line.words;
+    activeWordSpans = Array.from(dom.querySelectorAll('.lyric-word'));
+  } else {
+    activeWords = null;
+    activeWordSpans = [];
+  }
+}
+
+function startKaraokeLoop() {
+  if (karaokeRafId || !activeWords || activeWordSpans.length === 0) return;
+  if (audio.paused || document.hidden) return;
+
+  const tick = () => {
+    karaokeRafId = 0;
+    if (audio.paused || document.hidden || !activeWords || activeWordSpans.length === 0) return;
+    syncLyrics(audio.currentTime);
+    syncActiveLineWords(audio.currentTime);
+    if (!audio.paused && !document.hidden && activeWords && activeWordSpans.length > 0) {
+      karaokeRafId = requestAnimationFrame(tick);
+    }
+  };
+  karaokeRafId = requestAnimationFrame(tick);
+}
 
 // 清空歌词状态：切换歌曲 / 空库复位时调用。
 // 传了 song 就同时推一份空行占位文档，任务栏在歌词异步加载期间先显示新歌的歌名/歌手。
 export function resetLyrics(song = null) {
   lyricsRequestToken++;
+  stopKaraokeLoop();
+  activeWords = null;
+  activeWordSpans = [];
   state.currentLyrics = [];
   state.currentLineIndex = -1;
   state.lyricDoms = [];
@@ -160,6 +251,9 @@ function applyLineDepth(el, dist) {
 
 export function renderLyricsToDom() {
   if (!lyricsScroll) return;
+  stopKaraokeLoop();
+  activeWords = null;
+  activeWordSpans = [];
   lyricsScroll.innerHTML = '';
   state.lyricDoms = [];
   lineDist = []; // 行重建了，上一版记的距离不再对应，必须清掉
@@ -183,9 +277,21 @@ export function renderLyricsToDom() {
         state.showLyricsTranslation && line.text && line.translation ? line.translation : null;
       // 原文与译文是两个独立 span（原来中间夹了 <br>）。样式上靠 flex 列 +
       // 5px 间距把它们贴成一对，不需要换行符。
-      p.innerHTML = `<span class="lyric-text">${escapeHtml(mainText)}</span>${
-        translation ? `<span class="lyric-translation">${escapeHtml(translation)}</span>` : ''
-      }`;
+      const textSpan = document.createElement('span');
+      textSpan.className = 'lyric-text';
+      if (!isStatic && line.text && Array.isArray(line.words) && line.words.length > 0) {
+        renderWordSpans(textSpan, line.words, mainText);
+      } else {
+        textSpan.textContent = mainText;
+      }
+      p.appendChild(textSpan);
+
+      if (translation) {
+        const transSpan = document.createElement('span');
+        transSpan.className = 'lyric-translation';
+        transSpan.textContent = translation;
+        p.appendChild(transSpan);
+      }
 
       if (!isStatic) {
         p.onclick = () => {
@@ -209,6 +315,9 @@ export function renderLyricsToDom() {
     if (!isStatic && state.currentLineIndex !== -1 && state.lyricDoms[state.currentLineIndex]) {
       state.lyricDoms[state.currentLineIndex].classList.add('active');
       setupLineMarquee(state.lyricDoms[state.currentLineIndex]);
+      refreshActiveWordRefs();
+      syncActiveLineWords(audio.currentTime);
+      startKaraokeLoop();
     }
     applyBlurGradient(); // 重渲染后模糊梯度也要补一遍（开关翻译会走到这里）
   } else {
@@ -230,7 +339,10 @@ export function syncLyrics(currentTime) {
   // 二分定位当前行(歌词时间为毫秒)
   const activeIndex = universalLyricParser.getCurrentIndex(state.currentLyrics, currentTime * 1000);
 
-  if (activeIndex === state.currentLineIndex) return;
+  if (activeIndex === state.currentLineIndex) {
+    syncActiveLineWords(currentTime);
+    return;
+  }
 
   if (state.currentLineIndex !== -1 && state.lyricDoms[state.currentLineIndex]) {
     const prev = state.lyricDoms[state.currentLineIndex];
@@ -252,14 +364,26 @@ export function syncLyrics(currentTime) {
         targetLine.offsetTop - lyricsContainer.clientHeight / 2 + targetLine.clientHeight / 2;
     }
 
+    refreshActiveWordRefs();
+    syncActiveLineWords(currentTime);
+    if (activeWords && activeWordSpans.length > 0) startKaraokeLoop();
+    else stopKaraokeLoop();
+
     if (state.currentLyrics[activeIndex]) {
       // 小窗只显示原文；桌面歌词第一行原文，第二行优先翻译、没有翻译时显示下一句
       const line = state.currentLyrics[activeIndex];
       const next = state.currentLyrics[activeIndex + 1];
       setMiniLyrics(activeIndex);
-      pushDesktopLyrics(line.text || '', desktopSecondText(line, next));
+      pushDesktopLyrics(
+        line.text || '',
+        desktopSecondText(line, next),
+        line.text ? line.words || null : null
+      );
     }
   } else {
+    stopKaraokeLoop();
+    activeWords = null;
+    activeWordSpans = [];
     setMiniLyrics();
     pushDesktopLyrics('');
   }
@@ -318,12 +442,20 @@ function desktopSecondText(line, next) {
   return translation || (next ? next.text || '' : '');
 }
 
-// 向主进程推送桌面歌词：当前行 + 第二行（双行模式用），两者都变化时才推送
-export function pushDesktopLyrics(text, secondText = '') {
-  const key = `${text}\u0000${secondText}`;
+// 向主进程推送桌面歌词：当前行 + 第二行（双行模式用）+ 可选逐字时间信息，变化时才推送
+export function pushDesktopLyrics(text, secondText = '', words = null) {
+  const normalizedWords = Array.isArray(words) && words.length > 0 ? words : null;
+  const wordsKey = normalizedWords ? `${normalizedWords[0].time}:${normalizedWords.length}` : '';
+  const songPath = state.songs[state.currentIndex]?.path || null;
+  const key = `${songPath || ''}\u0000${text}\u0000${secondText}\u0000${wordsKey}`;
   if (key === state.lastDesktopText) return;
   state.lastDesktopText = key;
-  window.dreamApi.updateDesktopLyrics({ text, secondText });
+  window.dreamApi.updateDesktopLyrics({
+    text,
+    secondText,
+    words: normalizedWords,
+    songPath,
+  });
 }
 
 // 翻译开关变化后立即重推当前行，让桌面歌词第二行同步切换
@@ -335,11 +467,32 @@ function pushCurrentDesktopLyrics() {
     return;
   }
   const next = state.currentLyrics[index + 1];
-  pushDesktopLyrics(line.text || '', desktopSecondText(line, next));
+  pushDesktopLyrics(
+    line.text || '',
+    desktopSecondText(line, next),
+    line.text ? line.words || null : null
+  );
 }
 
 export function bindLyricsEvents() {
   if (btnLyricTranslation) btnLyricTranslation.onclick = toggleLyricsTranslation;
+
+  audio.addEventListener('play', startKaraokeLoop);
+  audio.addEventListener('pause', () => {
+    stopKaraokeLoop();
+    syncActiveLineWords(audio.currentTime);
+  });
+  audio.addEventListener('seeked', () => {
+    syncLyrics(audio.currentTime);
+    syncActiveLineWords(audio.currentTime);
+  });
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) stopKaraokeLoop();
+    else {
+      syncActiveLineWords(audio.currentTime);
+      startKaraokeLoop();
+    }
+  });
 
   lyricsScroll.addEventListener('wheel', () => {
     state.isUserScrolling = true;

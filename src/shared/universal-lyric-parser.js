@@ -1,5 +1,13 @@
 // 通用 LRC 歌词解析器(ESM 化版本,解析逻辑与 universal-lyric-parser.js 一致)
 import { isCreditLine } from './lyrics-credits.js';
+import {
+  finalizeWordsTimeline,
+  hasWordTimestamps,
+  parseEnhancedWords,
+  shiftWords,
+  sliceWordsByLength,
+  stripWordTimestamps,
+} from './lyric-words.js';
 
 class universalLyricParser {
   static TIME_REGEX = /\[(\d{1,2}):(\d{2})(?:[.:](\d{1,3}))?\]/g;
@@ -50,10 +58,15 @@ class universalLyricParser {
       const matches = [...trimmed.matchAll(this.TIME_REGEX)];
       if (matches.length === 0) continue;
 
-      const text = trimmed
-        .replace(this.TIME_REGEX, '')
-        .replace(this.WORD_TIME_REGEX, '')
-        .trim();
+      const rawBody = trimmed.replace(this.TIME_REGEX, '').trim();
+      const text = stripWordTimestamps(rawBody).trim();
+      const firstTime =
+        parseInt(matches[0][1], 10) * 60 * 1000 +
+        parseInt(matches[0][2], 10) * 1000 +
+        parseInt((matches[0][3] || '0').padEnd(3, '0').slice(0, 3), 10);
+      const baseEnhanced = hasWordTimestamps(rawBody)
+        ? parseEnhancedWords(rawBody, firstTime)
+        : null;
 
       for (const match of matches) {
         const min = parseInt(match[1], 10);
@@ -61,14 +74,16 @@ class universalLyricParser {
         const msRaw = match[3] || '0';
         const ms = parseInt(msRaw.padEnd(3, '0').slice(0, 3), 10);
         const time = min * 60 * 1000 + sec * 1000 + ms;
+        const words = baseEnhanced ? shiftWords(baseEnhanced.words, time - firstTime) : undefined;
 
-        rawTimedEntries.push({ time, text });
+        rawTimedEntries.push({ time, text, words });
       }
     }
 
     if (metadata.offset) {
       for (const entry of rawTimedEntries) {
         entry.time = Math.max(0, entry.time + metadata.offset);
+        if (entry.words) entry.words = shiftWords(entry.words, metadata.offset);
       }
     }
 
@@ -80,17 +95,24 @@ class universalLyricParser {
     const result = [];
 
     for (const entry of rawTimedEntries) {
-      const { time, text } = entry;
+      const { time, text, words } = entry;
 
       if (text === '//') {
         continue;
       }
 
       const splitResult = this._splitInline(text, enableSpaceSplit);
+      const lineWords =
+        words && splitResult.original
+          ? splitResult.translation
+            ? sliceWordsByLength(words, splitResult.original.length)
+            : words
+          : undefined;
       const currentItem = {
         time,
         text: splitResult.original,
         translation: splitResult.translation,
+        ...(lineWords ? { words: lineWords } : {}),
       };
       const currentIsCredit =
         isCreditLine(currentItem.text) || isCreditLine(currentItem.translation);
@@ -143,8 +165,10 @@ class universalLyricParser {
       result.push(currentItem);
     }
 
-    const finalLines = result.filter(
-      (line) => line.text.length > 0 || (line.translation && line.translation.length > 0)
+    const finalLines = finalizeWordsTimeline(
+      result.filter(
+        (line) => line.text.length > 0 || (line.translation && line.translation.length > 0)
+      )
     );
 
     return {

@@ -331,13 +331,7 @@ body.bar-hidden .lyrics-container {
   scroll-behavior: smooth;
   /* 上下渐隐：容器是 overflow:hidden 的，滚到边缘的模糊行会被硬边切断。
      用遮罩让上下两端淡出，避免出现一条突兀的横切线。 */
-  --lyrics-fade: linear-gradient(
-    to bottom,
-    transparent 0,
-    #000 12%,
-    #000 88%,
-    transparent 100%
-  );
+  --lyrics-fade: linear-gradient(to bottom, transparent 0, #000 12%, #000 88%, transparent 100%);
   -webkit-mask-image: var(--lyrics-fade);
   -webkit-mask-repeat: no-repeat;
   -webkit-mask-size: 100% 100%;
@@ -397,6 +391,33 @@ body.bar-hidden .lyrics-container {
   font-size: calc(36 * var(--u));
   font-weight: 600;
   color: var(--lyric-1);
+}
+
+/* 增强型 LRC 逐字高亮：非当前行保持整行默认灰阶与模糊层次，仅当前行呈现逐字扫过 */
+.lyric-word {
+  display: inline;
+  white-space: pre;
+}
+
+.lyric-line.active .lyric-word.todo {
+  color: color-mix(in srgb, var(--lyric-1) 42%, transparent);
+}
+
+.lyric-line.active .lyric-word.done {
+  color: var(--lyric-1);
+}
+
+.lyric-line.active .lyric-word.sweeping {
+  background-image: linear-gradient(
+    90deg,
+    var(--lyric-1) 0%,
+    var(--lyric-1) var(--wp-a, 0%),
+    color-mix(in srgb, var(--lyric-1) 42%, transparent) var(--wp-b, 0%),
+    color-mix(in srgb, var(--lyric-1) 42%, transparent) 100%
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
 }
 
 .lyric-line.active .lyric-translation {
@@ -1381,6 +1402,27 @@ body.mini-mode .mini-lyric.now {
   font-weight: 650;
   line-height: 1.5;
   color: var(--ink1);
+}
+
+body.mini-mode .mini-lyric.now .lyric-word.todo {
+  color: color-mix(in srgb, var(--ink1) 42%, transparent);
+}
+
+body.mini-mode .mini-lyric.now .lyric-word.done {
+  color: var(--ink1);
+}
+
+body.mini-mode .mini-lyric.now .lyric-word.sweeping {
+  background-image: linear-gradient(
+    90deg,
+    var(--ink1) 0%,
+    var(--ink1) var(--wp-a, 0%),
+    color-mix(in srgb, var(--ink1) 42%, transparent) var(--wp-b, 0%),
+    color-mix(in srgb, var(--ink1) 42%, transparent) 100%
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
 }
 
 /* 浮层外壳（设置 / 帮助共用）：居中显示。 */

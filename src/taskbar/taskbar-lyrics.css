@@ -91,6 +91,48 @@ body.dark {
     transform 180ms ease;
 }
 
+/* 逐字高亮时把文字阴影转给父层 drop-shadow，避免 background-clip:text 把阴影叠在透明填充上方 */
+#line:has(.lyric-word) {
+  text-shadow: none;
+  filter: drop-shadow(var(--text-shadow));
+}
+
+.lyric-word {
+  display: inline;
+  white-space: pre;
+}
+
+.lyric-word.todo {
+  color: color-mix(in srgb, var(--line-color) 42%, transparent);
+}
+
+.lyric-word.done {
+  color: var(--line-color);
+}
+
+.lyric-word.sweeping {
+  background-image: linear-gradient(
+    90deg,
+    var(--line-color) 0%,
+    var(--line-color) var(--wp-a, 0%),
+    color-mix(in srgb, var(--line-color) 42%, transparent) var(--wp-b, 0%),
+    color-mix(in srgb, var(--line-color) 42%, transparent) 100%
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+body.vertical .lyric-word.sweeping {
+  background-image: linear-gradient(
+    180deg,
+    var(--line-color) 0%,
+    var(--line-color) var(--wp-a, 0%),
+    color-mix(in srgb, var(--line-color) 42%, transparent) var(--wp-b, 0%),
+    color-mix(in srgb, var(--line-color) 42%, transparent) 100%
+  );
+}
+
 /* 换行瞬间先落到起始态（无过渡），移除类后由基础规则做 180ms 淡入 + 2px 上移 */
 #line.line-change {
   opacity: 0;

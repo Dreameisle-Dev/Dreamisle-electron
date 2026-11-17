@@ -17,6 +17,15 @@ export function buildLyricDocument(song, lines) {
       time: Number(line.time) || 0,
       text: line.text || '',
       translation: line.translation || '',
+      ...(Array.isArray(line.words) && line.words.length > 0
+        ? {
+            words: line.words.map((w) => ({
+              time: Number(w.time) || 0,
+              endTime: Number(w.endTime) || Number(w.time) || 0,
+              text: typeof w.text === 'string' ? w.text : '',
+            })),
+          }
+        : {}),
     })),
   };
 }
