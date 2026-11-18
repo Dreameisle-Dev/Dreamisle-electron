@@ -14,12 +14,13 @@
   },
   "build": {
     "appId": "org.dreamisle-dev.dreamisle",
-    "asarUnpack": [
-      "node_modules/koffi/**/*"
-    ],
     "win": {
       "icon": "src/assets/app_icon.ico",
-      "appId": "org.dreamisle-dev.dreamisle"
+      "appId": "org.dreamisle-dev.dreamisle",
+      "asarUnpack": [
+        "node_modules/koffi/**/*",
+        "node_modules/@koromix/koffi-win32-*/**/*"
+      ]
     },
     "mac": {
       "target": [
@@ -30,7 +31,17 @@
       "hardenedRuntime": true,
       "extendInfo": {
         "CFBundleDisplayName": "Dreamisle"
-      }
+      },
+      "files": [
+        "!**/node_modules/koffi{,/**/*}",
+        "!**/node_modules/@koromix{,/**/*}"
+      ]
+    },
+    "linux": {
+      "files": [
+        "!**/node_modules/koffi{,/**/*}",
+        "!**/node_modules/@koromix{,/**/*}"
+      ]
     },
     "nsis": {
       "oneClick": false,
@@ -42,8 +53,10 @@
   },
   "dependencies": {
     "electron-store": "^11.0.2",
-    "koffi": "^3.3.3",
     "music-metadata": "^11.16.1"
+  },
+  "optionalDependencies": {
+    "koffi": "^3.3.3"
   },
   "devDependencies": {
     "electron": "^40.10.6",
