@@ -3,18 +3,54 @@
 import universalLyricParser from './universal-lyric-parser.js';
 import { isCreditLine } from './lyrics-credits.js';
 
+const SLASH_NAME_LIST_RE =
+  /^(?:[^\s/、，,。！？!?]{1,14}\s*[/、]\s*){2,}[^\s/、，,。！？!?]{1,14}$/;
+const WRAP_CONNECTOR_RE = /^(?:颁发的|頒發的|推出的|出品的|打造的|联合|聯合|由)$/;
+
 // 剔除制作信息行；翻译本身若是 credits（例如同一时间戳的 "Lyrics by …"）也一并清掉，
 // 但不能因为翻译是制作信息就把原文歌词整行删掉。
+// 同时清掉因制作/获奖信息折行而产生的紧邻续行（如空冒号后紧跟的多人名单「A/B/C/D」，或夹在两条声明之间的「颁发的」）。
 function stripCreditLines(lines) {
   const cleaned = [];
+  let prevWasCredit = false;
+  let prevWasEmptyColonCredit = false;
 
-  for (const line of lines) {
-    if (isCreditLine(line.text)) continue;
-    if (!line.text && line.translation && isCreditLine(line.translation)) continue;
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    const nextLine = lines[i + 1];
+    const text = (line.text || '').trim();
+
+    if (isCreditLine(text)) {
+      prevWasCredit = true;
+      prevWasEmptyColonCredit = /[:：]\s*$/.test(text);
+      continue;
+    }
+
+    if (prevWasEmptyColonCredit && text && SLASH_NAME_LIST_RE.test(text)) {
+      prevWasCredit = true;
+      continue;
+    }
+
+    if (
+      prevWasCredit &&
+      text &&
+      WRAP_CONNECTOR_RE.test(text) &&
+      nextLine &&
+      isCreditLine(nextLine.text)
+    ) {
+      prevWasCredit = true;
+      prevWasEmptyColonCredit = false;
+      continue;
+    }
+
+    prevWasCredit = false;
+    prevWasEmptyColonCredit = false;
+
+    if (!text && line.translation && isCreditLine(line.translation)) continue;
     if (line.translation && isCreditLine(line.translation)) {
       line.translation = undefined;
     }
-    if (!line.text && !line.translation) continue;
+    if (!text && !line.translation) continue;
     cleaned.push(line);
   }
 
@@ -37,7 +73,7 @@ export function parseLyricsText(lrcText) {
   const staticLines = lrcText
     .split(/\r?\n/)
     .map((line) => line.trim())
-    .filter((line) => line.length > 0 && !/^\[.*?\]$/.test(line))
+    .filter((line) => line.length > 0 && !/^\[.*?\]$/.test(line) && !/^\{"t":\d+,"c":\[/.test(line))
     .filter((line) => !isCreditLine(line))
     .map((text) => ({ time: 0, text, isStatic: true }));
 
@@ -53,10 +89,10 @@ export function parseSyncLyrics(syncText) {
 
   const lrcText = syncText
     .map((item) => {
-      const ms = Math.max(0, Number(item.timestamp) || 0);
+      const ms = Math.round(Math.max(0, Number(item.timestamp) || 0));
       const min = Math.floor(ms / 60000);
       const sec = Math.floor((ms % 60000) / 1000);
-      const rest = Math.round(ms % 1000);
+      const rest = ms % 1000;
       return `[${String(min).padStart(2, '0')}:${String(sec).padStart(2, '0')}.${String(rest).padStart(3, '0')}]${item.text || ''}`;
     })
     .join('\n');

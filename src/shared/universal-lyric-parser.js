@@ -9,6 +9,31 @@ import {
   stripWordTimestamps,
 } from './lyric-words.js';
 
+const TRAILING_COLON_RE = /[:：]\s*$/;
+
+// 判断两条相近时间戳的行是否适合合并为「原文 + 翻译」
+function isMergeableTranslationPair(existing, current) {
+  if (!existing.text || existing.translation || !current.text || current.translation) {
+    return false;
+  }
+
+  // 说话人/分段标签（如「陈亦洺：」「合唱：」）不能把紧接着的第一句歌词当成翻译
+  if (TRAILING_COLON_RE.test(existing.text) && !TRAILING_COLON_RE.test(current.text)) {
+    return false;
+  }
+
+  // 前一句带有逐字时间轴且在当前句开始前已唱完，属于顺序衔接的两句歌词，而非同期双语翻译
+  if (Array.isArray(existing.words) && existing.words.length > 0) {
+    const lastWord = existing.words[existing.words.length - 1];
+    const existingEnd = Number.isFinite(lastWord.endTime) ? lastWord.endTime : lastWord.time;
+    if (existingEnd > existing.time && existingEnd <= current.time) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
 class universalLyricParser {
   static TIME_REGEX = /\[(\d{1,2}):(\d{2})(?:[.:](\d{1,3}))?\]/g;
   // 逐字（增强型）LRC 的词级时间戳 <mm:ss.xxx>。它跟在每个字/词前面，
@@ -125,15 +150,22 @@ class universalLyricParser {
         continue;
       }
 
-      // 只在同时间戳的**非制作信息**行里找可合并的原行；从后往前找，
-      // 后面的那行才是当前原文（制作信息可能夹在中间）。
+      // 只检查同时间戳容差内紧邻的前一条非制作信息行；
+      // 中间夹着制作信息可跳过，但若前一条非制作信息行本身不可与当前行配对（例如「陈亦洺：」
+      // 后紧接第一句开唱），立即停止，避免跨过它去和更早的行错误合并。
       let existingIndex = -1;
       for (let i = result.length - 1; i >= 0; i--) {
         const candidate = result[i];
-        if (Math.abs(candidate.time - time) <= timeToleranceMs && !isCreditLine(candidate.text)) {
+        if (Math.abs(candidate.time - time) > timeToleranceMs) break;
+        if (isCreditLine(candidate.text)) continue;
+        if (
+          (!candidate.text && currentItem.text) ||
+          (candidate.text && !currentItem.text) ||
+          isMergeableTranslationPair(candidate, currentItem)
+        ) {
           existingIndex = i;
-          break;
         }
+        break;
       }
 
       if (existingIndex !== -1) {

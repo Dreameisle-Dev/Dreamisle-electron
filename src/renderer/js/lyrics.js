@@ -184,27 +184,26 @@ export async function loadAndRenderLyrics(song) {
   let lrcData = await window.dreamApi.getLyrics(song.path);
   if (token !== lyricsRequestToken) return;
 
+  let parsed = { metadata: {}, lines: [] };
   if (lrcData) {
     if (typeof lrcData === 'object' && lrcData !== null) {
       if (Array.isArray(lrcData.syncText) && lrcData.syncText.length > 0) {
         // 富格式歌词源:统一转 LRC 文本走解析器,使内嵌同步歌词同样支持行内双语拆分
-        state.currentLyrics = parseSyncLyrics(lrcData.syncText).lines;
+        parsed = parseSyncLyrics(lrcData.syncText);
       } else if (typeof lrcData.text === 'string') {
-        state.currentLyrics = parseLyricsText(lrcData.text).lines;
+        parsed = parseLyricsText(lrcData.text);
       } else if (lrcData.type === 'Buffer') {
         try {
-          state.currentLyrics = parseLyricsText(
-            new TextDecoder().decode(new Uint8Array(lrcData.data))
-          ).lines;
+          parsed = parseLyricsText(new TextDecoder().decode(new Uint8Array(lrcData.data)));
         } catch (e) {}
       }
     } else if (typeof lrcData === 'string') {
-      state.currentLyrics = parseLyricsText(lrcData).lines;
+      parsed = parseLyricsText(lrcData);
     }
   }
 
   // 去掉内嵌歌词常见的「歌名 - 歌手」头部；制作信息已在解析阶段剔除
-  state.currentLyrics = stripSongHeader(state.currentLyrics, song);
+  state.currentLyrics = stripSongHeader(parsed.lines, song, parsed.metadata);
   renderLyricsToDom();
   // 解析完成后再推完整文档；此时任务栏可从占位（歌名/歌手）切到歌词行
   pushTaskbarLyricsDocument(song, state.currentLyrics);

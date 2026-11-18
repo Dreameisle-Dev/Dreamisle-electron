@@ -427,6 +427,442 @@ const CN_LABELS = [
   '키보드',
   '피아노',
   '코러스',
+  // 制作人 / 发行商 / 版权 / 宣传 / 歌词贡献扩展（含简繁）
+  '总制作人',
+  '總製作人',
+  '执行制作人',
+  '執行製作人',
+  '联合制作人',
+  '聯合製作人',
+  '副制作人',
+  '副製作人',
+  '助理制作人',
+  '助理製作人',
+  '主制作人',
+  '主製作人',
+  '音乐制作人',
+  '音樂製作人',
+  '歌曲制作人',
+  '歌曲製作人',
+  '单曲制作人',
+  '單曲製作人',
+  '专辑制作人',
+  '專輯製作人',
+  '项目制作人',
+  '項目製作人',
+  '人声制作人',
+  '人聲製作人',
+  '声乐制作人',
+  '聲樂製作人',
+  '音频制作人',
+  '音頻製作人',
+  '混音制作人',
+  '混音製作人',
+  '母带制作人',
+  '母帶製作人',
+  '编曲制作人',
+  '編曲製作人',
+  '说唱制作人',
+  '說唱製作人',
+  '后期制作人',
+  '後期製作人',
+  '特邀制作人',
+  '特邀製作人',
+  '客座制作人',
+  '客座製作人',
+  '制作总监',
+  '製作總監',
+  '制作统筹',
+  '製作統籌',
+  '制作团队',
+  '製作團隊',
+  '制作助理',
+  '製作助理',
+  '制作人员',
+  '製作人員',
+  '制作单位',
+  '製作單位',
+  '制作机构',
+  '製作機構',
+  '制作商',
+  '製作商',
+  '制作协力',
+  '製作協力',
+  '制作协助',
+  '製作協助',
+  '协助制作',
+  '協助製作',
+  '特约制作',
+  '特約製作',
+  '委托制作',
+  '委託製作',
+  '制作发行方',
+  '製作發行方',
+  '制作出品',
+  '製作出品',
+  '歌曲制作',
+  '歌曲製作',
+  '专辑制作',
+  '專輯製作',
+  '单曲制作',
+  '單曲製作',
+  '制片人',
+  '製片人',
+  '总制片人',
+  '總製片人',
+  '执行制片',
+  '執行製片',
+  '总制片',
+  '總製片',
+  '制片',
+  '製片',
+  '出品制作',
+  '出品製作',
+  '出品制作人',
+  '出品製作人',
+  '发行商',
+  '發行商',
+  '发行人',
+  '發行人',
+  '发行机构',
+  '發行機構',
+  '发行单位',
+  '發行單位',
+  '发行团队',
+  '發行團隊',
+  '发行部门',
+  '發行部門',
+  '发行厂牌',
+  '發行廠牌',
+  '发行代理',
+  '發行代理',
+  '发行品牌',
+  '發行品牌',
+  '发行统筹',
+  '發行統籌',
+  '发行企划',
+  '發行企劃',
+  '发行运营',
+  '發行運營',
+  '发行支持',
+  '發行支持',
+  '发行制作',
+  '發行製作',
+  '发行平台',
+  '發行平台',
+  '数字发行',
+  '數字發行',
+  '数字发行商',
+  '數字發行商',
+  '数字音乐发行',
+  '數字音樂發行',
+  '全网发行',
+  '全網發行',
+  '全网数字发行',
+  '全網數字發行',
+  '全平台发行',
+  '全平台發行',
+  '独家发行',
+  '獨家發行',
+  '独家发行商',
+  '獨家發行商',
+  '联合发行商',
+  '聯合發行商',
+  '海外发行',
+  '海外發行',
+  '海外发行商',
+  '海外發行商',
+  '海外数字发行',
+  '海外數字發行',
+  '全球发行',
+  '全球發行',
+  '全球发行商',
+  '全球發行商',
+  '代理发行',
+  '代理發行',
+  '版权发行',
+  '版權發行',
+  '版权发行商',
+  '版權發行商',
+  '实体唱片发行',
+  '實體唱片發行',
+  '唱片发行',
+  '唱片發行',
+  '发行时间',
+  '發行時間',
+  '发行日期',
+  '發行日期',
+  '发行年份',
+  '發行年份',
+  '发行地区',
+  '發行地區',
+  '发行版本',
+  '發行版本',
+  '出品商',
+  '出品单位',
+  '出品單位',
+  '出品机构',
+  '出品機構',
+  '出品团队',
+  '出品團隊',
+  '出品厂牌',
+  '出品廠牌',
+  '出品时间',
+  '出品時間',
+  '联合出品人',
+  '聯合出品人',
+  '联合出品方',
+  '聯合出品方',
+  '承制',
+  '承製',
+  '承制方',
+  '承製方',
+  '出版',
+  '出版商',
+  '出版方',
+  '出版社',
+  '出版公司',
+  '出版单位',
+  '出版單位',
+  '出版发行',
+  '出版發行',
+  '出版时间',
+  '出版時間',
+  '所属厂牌',
+  '所屬廠牌',
+  '制作厂牌',
+  '製作廠牌',
+  '音乐厂牌',
+  '音樂廠牌',
+  '联合厂牌',
+  '聯合廠牌',
+  '厂牌主理人',
+  '廠牌主理人',
+  '主理人',
+  '版权商',
+  '版權商',
+  '版权公司',
+  '版權公司',
+  '版权代理',
+  '版權代理',
+  '版权归属',
+  '版權歸屬',
+  '版权所属',
+  '版權所屬',
+  '版权管理',
+  '版權管理',
+  '版权管理方',
+  '版權管理方',
+  '版权运营',
+  '版權運營',
+  '版权授权',
+  '版權授權',
+  '正版授权',
+  '正版授權',
+  '授权方',
+  '授權方',
+  '被授权方',
+  '被授權方',
+  '海外版权',
+  '海外版權',
+  '全球版权',
+  '全球版權',
+  '独家版权',
+  '獨家版權',
+  '词版权',
+  '詞版權',
+  '曲版权',
+  '曲版權',
+  '母带版权',
+  '母帶版權',
+  '录音版权',
+  '錄音版權',
+  '词OP',
+  '詞OP',
+  '曲OP',
+  '词SP',
+  '詞SP',
+  '曲SP',
+  '著作权人',
+  '著作權人',
+  '权利人',
+  '權利人',
+  '总监制',
+  '總監製',
+  '联合监制',
+  '聯合監製',
+  '总策划',
+  '總策劃',
+  '总统筹',
+  '總統籌',
+  '项目总监',
+  '項目總監',
+  '项目统筹',
+  '項目統籌',
+  '音乐统筹',
+  '音樂統籌',
+  '艺宣',
+  '藝宣',
+  '艺人统筹',
+  '藝人統籌',
+  '艺人宣传',
+  '藝人宣傳',
+  '宣发团队',
+  '宣發團隊',
+  '宣发策划',
+  '宣發策劃',
+  '推广公司',
+  '推廣公司',
+  '营销公司',
+  '營銷公司',
+  '宣传公司',
+  '宣傳公司',
+  '推广发行',
+  '推廣發行',
+  '企划制作',
+  '企劃製作',
+  '企划发行',
+  '企劃發行',
+  '企划宣传',
+  '企劃宣傳',
+  '企划统筹',
+  '企劃統籌',
+  '宣传发行',
+  '宣傳發行',
+  '运营发行',
+  '運營發行',
+  '营销',
+  '營銷',
+  '媒体推广',
+  '媒體推廣',
+  '新媒体推广',
+  '新媒體推廣',
+  '短视频推广',
+  '短視頻推廣',
+  '合作联系',
+  '合作聯繫',
+  '合作邮箱',
+  '合作郵箱',
+  '联系邮箱',
+  '聯繫郵箱',
+  '商务授权',
+  '商務授權',
+  '商业授权',
+  '商業授權',
+  '原曲',
+  '原词',
+  '原詞',
+  '原版',
+  '词作者',
+  '詞作者',
+  '曲作者',
+  '原作者',
+  '所属专辑',
+  '所屬專輯',
+  '专辑名称',
+  '專輯名稱',
+  '歌曲名称',
+  '歌曲名稱',
+  '歌词编辑',
+  '歌詞編輯',
+  '滚动歌词',
+  '滾動歌詞',
+  '滚动歌词制作',
+  '滾動歌詞製作',
+  '动态歌词',
+  '動態歌詞',
+  '动态歌词制作',
+  '動態歌詞製作',
+  '逐字歌词',
+  '逐字歌詞',
+  '歌词校正',
+  '歌詞校正',
+  '歌词校对',
+  '歌詞校對',
+  '歌词整理',
+  '歌詞整理',
+  '歌词统筹',
+  '歌詞統籌',
+  '歌词提供',
+  '歌詞提供',
+  '歌词提供者',
+  '歌詞提供者',
+  '文本提供',
+  '提供歌词',
+  '提供歌詞',
+  '歌词搬运',
+  '歌詞搬運',
+  '歌词上传',
+  '歌詞上傳',
+  '歌词审核',
+  '歌詞審核',
+  '歌词翻译',
+  '歌詞翻譯',
+  '歌词校译',
+  '歌詞校譯',
+  '歌词贡献',
+  '歌詞貢獻',
+  '翻译贡献',
+  '翻譯貢獻',
+  '贡献者',
+  '貢獻者',
+  '上传者',
+  '上傳者',
+  '打轴',
+  '打軸',
+  '字幕',
+  '字幕组',
+  '字幕組',
+  '字幕制作',
+  '字幕製作',
+  '后期编辑',
+  '後期編輯',
+  '词曲编',
+  '詞曲編',
+  '词曲唱',
+  '詞曲唱',
+  '词曲编唱',
+  '詞曲編唱',
+  '编混',
+  '編混',
+  '录混',
+  '錄混',
+  '音乐版权顾问',
+  '音樂版權顧問',
+  '版权顾问',
+  '版權顧問',
+  '创意顾问',
+  '創意顧問',
+  '艺术顾问',
+  '藝術顧問',
+  '音乐顾问',
+  '音樂顧問',
+  '技术顾问',
+  '技術顧問',
+  '法律顾问',
+  '法律顧問',
+  '合声编写',
+  '合聲編寫',
+  '和声设计',
+  '和聲設計',
+  '合声设计',
+  '合聲設計',
+  'MV团队',
+  'MV團隊',
+  '工作团队',
+  '工作團隊',
+  '宣传营销',
+  '宣傳營銷',
+  '协办单位',
+  '協辦單位',
+  '主办单位',
+  '主辦單位',
+  '承办单位',
+  '承辦單位',
+  '指导单位',
+  '指導單位',
+  '支持单位',
+  '支持單位',
 ];
 
 const EN_LABELS = [
@@ -582,6 +1018,50 @@ const EN_LABELS = [
   'song',
   'title',
   'album',
+  'phonographic copyright',
+  'published',
+  'publishers',
+  'co-published',
+  'sub-publisher',
+  'administered',
+  'distributed',
+  'distributor',
+  'distributors',
+  'distribution',
+  'released',
+  'release',
+  'release date',
+  'production',
+  'producers',
+  'co-produced',
+  'co-written',
+  'co-arranged',
+  'co-executive producer',
+  'line producer',
+  'songwriters',
+  'composers',
+  'lyricists',
+  'arrangers',
+  'musicians',
+  'vocalists',
+  'singers',
+  'writers',
+  'lrc',
+  'a & r',
+  'a&r direction',
+  'a&r coordinator',
+  'a&r administration',
+  'album art',
+  'public relations',
+  'pr',
+  'licensed',
+  'license',
+  'repertoire owner',
+  'manufacturing company',
+  'production company',
+  'publishing company',
+  'record company',
+  'management company',
 ];
 
 // 带冒号的 credits 常常是「前缀 + 冒号 + 名单」，前缀会套很多层修饰
@@ -1155,6 +1635,238 @@ const CN_SUFFIXES = [
   '和音编写',
   '设计团队',
   '海报设计团队',
+  '制作商',
+  '製作商',
+  '制作单位',
+  '製作單位',
+  '制作机构',
+  '製作機構',
+  '制作人员',
+  '製作人員',
+  '制作协力',
+  '製作協力',
+  '制作协助',
+  '製作協助',
+  '发行商',
+  '發行商',
+  '发行机构',
+  '發行機構',
+  '发行单位',
+  '發行單位',
+  '发行团队',
+  '發行團隊',
+  '发行部门',
+  '發行部門',
+  '发行厂牌',
+  '發行廠牌',
+  '发行代理',
+  '發行代理',
+  '发行品牌',
+  '發行品牌',
+  '发行统筹',
+  '發行統籌',
+  '发行企划',
+  '發行企劃',
+  '发行运营',
+  '發行運營',
+  '发行支持',
+  '發行支持',
+  '发行制作',
+  '發行製作',
+  '发行平台',
+  '發行平台',
+  '数字发行',
+  '數字發行',
+  '数字发行商',
+  '數字發行商',
+  '联合发行商',
+  '聯合發行商',
+  '独家发行商',
+  '獨家發行商',
+  '海外发行商',
+  '海外發行商',
+  '全球发行商',
+  '全球發行商',
+  '版权发行',
+  '版權發行',
+  '版权发行商',
+  '版權發行商',
+  '发行时间',
+  '發行時間',
+  '发行日期',
+  '發行日期',
+  '发行年份',
+  '發行年份',
+  '发行地区',
+  '發行地區',
+  '发行版本',
+  '發行版本',
+  '出品商',
+  '出品单位',
+  '出品單位',
+  '出品机构',
+  '出品機構',
+  '出品团队',
+  '出品團隊',
+  '出品厂牌',
+  '出品廠牌',
+  '出品时间',
+  '出品時間',
+  '承制',
+  '承製',
+  '承制方',
+  '承製方',
+  '版权商',
+  '版權商',
+  '版权公司',
+  '版權公司',
+  '版权代理',
+  '版權代理',
+  '版权归属',
+  '版權歸屬',
+  '版权所属',
+  '版權所屬',
+  '版权运营',
+  '版權運營',
+  '版权授权',
+  '版權授權',
+  '正版授权',
+  '正版授權',
+  '授权方',
+  '授權方',
+  '被授权方',
+  '被授權方',
+  '出版',
+  '出版商',
+  '出版方',
+  '出版社',
+  '出版公司',
+  '出版单位',
+  '出版單位',
+  '出版发行',
+  '出版發行',
+  '出版时间',
+  '出版時間',
+  '主理人',
+  '推广公司',
+  '推廣公司',
+  '营销公司',
+  '營銷公司',
+  '宣传公司',
+  '宣傳公司',
+  '宣发团队',
+  '宣發團隊',
+  '词作者',
+  '詞作者',
+  '曲作者',
+  '原作者',
+  '原曲',
+  '原词',
+  '原詞',
+  '合作邮箱',
+  '合作郵箱',
+  '联系邮箱',
+  '聯繫郵箱',
+  '合作联系',
+  '合作聯繫',
+  '歌词编辑',
+  '歌詞編輯',
+  '滚动歌词',
+  '滾動歌詞',
+  '滚动歌词制作',
+  '滾動歌詞製作',
+  '动态歌词',
+  '動態歌詞',
+  '动态歌词制作',
+  '動態歌詞製作',
+  '逐字歌词',
+  '逐字歌詞',
+  '歌词制作',
+  '歌詞製作',
+  '歌词校正',
+  '歌詞校正',
+  '歌词校对',
+  '歌詞校對',
+  '歌词整理',
+  '歌詞整理',
+  '歌词统筹',
+  '歌詞統籌',
+  '歌词提供',
+  '歌詞提供',
+  '歌词提供者',
+  '歌詞提供者',
+  '文本提供',
+  '提供歌词',
+  '提供歌詞',
+  '歌词搬运',
+  '歌詞搬運',
+  '歌词上传',
+  '歌詞上傳',
+  '歌词审核',
+  '歌詞審核',
+  '歌词翻译',
+  '歌詞翻譯',
+  '歌词校译',
+  '歌詞校譯',
+  '歌词贡献',
+  '歌詞貢獻',
+  '翻译贡献',
+  '翻譯貢獻',
+  '贡献者',
+  '貢獻者',
+  '上传者',
+  '上傳者',
+  '提供者',
+  '打轴',
+  '打軸',
+  '字幕组',
+  '字幕組',
+  '字幕制作',
+  '字幕製作',
+  '后期编辑',
+  '後期編輯',
+  '词曲编',
+  '詞曲編',
+  '词曲唱',
+  '詞曲唱',
+  '词曲编唱',
+  '詞曲編唱',
+  '编混',
+  '編混',
+  '录混',
+  '錄混',
+  '专辑名称',
+  '專輯名稱',
+  '歌曲名称',
+  '歌曲名稱',
+  '所属专辑',
+  '所屬專輯',
+  '著作权人',
+  '著作權人',
+  '权利人',
+  '權利人',
+  '顾问',
+  '顧問',
+  '有限公司',
+  '有限责任公司',
+  '有限責任公司',
+  '股份有限公司',
+  '股份公司',
+  '团队',
+  '单位',
+  '营销',
+  '合声编写',
+  '合聲編寫',
+  '和声设计',
+  '和聲設計',
+  '合声设计',
+  '合聲設計',
+  '协办单位',
+  '協辦單位',
+  '工作团队',
+  '工作團隊',
+  '宣传营销',
+  '宣傳營銷',
 ];
 
 const EN_SUFFIXES = [
@@ -1273,6 +1985,47 @@ const EN_SUFFIXES = [
   'vocal tuning',
   'tuned',
   'tuning',
+  'publishers',
+  'published',
+  'published by',
+  'distributed',
+  'distributor',
+  'distributors',
+  'distribution',
+  'distributed by',
+  'released',
+  'release',
+  'released by',
+  'release date',
+  'producers',
+  'songwriters',
+  'composers',
+  'lyricists',
+  'arrangers',
+  'writers',
+  'vocalists',
+  'singers',
+  'musicians',
+  'a&r',
+  'a & r',
+  'phonographic copyright',
+  'copyright',
+  'licensed',
+  'licensed by',
+  'album art',
+  'cover art',
+  'cover design',
+  'public relations',
+  'administration',
+  'administered',
+  'administered by',
+  'lrc',
+  'repertoire owner',
+  'manufacturing company',
+  'production company',
+  'publishing company',
+  'record company',
+  'management company',
 ];
 
 const escapeRegExp = (text) => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -1291,18 +2044,131 @@ const CN_SUFFIX_PATTERN = uniqueLongestFirst(CN_SUFFIXES);
 const EN_SUFFIX_PATTERN = uniqueLongestFirst(EN_SUFFIXES);
 const CREDIT_SUFFIX_RE = new RegExp(`(?:${CN_SUFFIX_PATTERN}|${EN_SUFFIX_PATTERN})$`, 'i');
 
-// 中文标签可以用 / 、 & 串起来：「作词/作曲：」「词/曲：」
-const CN_LABEL_RE = new RegExp(
-  `^(?:${CN_PATTERN})(?:(?:\\s*[/、&]\\s*)(?:${CN_PATTERN}))*\\s*(?:[:：]|$)`,
-  'i'
-);
+// 中文标签可以用 / 、 & , ， + 及 与 和 等串起来：「作词/作曲：」「词/曲：」「制作人，监制：」
+const CN_ONE_LABEL_RE = new RegExp(`^(?:${CN_PATTERN})`, 'i');
 
 // 单个英文制作标签前缀（按最长优先，配合确定性逐段推进，避免嵌套量词回溯导致的 ReDoS）
-const EN_ONE_LABEL_RE = new RegExp(`^(?:${EN_PATTERN})(?=$|[\\s,:/&+：\\-–—])`, 'i');
+const EN_ONE_LABEL_RE = new RegExp(
+  `^(?:${EN_PATTERN})(?:\\(s\\))?(?=$|[\\s,:/&+：\\-–—|｜=（）()【】\\[\\]])`,
+  'i'
+);
 const EN_SEP_RE = /^(?:\s*(?:[,/&+]|\band\b)\s*|\s+)/i;
+const CHAIN_SEP_RE = /^(?:\s*(?:[/／、&＆,，+＋]|及|与|與|\band\b)\s*|\s+和\s+|\s+)/i;
+const BARE_WS_RE = /^\s+$/;
+const LABEL_PAREN_RE =
+  /^\s*(?:[（(][^（）()\r\n]{1,40}[）)]|\[[^\[\]\r\n]{1,40}\]|【[^【】\r\n]{1,40}】)/;
 const EN_LABEL_END_RE = /^\s*(?:[:：]|[-–—])/;
 const EN_BY_END_RE = /^\s+by\b/i;
 const EN_AT_END_RE = /^(?:recorded|mixed|mastered|produced|arranged|engineered|conducted)\s+at\b/i;
+
+// 人声/说唱分段提示在冒号后没有署名时（如「合唱：」「rap：」），属于歌词分段 cue，不当成 credits；
+// 只有冒号后确实带了名字（如「Rap：梦然」「合唱：某某合唱团」）才剔除。
+const EMPTY_COLON_CUE_EXCLUDED = new Set([
+  '合唱',
+  '和声',
+  '和聲',
+  '合声',
+  '合聲',
+  '伴唱',
+  '童声',
+  '童聲',
+  '旁白',
+  '念白',
+  '对唱',
+  '對唱',
+  '独唱',
+  '獨唱',
+  '男声',
+  '男聲',
+  '女声',
+  '女聲',
+  '领唱',
+  '領唱',
+  '重唱',
+  '主唱',
+  'rap',
+  '说唱',
+  '說唱',
+]);
+
+// 简写复合标签（如「词/曲/编：张三」「词/曲/编/混：张三」「录/混：李四」），避免单字「编」「混」误伤歌词
+const CN_SHORT_COMPOUND_RE =
+  /^(?:词|詞|曲|编|編|录|錄)(?:\s*[/／、&＆+＋]\s*(?:词|詞|曲|编|編|录|錄|混|唱|制|製|和|伴|修|配))+\s*(?:[:：]|[-–—｜|=]\s*\S)/;
+
+// 单个词使用非冒号分隔符（- / — / ｜ / =）时可能与歌词冲突的词
+const CN_ALT_DELIM_EXCLUDED = new Set([
+  '词',
+  '詞',
+  '曲',
+  '鼓',
+  '人声',
+  '人聲',
+  '歌词',
+  '歌詞',
+  '合唱',
+  '和声',
+  '和聲',
+  '合声',
+  '合聲',
+  '童声',
+  '童聲',
+  '旁白',
+  '念白',
+  '对唱',
+  '對唱',
+  '设计',
+  '設計',
+  '音乐',
+  '制作',
+  '製作',
+  '发行',
+  '發行',
+  '出品',
+  '出版',
+  '演唱',
+  '演奏',
+  '翻译',
+  '翻譯',
+  '宣传',
+  '宣傳',
+  '推广',
+  '推廣',
+  '策划',
+  '策劃',
+  '统筹',
+  '統籌',
+  '导演',
+  '導演',
+  '后期',
+  '後期',
+  '摄影',
+  '攝影',
+  '配器',
+  'lrc',
+]);
+const EN_PIPE_EQ_EXCLUDED = new Set([
+  'music',
+  'words',
+  'lyrics',
+  'lyric',
+  'song',
+  'title',
+  'album',
+  'thanks',
+  'credit',
+  'credits',
+  'guitar',
+  'piano',
+  'drums',
+  'drum',
+  'bass',
+  'strings',
+  'chorus',
+  'choir',
+  'design',
+  'art',
+  'business',
+]);
 
 function matchEnLabelChain(candidate, tailRe) {
   const first = candidate.match(EN_ONE_LABEL_RE);
@@ -1321,6 +2187,111 @@ function matchEnLabelChain(candidate, tailRe) {
   return false;
 }
 
+// 统一确定性扫描中文/混合制作标签链：「作词/作曲：」「制作人-张三」「Publisher / 发行商：XXX」「制作人（Music Producer）：张三」
+function matchLabelChain(candidate) {
+  let rest = candidate;
+  let tokenCount = 0;
+  let hasCn = false;
+  let hasEn = false;
+  let lastTokenLower = '';
+  let lastKind = '';
+  let usedBareWs = false;
+  let hasTrailingParen = false;
+
+  while (rest.length > 0) {
+    let tok = null;
+    let kind = '';
+
+    // 含英文时优先试英文整词匹配，再试中文前缀匹配；纯字符前缀不歧义
+    const cnMatch = rest.match(CN_ONE_LABEL_RE);
+    const enMatch = rest.match(EN_ONE_LABEL_RE);
+    if (cnMatch && (!enMatch || cnMatch[0].length >= enMatch[0].length)) {
+      tok = cnMatch[0];
+      kind = 'cn';
+      hasCn = true;
+    } else if (enMatch) {
+      tok = enMatch[0];
+      kind = 'en';
+      hasEn = true;
+    } else {
+      return false;
+    }
+
+    tokenCount++;
+    lastTokenLower = tok.toLowerCase();
+    lastKind = kind;
+    rest = rest.slice(tok.length);
+
+    // 跳过标签后附带的简短括号说明，如「制作人（Music Producer）：」「制作人(中国)：」
+    hasTrailingParen = false;
+    const paren = rest.match(LABEL_PAREN_RE);
+    if (paren) {
+      hasTrailingParen = true;
+      rest = rest.slice(paren[0].length);
+    }
+
+    // 1. 行尾：只对纯中文无括号、无裸空格串接的标签（如单独一行「作词」「作词/作曲」）生效
+    if (/^\s*$/.test(rest)) {
+      return hasCn && !hasEn && !usedBareWs && !hasTrailingParen;
+    }
+
+    // 2. 冒号（: / ：）：人声/合唱/Rap 提示若冒号后为空（如「合唱：」「rap：」），保留给歌词分段提示
+    if (/^\s*[:：]/.test(rest)) {
+      if (
+        tokenCount === 1 &&
+        EMPTY_COLON_CUE_EXCLUDED.has(lastTokenLower) &&
+        /^\s*[:：]\s*$/.test(rest)
+      ) {
+        return false;
+      }
+      return true;
+    }
+
+    // 3. 备选分隔符（- / – / — / ＝ / ｜ / |）
+    const altMatch = rest.match(/^(\s*)([-–—｜|=])/);
+    if (altMatch) {
+      const leadWs = altMatch[1];
+      const sym = altMatch[2];
+      const afterSym = rest.slice(altMatch[0].length);
+      const hasValue = /\S/.test(afterSym);
+
+      if (hasValue) {
+        // 纯英文的 -/–/— 已由 isEnLabelLine 处理；这里保留并防止把「Music | 音乐」等 ` | ` 双语行当 credits
+        if (sym === '|' && leadWs.length > 0 && /^\s/.test(afterSym)) {
+          if (hasCn && !hasEn && tokenCount === 1 && !CN_ALT_DELIM_EXCLUDED.has(lastTokenLower)) {
+            return true;
+          }
+          // 若多词或非中英文混合，不把 ` | ` 当作分隔符（交给双语拆分处理）
+        } else if (sym === '=' || sym === '｜' || sym === '|') {
+          const singleCnExcluded =
+            tokenCount === 1 && lastKind === 'cn' && CN_ALT_DELIM_EXCLUDED.has(lastTokenLower);
+          const singleEnExcluded =
+            tokenCount === 1 && lastKind === 'en' && EN_PIPE_EQ_EXCLUDED.has(lastTokenLower);
+          if (!singleCnExcluded && !singleEnExcluded) return true;
+        } else {
+          // - / – / —
+          if (hasEn && !hasCn) return true;
+          if (!(
+            tokenCount === 1 &&
+            lastKind === 'cn' &&
+            CN_ALT_DELIM_EXCLUDED.has(lastTokenLower)
+          )) {
+            return true;
+          }
+        }
+      }
+    }
+
+    // 4. 尝试继续匹配下一个串联标签
+    const sep = rest.match(CHAIN_SEP_RE);
+    if (!sep) return false;
+    if (BARE_WS_RE.test(sep[0])) usedBareWs = true;
+    rest = rest.slice(sep[0].length);
+  }
+
+  return false;
+}
+
 // 「Lyrics by…」「Mixed & Mastered by…」「Produced, Arranged and Mixed by…」
 function isEnLabelLine(candidate) {
   return matchEnLabelChain(candidate, EN_LABEL_END_RE);
@@ -1331,7 +2302,7 @@ function isEnByLine(candidate) {
 }
 
 // 「Recorded at…」「Vocals Recorded at…」「Strings Arranged at…」这类没有 by 的信息行。
-// 可选前缀只允许制作标签；不收 "… in"：Written in the stars / Mixed in the crowd 都是正常歌词。
+// 可选前缀只允许制作标签（及 & / and 等连接符）；不收 "… in"：Written in the stars / Mixed in the crowd 都是正常歌词。
 function isEnAtLine(candidate) {
   let rest = candidate;
   while (rest.length > 0) {
@@ -1339,9 +2310,9 @@ function isEnAtLine(candidate) {
     const tok = rest.match(EN_ONE_LABEL_RE);
     if (!tok) return false;
     const afterTok = rest.slice(tok[0].length);
-    const ws = afterTok.match(/^\s+/);
-    if (!ws) return false;
-    rest = afterTok.slice(ws[0].length);
+    const sep = afterTok.match(EN_SEP_RE);
+    if (!sep) return false;
+    rest = afterTok.slice(sep[0].length);
   }
   return false;
 }
@@ -1352,10 +2323,10 @@ const EN_PLAYED_RE = new RegExp(
   'i'
 );
 
-// 没写冒号的「编曲 李宗锦」。只对足够明确的标签生效，
-// 避免把「制作 一个梦」「演唱 一首歌」这类正文当成 credits。
+// 没写冒号的「编曲 李宗锦」「发行商 华纳唱片」。只对足够明确的标签生效，
+// 避免把「制作 一个梦」「演唱 一首歌」「发行 一张车票」这类正文当成 credits。
 const CN_SPACE_CREDIT_RE =
-  /^(?:作词|作詞|作曲|编曲|編曲|编曲人|編曲人|作词人|作詞人|作曲人|填词|填詞|词曲|詞曲|制作人|製作人|监制|監製|出品人|出品方|录音|錄音|录音师|錄音師|混音|混音师|混音師|母带|母帶|母带师|母帶師|监唱|配唱|主唱|领唱|領唱|伴唱|演奏|弦乐|弦樂|吉他|贝斯|貝斯|鼓|键盘|鍵盤|钢琴|鋼琴|OP|SP)\s+[^\s:：]/;
+  /^(?:作词|作詞|作曲|编曲|編曲|编曲人|編曲人|作词人|作詞人|作曲人|填词|填詞|词曲|詞曲|制作人|製作人|音乐制作人|音樂製作人|总制作人|總製作人|执行制作人|執行製作人|联合制作人|聯合製作人|配唱制作人|配唱製作人|制作公司|製作公司|制作团队|製作團隊|制作方|製作方|制作商|製作商|监制|監製|总监制|總監製|音乐监制|音樂監製|音乐总监|音樂總監|出品人|出品方|出品公司|联合出品|聯合出品|发行商|發行商|发行方|發行方|发行人|發行人|发行公司|發行公司|发行团队|發行團隊|联合发行|聯合發行|版权方|版權方|版权公司|版權公司|版权代理|版權代理|版权提供|版權提供|出版商|出版方|出版社|出版公司|唱片公司|宣发|宣發|录音|錄音|录音师|錄音師|混音|混音师|混音師|母带|母帶|母带师|母帶師|监唱|配唱|主唱|领唱|領唱|伴唱|演奏|弦乐|弦樂|吉他|贝斯|貝斯|鼓|键盘|鍵盤|钢琴|鋼琴|OP|SP)\s+[^\s:：]/;
 
 // 「第一吉他手：…」「首席小提琴：…」「第2鼓手：…」这类乐手 credit。
 // 只认可枚举的乐器词，避免把「第一次牵手：…」这类歌词误判。
@@ -1400,39 +2371,55 @@ const PLATFORM_NAMES = [
 ];
 const PLATFORM_PATTERN = [...new Set(PLATFORM_NAMES)].map(escapeRegExp).join('|');
 const PLATFORM_NOTICE_RE = new RegExp(
-  `(?:${PLATFORM_PATTERN})[\\s\\S]*?(?:享有|提供|翻译|翻譯|著作权|著作權|版权|版權|音乐人|音樂人|计划|計劃|企划|企劃|独家|獨家|品牌)`,
+  `(?:${PLATFORM_PATTERN})[\\s\\S]{0,160}?(?:享有|提供|翻译|翻譯|著作权|著作權|版权|版權|音乐人|音樂人|计划|計劃|企划|企劃|独家|獨家|品牌)`,
   'i'
 );
 // 反向语序：「本翻译作品著作权归QQ音乐所有」
 const PLATFORM_NOTICE_REVERSE_RE = new RegExp(
-  `(?:享有|提供|翻译|翻譯|著作权|著作權|版权|版權)[\\s\\S]*?(?:${PLATFORM_PATTERN})`,
+  `(?:享有|提供|翻译|翻譯|著作权|著作權|版权|版權)[\\s\\S]{0,160}?(?:${PLATFORM_PATTERN})`,
   'i'
 );
-// 只有平台名的推广行，如「【QQ音乐】」「『酷狗音乐』」
-const PLATFORM_ONLY_RE = new RegExp(`^[\\s『「【\\[]*(?:${PLATFORM_PATTERN})[\\s』」】\\]]*$`, 'i');
+// 只有平台名的推广行，如「【QQ音乐】」「『酷狗音乐』」「「腾讯音乐·正音乐」」
+const PLATFORM_ONLY_RE = new RegExp(
+  `^[\\s『「【\\[]*(?:${PLATFORM_PATTERN})(?:[·・\\-]\\s*[^』」】\\]\\r\\n]{1,16})?[\\s』」】\\]]*$`,
+  'i'
+);
 // 「酷狗音乐人」「QQ音乐人」这类平台创作者计划徽章
 const PLATFORM_CREATOR_RE = new RegExp(
   `^[\\s『「【\\[]*(?:${PLATFORM_PATTERN})人[\\s』」】\\]]*$`,
   'i'
 );
+const LEADING_PLATFORM_TAG_RE = new RegExp(
+  `^(?:[『「【〖\\[(（]\\s*(?:${PLATFORM_PATTERN})\\s*[』」】〗\\])）]\\s*(?:[-–—:：|｜]\\s*)?|(?:${PLATFORM_PATTERN})\\s*[-–—:：|｜]\\s*)`,
+  'i'
+);
+const LEADING_BULLET_RE = /^[※★☆•·●○◆◇■□▲△▶►]+\s*/;
 
 const SPECIAL_RES = [
   // ℗ / © / (P) / (C)，覆盖半角/全角括号
   /^(?:℗|©|\(p\)|\(c\)|（p）|（c）)/i,
-  /^copyright\b(?=\s*(?:[:：©℗]|\([cC]\)|\d))/i,
+  /^(?:phonographic\s+)?copyright\b(?=\s*(?:[:：©℗]|\([cCpP]\)|\d))/i,
   /^all rights reserved\s*[.。]?\s*$/i,
-  /^all rights reserved\b.*(?:unauthorized|未经|未經|copyright)/i,
+  /^all rights reserved\b.{0,120}?(?:unauthorized|未经|未經|copyright)/i,
   /^unauthorized\b/i,
-  // 版权声明：必须同时出现「未经…许可/授权」和「不得/禁止/翻唱…」才判定，
+  // 版权声明：必须同时出现「未经…许可/授权/允许」和「不得/禁止/翻唱/请勿…」才判定，
   // 避免把「未经许可的年少」这类正常歌词删掉
-  /^(?:未经|未經).*(?:许可|許可|授权|授權).*(?:不得|禁止|翻唱|翻錄|翻录|使用|复制|複製|传播|傳播|转载|轉載)/,
-  // 「本歌曲由…赞助」「本作品…」整句
-  /^(?:本歌曲|本作品|本节目|本節目).*(?:赞助|贊助|提供|出品|制作|製作|发行|發行|版权|版權|许可|許可|授权|授權)/,
+  /^(?:未经|未經).{0,80}?(?:许可|許可|授权|授權|允许|允許|同意).{0,120}?(?:不得|禁止|严禁|嚴禁|请勿|請勿|切勿|不可|翻唱|翻錄|翻录|使用|商用|商业|商業|复制|複製|传播|傳播|转载|轉載|搬运|搬運|盗用|盜用|二改)/,
+  // 「本歌曲由…赞助」「本歌曲来自〖飓风计划〗」「本作品…」整句
+  /^(?:本歌曲|本作品|本节目|本節目|本单曲|本單曲|本专辑|本專輯|本曲).{0,120}?(?:来自|來自|出自|入选|入選|荣获|榮獲|获得|獲得|赞助|贊助|提供|出品|制作|製作|发行|發行|版权|版權|许可|許可|授权|授權|联合|聯合|打造|企划|企劃|推广|推廣|营销|營銷|运营|運營|独家|獨家)/,
+  // 平台激励计划 / 奖项 / 授权版本推广语
+  /(?:现金激励|現金激勵|流量扶持|版权分成|版權分成|词曲分成|詞曲分成|音乐人扶持|音樂人扶持)/,
+  /^(?:扶持|助力|支持)原创(?:好)?音乐$/,
+  /^歌曲于.{0,24}?(?:荣获|榮獲|获得|獲得|入选|入選|登榜|上榜)/,
+  /^[「『【〖\[]?.{1,24}(?:广电局|廣電局|文旅厅|文旅廳|文化厅|文化廳|宣传部|宣傳部|版权局|版權局|文联|文聯)[」』】〗\]]?$/,
+  /^[《「『【〖\[]?(?:优秀网络视听(?:节目|作品)|五个一工程|中国当代歌曲创作精品工程)[》」』】〗\]]?$/,
+  /^(?:正式|官方|正版|独家|獨家)(?:授权|授權).{0,20}$/,
   // 鸣谢/赞助整行（即使没有冒号）
   /^(?:特别鸣谢|特別鳴謝|鸣谢|鳴謝|赞助|贊助)/,
   /^(?:版权所有|版權所有|翻版必究|翻錄必究|翻录必究)/,
-  /^(?:全面|倾力|傾力|匠心|重磅|诚意|誠意|精心)?打造.*(?:国风|國風).*(?:作品|音乐|音樂|专辑|專輯|单曲|單曲)/,
-  /^[『「【\[]?\s*(?:国风新语|國風新語)\s*[』」】\]]?$/,
+  /^(?:全面|倾力|傾力|匠心|重磅|诚意|誠意|精心)?打造.{0,80}?(?:国风|國風).{0,80}?(?:作品|音乐|音樂|专辑|專輯|单曲|單曲)/,
+  /^[『「【〖\[]?\s*(?:国风新语|國風新語)\s*[』」】〗\]]?$/,
+  /^[^：:\r\n]{2,30}(?:工作团队|工作團隊|制作团队|製作團隊|设计团队|設計團隊|宣发团队|宣發團隊)$/,
   /^special\s+thanks\b/i,
   PLATFORM_NOTICE_RE,
   PLATFORM_NOTICE_REVERSE_RE,
@@ -1440,30 +2427,145 @@ const SPECIAL_RES = [
   PLATFORM_CREATOR_RE,
 ];
 
-// 只去掉整行最外层的一对括号，用来识别「(作词：张三)」「『作词：张三』」这类写法
+const BRACKET_PAIRS = new Map([
+  ['（', '）'],
+  ['(', ')'],
+  ['【', '】'],
+  ['〖', '〗'],
+  ['[', ']'],
+  ['「', '」'],
+  ['『', '』'],
+]);
+const OPEN_BRACKETS = new Set(BRACKET_PAIRS.keys());
+const CLOSE_BRACKETS = new Set(BRACKET_PAIRS.values());
+
+// 只去掉包裹整行最外层的成对括号，用来识别「(作词：张三)」「『作词：张三』」这类写法
 function unwrapBrackets(text) {
-  const match = text.match(/^[（(【\[「『]+\s*([\s\S]*?)\s*[）)】\]」』]+$/);
-  return match ? match[1].trim() : text;
+  let cur = text.trim();
+  while (cur.length >= 2 && OPEN_BRACKETS.has(cur[0]) && CLOSE_BRACKETS.has(cur[cur.length - 1])) {
+    let depth = 0;
+    let closesAtEndOnly = true;
+    for (let i = 0; i < cur.length; i++) {
+      const ch = cur[i];
+      if (OPEN_BRACKETS.has(ch)) {
+        depth++;
+      } else if (CLOSE_BRACKETS.has(ch)) {
+        depth--;
+        if (depth < 0 || (depth === 0 && i < cur.length - 1)) {
+          closesAtEndOnly = false;
+          break;
+        }
+      }
+    }
+    if (!closesAtEndOnly || depth !== 0) break;
+    cur = cur.slice(1, -1).trim();
+  }
+  return cur;
+}
+
+// 识别「【制作人】张三」「「发行商」华纳唱片」「[Producer] John Doe」这类行首括号标签，
+// 避开「【合唱】」「（旁白）」「(Guitar)」等常见歌词分段/配器提示。
+const LEADING_BRACKET_LABEL_RE =
+  /^([（(【\[「『])\s*([^（）()【】\[\]「」『』\r\n]{1,40})\s*([）)】\]」』])\s*(?:[:：\-–—｜|=]\s*)?(\S.*)$/;
+const BRACKET_TAG_CUE_EXCLUDED = new Set([
+  '合唱',
+  '和声',
+  '和聲',
+  '合声',
+  '合聲',
+  '伴唱',
+  '童声',
+  '童聲',
+  '旁白',
+  '念白',
+  '对唱',
+  '對唱',
+  '男声',
+  '男聲',
+  '女声',
+  '女聲',
+  '演唱',
+  '人声',
+  '人聲',
+  '歌词',
+  '歌詞',
+  '音乐',
+  '音樂',
+  '设计',
+  '設計',
+  'chorus',
+  'choir',
+  'vocals',
+  'vocal',
+  'lead vocals',
+  'backing vocals',
+  'background vocals',
+  'guitar',
+  'piano',
+  'drums',
+  'drum',
+  'bass',
+  'strings',
+  'violin',
+  'cello',
+  'music',
+  'words',
+  'song',
+  'title',
+  'album',
+]);
+
+function matchBracketedLabelLine(candidate) {
+  const match = candidate.match(LEADING_BRACKET_LABEL_RE);
+  if (!match) return false;
+  const tag = match[2].trim();
+  if (!tag || BRACKET_TAG_CUE_EXCLUDED.has(tag.toLowerCase())) return false;
+  const synthetic = `${tag}: ${match[4]}`;
+  return (
+    matchLabelChain(synthetic) ||
+    CN_SHORT_COMPOUND_RE.test(synthetic) ||
+    CN_ORDINAL_INSTRUMENT_RE.test(synthetic)
+  );
 }
 
 // 「前缀：名单」类型：只看冒号前最后一个词是否命中制作/版权类后缀。
-// 兼容「母带后期处理录音室」「人声录音棚A」「制作人（中国）」这类组合写法。
+// 兼容「母带后期处理录音室」「人声录音棚A」「制作人（中国）」「制作公司Manufacturing company」这类组合写法。
+const COMPANY_OR_TEAM_EMPTY_TAIL_RE =
+  /(?:有限公司|有限责任公司|有限責任公司|股份有限公司|股份公司|公司|团队|團隊|单位|單位|工作室|录音室|錄音室|录音棚|錄音棚|机构|機構|中心|部门|部門|组织|組織)$/;
+
 function hasCreditSuffix(candidate) {
-  const match = candidate.match(/^([^：:]{1,30})[：:]\s*\S/);
+  const match = candidate.match(/^([^：:\r\n]{1,80})[：:](?:\s*(\S.*))?$/);
   if (!match) return false;
 
   const raw = match[1].trim();
   if (!raw) return false;
 
+  if (!match[2]) {
+    return COMPANY_OR_TEAM_EMPTY_TAIL_RE.test(raw);
+  }
+
   const variants = new Set([raw]);
-  const noParen = raw.replace(/\s*[（(【\[][^）)】\]]*[）)】\]]\s*$/, '').trim();
+  const noParen = raw.replace(/\s*[（(【\[][^（）()【】\[\]\r\n]*[）)】\]]\s*$/, '').trim();
   if (noParen) variants.add(noParen);
 
   for (const value of [...variants]) {
+    const noSlashEn = value
+      .replace(/\s*[/／]\s*[A-Za-z0-9][A-Za-z0-9\s/／&\-().]{0,50}$/, '')
+      .trim();
+    if (noSlashEn) variants.add(noSlashEn);
+
+    const noConcatEn = value
+      .replace(/([\p{sc=Han}])([A-Za-z][A-Za-z0-9\s/／&\-().]{1,50})$/u, '$1')
+      .trim();
+    if (noConcatEn && noConcatEn !== value) variants.add(noConcatEn);
+
     const noTrailingLatin = value
-      .replace(/\s*[/／]?[A-Za-z0-9]+(?:\s*[/／]\s*[A-Za-z0-9]+)*\s*$/, '')
+      .replace(/\s*[/／]?[A-Za-z0-9]+(?:\s*[/／]\s*[A-Za-z0-9]+)*(?:\(s\))?\s*$/, '')
       .trim();
     if (noTrailingLatin) variants.add(noTrailingLatin);
+
+    const noPluralS = value.replace(/\(s\)\s*$/i, '').trim();
+    if (noPluralS) variants.add(noPluralS);
   }
 
   for (const value of variants) {
@@ -1476,32 +2578,55 @@ function hasCreditSuffix(candidate) {
  * 判断一行歌词是不是制作信息/版权/赞助等非歌词内容。
  * 只判断整行，不修改行内文本。
  */
-const MAX_CREDIT_LINE_LENGTH = 300;
+const MAX_CREDIT_SCAN_LENGTH = 2000;
 
 export function isCreditLine(text) {
   if (typeof text !== 'string') return false;
 
-  // 行首的 // 是部分歌词文件的分隔符；BOM/NBSP 也一并清掉
-  const trimmed = text
-    .replace(/\u00a0/g, ' ')
+  // 行首的 // 是部分歌词文件的分隔符；清掉 BOM/零宽控制符，NBSP 转为空格
+  const cleaned = text
+    .replace(/[\u00a0\u200b\u200c\u200e\u200f\u2060\ufeff\u00ad]/g, (ch) =>
+      ch === '\u00a0' ? ' ' : ''
+    )
     .replace(/^\/+\s*/, '')
     .trim();
-  if (!trimmed || trimmed.length > MAX_CREDIT_LINE_LENGTH) return false;
+  if (!cleaned) return false;
 
-  const candidates = [trimmed];
+  const trimmed =
+    cleaned.length > MAX_CREDIT_SCAN_LENGTH ? cleaned.slice(0, MAX_CREDIT_SCAN_LENGTH) : cleaned;
+
+  const candidates = [];
+  const seen = new Set();
+  const pushCandidate = (value) => {
+    const v = value.trim();
+    if (v && !seen.has(v)) {
+      seen.add(v);
+      candidates.push(v);
+    }
+  };
+
+  pushCandidate(trimmed);
   const unwrapped = unwrapBrackets(trimmed);
-  if (unwrapped !== trimmed) candidates.push(unwrapped);
+  if (unwrapped !== trimmed) pushCandidate(unwrapped);
+
+  for (const base of [...candidates]) {
+    const noBullet = base.replace(LEADING_BULLET_RE, '');
+    if (noBullet !== base) pushCandidate(noBullet);
+    const noPlatform = noBullet.replace(LEADING_PLATFORM_TAG_RE, '');
+    if (noPlatform !== noBullet) pushCandidate(noPlatform);
+  }
 
   for (const candidate of candidates) {
-    if (!candidate) continue;
     if (SPECIAL_RES.some((re) => re.test(candidate))) return true;
-    if (CN_LABEL_RE.test(candidate)) return true;
+    if (matchLabelChain(candidate)) return true;
+    if (CN_SHORT_COMPOUND_RE.test(candidate)) return true;
     if (isEnLabelLine(candidate)) return true;
     if (isEnByLine(candidate)) return true;
     if (isEnAtLine(candidate)) return true;
     if (EN_PLAYED_RE.test(candidate)) return true;
     if (CN_ORDINAL_INSTRUMENT_RE.test(candidate)) return true;
     if (CN_SPACE_CREDIT_RE.test(candidate)) return true;
+    if (matchBracketedLabelLine(candidate)) return true;
     if (hasCreditSuffix(candidate)) return true;
   }
 
@@ -1523,17 +2648,83 @@ function removeBracketedInfo(text) {
   let depth = 0;
   let out = '';
   for (const ch of text) {
-    if ('（(【[《「『'.includes(ch)) {
+    if ('（(【〖[《「『'.includes(ch)) {
       depth++;
       continue;
     }
-    if ('）)】]》」』'.includes(ch)) {
+    if ('）)】〗]》」』'.includes(ch)) {
       if (depth > 0) depth--;
       continue;
     }
     if (depth === 0) out += ch;
   }
   return out;
+}
+
+function splitArtistList(raw, splitDash = false) {
+  if (typeof raw !== 'string') return [];
+  const cleaned = removeBracketedInfo(raw);
+  const sep = splitDash ? /[/／、,，&＆+\-–—]+/ : /[/／、,，&＆+]+|\s+[-–—]\s+/;
+  return cleaned.split(sep).map(compactInfo).filter(Boolean);
+}
+
+function splitArtistSignature(raw) {
+  const parts = splitArtistList(raw).sort();
+  return parts.join('\u0000');
+}
+
+function matchesArtistAndTitle(rawText, title, rawArtist, artist, artistSignature, index) {
+  if (!title || !artist) return false;
+  const headerRaw = removeBracketedInfo(rawText);
+  const headerCompact = compactInfo(headerRaw);
+  if (!headerCompact) return false;
+
+  if (headerCompact === title + artist || headerCompact === artist + title) {
+    return true;
+  }
+
+  // 支持多位歌手顺序/署名差异，如：
+  // - 音频「镜予歌/陈亦洺/尚辰」 vs LRC「陈亦洺、尚辰、镜予歌 - 千秋迭梦」
+  // - 音频「Alan Walker/Iselin Solheim」 vs LRC「Alan Walker - Faded」
+  // - 音频「3LAU/Carly Paige」 vs LRC「3LAU、Carly Paige、Marc... - Touch」
+  // - 音频「不才、三体宇宙」 vs LRC「夜航星 (Night Voyager) - 蔡明希-不才/三体宇宙」
+  // - 音频「伶」 vs LRC「散る散る満ちる (散落飘零) - 鹫尾伶菜」（前两行精确歌名 + 空格短横线）
+  const songArtists = splitArtistList(rawArtist);
+  const segments = headerRaw
+    .split(/\s*[-–—|/／]+\s*/)
+    .map((s) => s.trim())
+    .filter(Boolean);
+
+  for (let i = 0; i < segments.length; i++) {
+    if (compactInfo(segments[i]) !== title) continue;
+    const otherRaw = [...segments.slice(0, i), ...segments.slice(i + 1)].join(' / ');
+    if (!otherRaw) continue;
+
+    if (artistSignature && splitArtistSignature(otherRaw) === artistSignature) {
+      return true;
+    }
+
+    const otherTokens = new Set(splitArtistList(otherRaw, true));
+    if (songArtists.length > 0 && songArtists.every((a) => otherTokens.has(a))) {
+      return true;
+    }
+    if (songArtists.length > 1 && songArtists[0].length >= 2 && otherTokens.has(songArtists[0])) {
+      return true;
+    }
+
+    if (
+      index < 2 &&
+      title.length >= 3 &&
+      /\s+[-–—]\s+/.test(headerRaw) &&
+      otherRaw.length <= 40 &&
+      !/[，。！？,.!?]/.test(otherRaw) &&
+      songArtists[0] &&
+      compactInfo(otherRaw).includes(songArtists[0])
+    ) {
+      return true;
+    }
+  }
+  return false;
 }
 
 /**
@@ -1543,43 +2734,90 @@ function removeBracketedInfo(text) {
  * 避免把正文里恰好出现歌名或歌手名的歌词删掉。
  * @param {Array<{text: string, translation?: string}>} lines
  * @param {{title?: string, artist?: string, album?: string}} song
+ * @param {{title?: string, artist?: string, album?: string}|null} [lrcMetadata]
  */
-export function stripSongHeader(lines, song) {
-  if (!Array.isArray(lines) || lines.length === 0 || !song) return lines;
+export function stripSongHeader(lines, song, lrcMetadata = null) {
+  if (!Array.isArray(lines) || lines.length === 0 || (!song && !lrcMetadata)) return lines;
 
-  const title = compactInfo(song.title);
-  const artist = compactInfo(song.artist);
-  const album = compactInfo(song.album);
-  if (!title && !artist) return lines;
+  const sources = [];
+  const metaList = [song, lrcMetadata].filter(Boolean);
+  for (const primary of metaList) {
+    const rawTitle = primary.title || lrcMetadata?.title || song?.title || '';
+    const rawArtist = primary.artist || lrcMetadata?.artist || song?.artist || '';
+    const rawAlbum = primary.album || lrcMetadata?.album || song?.album || '';
+    const title = compactInfo(rawTitle);
+    const titleNoBracket = compactInfo(removeBracketedInfo(rawTitle));
+    const artist = compactInfo(rawArtist);
+    const artistNoBracket = compactInfo(removeBracketedInfo(rawArtist));
+    const album = compactInfo(rawAlbum);
+    if (title || artist) {
+      sources.push({
+        rawTitle,
+        rawArtist,
+        title,
+        titleVariants: [...new Set([title, titleNoBracket].filter(Boolean))],
+        artist,
+        artistVariants: [...new Set([artist, artistNoBracket].filter(Boolean))],
+        artistSignature: splitArtistSignature(rawArtist),
+        album,
+      });
+    }
+  }
+  if (sources.length === 0) return lines;
 
   const limit = Math.min(lines.length, HEADER_SCAN_LINES);
   const head = lines.slice(0, limit);
 
   // 「歌名 + 歌手」「歌手 + 歌名」；有专辑时再允许三者按任意顺序拼接
   const combined = new Set();
-  if (title && artist) {
-    combined.add(title + artist);
-    combined.add(artist + title);
+  const titleSet = new Set();
+  const artistSet = new Set();
 
-    if (album) {
-      const permute = (items) =>
-        items.length <= 1
-          ? [items]
-          : items.flatMap((item, i) =>
-              permute([...items.slice(0, i), ...items.slice(i + 1)]).map((rest) => [item, ...rest])
-            );
-      for (const permutation of permute([title, artist, album])) {
-        combined.add(permutation.join(''));
+  for (const src of sources) {
+    for (const t of src.titleVariants) titleSet.add(t);
+    for (const a of src.artistVariants) artistSet.add(a);
+
+    if (src.titleVariants.length > 0 && src.artistVariants.length > 0) {
+      for (const t of src.titleVariants) {
+        for (const a of src.artistVariants) {
+          combined.add(t + a);
+          combined.add(a + t);
+          if (src.album) {
+            const permute = (items) =>
+              items.length <= 1
+                ? [items]
+                : items.flatMap((item, i) =>
+                    permute([...items.slice(0, i), ...items.slice(i + 1)]).map((rest) => [
+                      item,
+                      ...rest,
+                    ])
+                  );
+            for (const permutation of permute([t, a, src.album])) {
+              combined.add(permutation.join(''));
+            }
+          }
+        }
+      }
+    } else if (src.titleVariants.length > 0 && src.album) {
+      for (const t of src.titleVariants) {
+        combined.add(t + src.album);
+        combined.add(src.album + t);
       }
     }
-  } else if (title && album) {
-    combined.add(title + album);
-    combined.add(album + title);
   }
 
   const headerTextOf = (line) =>
     compactInfo(removeBracketedInfo(line.text || line.translation || ''));
-  const hasArtistLine = !!artist && head.some((line) => headerTextOf(line) === artist);
+  const hasArtistLine =
+    artistSet.size > 0 &&
+    head.some((line) => {
+      const h = headerTextOf(line);
+      const raw = line.text || line.translation || '';
+      return (
+        artistSet.has(h) ||
+        sources.some((s) => s.artistSignature && splitArtistSignature(raw) === s.artistSignature)
+      );
+    });
 
   return lines.filter((line, index) => {
     if (index >= limit) return true;
@@ -1590,14 +2828,29 @@ export function stripSongHeader(lines, song) {
     if (!headerText) return true;
 
     // 单独成行的歌手名；或紧挨着歌手行的歌名行（常见内嵌歌词头两行）
-    if (artist && headerText === artist) return false;
-    if (title && headerText === title && (hasArtistLine || /[-–—/|·]\s*$/.test(rawText))) {
+    if (
+      artistSet.has(headerText) ||
+      sources.some((s) => s.artistSignature && splitArtistSignature(rawText) === s.artistSignature)
+    ) {
+      return false;
+    }
+    if (titleSet.has(headerText) && (hasArtistLine || /[-–—/|·]\s*$/.test(rawText))) {
       return false;
     }
 
     // 「歌名 - 歌手」「歌手 / 歌名」「歌名 - 歌手 - 专辑」等组合行；
     // 括号里的英文名/专辑宣传语已在 headerTextOf 里去掉
     if (combined.has(headerText)) return false;
+
+    for (const src of sources) {
+      for (const t of src.titleVariants) {
+        for (const a of src.artistVariants) {
+          if (matchesArtistAndTitle(rawText, t, src.rawArtist, a, src.artistSignature, index)) {
+            return false;
+          }
+        }
+      }
+    }
 
     return true;
   });
