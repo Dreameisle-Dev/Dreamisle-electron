@@ -22,7 +22,7 @@ import {
   applyActiveSort,
   applyPlaylistFromMain,
   bindPlaylistEvents,
-  setQueue,
+  restoreSavedQueue,
 } from './playlist.js';
 import {
   togglePlaylistsDrawer,
@@ -368,18 +368,19 @@ window.addEventListener('DOMContentLoaded', async () => {
     state.librarySongs = [...savedSongs]; // 曲库缓存
     searchInput.value = '';
 
-    // 优先恢复上次的播放队列（切换队列/编辑队列时都会保存快照）；
-    // 没有快照时按曲库 + 当前排序初始化。
-    const restoredQueue = await loadQueueSnapshot();
-    if (restoredQueue.length > 0) {
-      setQueue(restoredQueue, { type: 'custom' });
+    // 先拉歌单与队列快照，再还原上次所在的队列类型（全库/文件夹/歌单/自定义队列）及排序/字母索引
+    await loadPlaylists().catch(() => {});
+    const snapshot = await loadQueueSnapshot();
+    if (snapshot.songs.length > 0) {
+      restoreSavedQueue(snapshot);
     } else {
       state.originalSongs = [...savedSongs]; // 备份原始数据
       state.songs = [...savedSongs];
       // 必须走排序入口而不是 initVirtualList：后者按物理扫描顺序渲染，
       // 会和「歌名」按钮的高亮对不上，字母索引也会从错误的字母开始
-      applyActiveSort();
+      applyActiveSort({ persist: true });
     }
+    renderPlaylistsList();
 
     const savedState = await window.dreamApi.loadPlaybackState();
     const restoredIndex = resolveRestoredIndex(state.songs, savedState);
@@ -420,7 +421,9 @@ window.addEventListener('DOMContentLoaded', async () => {
 
   setupIpcListeners();
   updateProgressStyle(0);
-  loadPlaylists().catch(() => {});
+  if (!savedSongs || savedSongs.length === 0) {
+    loadPlaylists().catch(() => {});
+  }
 
   // 播放恢复完成后，后台同步文件夹新增/删除的歌曲；同步结束后清理歌单失效歌曲
   syncLibrary()

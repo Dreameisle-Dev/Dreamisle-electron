@@ -152,6 +152,7 @@ export function setTaskbarLyricsSetting(enabled) {
 // 播放队列快照：跨重启恢复当前播放队列。配置可能被手改，
 // 读取和写入都归一化，只保留可播放的字段并限制长度。
 const MAX_PLAY_QUEUE_LENGTH = 1000;
+const VALID_SORT_MODES = new Set(['title', 'artist', 'random', 'custom']);
 
 function normalizeQueueEntry(song) {
   if (!song || typeof song !== 'object' || typeof song.path !== 'string' || !song.path) return null;
@@ -163,18 +164,61 @@ function normalizeQueueEntry(song) {
   };
 }
 
+function normalizeActiveQueue(raw) {
+  if (!raw || typeof raw !== 'object') return null;
+  if (raw.type === 'library' || raw.type === 'custom') {
+    return { type: raw.type };
+  }
+  if (
+    raw.type === 'playlist' &&
+    typeof raw.id === 'string' &&
+    raw.id.length > 0 &&
+    raw.id.length <= 256
+  ) {
+    return { type: 'playlist', id: raw.id };
+  }
+  if (
+    raw.type === 'folder' &&
+    typeof raw.path === 'string' &&
+    raw.path.length > 0 &&
+    raw.path.length <= 4096
+  ) {
+    return { type: 'folder', path: raw.path };
+  }
+  return null;
+}
+
+function normalizeQueueMeta(raw) {
+  if (!raw || typeof raw !== 'object') return { activeQueue: null, sortMode: null };
+  return {
+    activeQueue: normalizeActiveQueue(raw.activeQueue),
+    sortMode:
+      typeof raw.sortMode === 'string' && VALID_SORT_MODES.has(raw.sortMode) ? raw.sortMode : null,
+  };
+}
+
 export function getPlayQueue() {
   const raw = store.get('playQueue');
-  if (!Array.isArray(raw)) return [];
-  return raw.map(normalizeQueueEntry).filter(Boolean).slice(0, MAX_PLAY_QUEUE_LENGTH);
+  const songs = Array.isArray(raw)
+    ? raw.map(normalizeQueueEntry).filter(Boolean).slice(0, MAX_PLAY_QUEUE_LENGTH)
+    : [];
+  const meta = normalizeQueueMeta(store.get('playQueueMeta'));
+  return { songs, activeQueue: meta.activeQueue, sortMode: meta.sortMode };
 }
 
 export function setPlayQueue(queue) {
-  const list = Array.isArray(queue) ? queue : [];
+  const isObj = queue && !Array.isArray(queue) && typeof queue === 'object';
+  const rawList = isObj ? queue.songs : queue;
+  const list = Array.isArray(rawList) ? rawList : [];
   store.set(
     'playQueue',
     list.map(normalizeQueueEntry).filter(Boolean).slice(0, MAX_PLAY_QUEUE_LENGTH)
   );
+  if (isObj) {
+    store.set('playQueueMeta', normalizeQueueMeta(queue));
+  } else {
+    store.delete('playQueueMeta');
+  }
 }
 
 // 菜单栏歌词：macOS 专属，默认关闭；开启后在托盘图标旁显示当前歌词行。

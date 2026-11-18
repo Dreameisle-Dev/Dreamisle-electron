@@ -189,7 +189,7 @@ function updateSortButtons(activeBtn) {
 /**
  * 执行队列重排并更新播放指针
  */
-export function applySort(mode, btnEl) {
+export function applySort(mode, btnEl, { persist = true } = {}) {
   if (state.originalSongs.length === 0) return;
 
   state.sortMode = mode;
@@ -213,17 +213,18 @@ export function applySort(mode, btnEl) {
 
   // 刷新前端过滤和列表渲染，保留搜索框已有字符
   initVirtualList(searchInput.value.trim());
+  if (persist) saveQueueSnapshot(state.songs, state.activeQueue, state.sortMode);
 }
 
 // 套用当前激活的排序按钮。任何「列表重新出现」的路径（启动、换队列）都必须走这里：
 // 直接调 initVirtualList 是按 state.songs 的物理顺序渲染，而按钮高亮仍是「歌名」——
 // 列表顺序和按钮说法对不上，字母索引也会跟着错位。
-export function applyActiveSort() {
+export function applyActiveSort({ persist = false } = {}) {
   const activeSortBtn = [btnSortTitle, btnSortArtist, btnSortRandom].find(
     (btn) => btn && btn.classList.contains('active')
   );
-  if (activeSortBtn) applySort(activeSortBtn.dataset.mode, activeSortBtn);
-  else applySort('title', btnSortTitle); // 兜底：按钮全没高亮时按歌名排
+  if (activeSortBtn) applySort(activeSortBtn.dataset.mode, activeSortBtn, { persist });
+  else applySort('title', btnSortTitle, { persist }); // 兜底：按钮全没高亮时按歌名排
 }
 
 // 应用一套新队列:重定位当前歌曲、套用激活排序、刷新列表(空队列复位)
@@ -249,10 +250,67 @@ function applyQueueSongs(songs) {
     state.sortMode = 'custom';
     initVirtualList(searchInput.value.trim());
   } else {
-    applyActiveSort();
+    applyActiveSort({ persist: false });
   }
   syncQueueControls();
-  saveQueueSnapshot(state.songs); // 队列切换后同步重启恢复用的快照
+  saveQueueSnapshot(state.songs, state.activeQueue, state.sortMode); // 队列切换后同步重启恢复用的快照
+}
+
+const SORT_BUTTONS = {
+  title: btnSortTitle,
+  artist: btnSortArtist,
+  random: btnSortRandom,
+};
+
+function restoreTypedQueue(baseSongs, activeQueue, savedSongs, mode) {
+  state.activeQueue = activeQueue;
+  if (mode === 'random') {
+    const valid = new Set(baseSongs.map((s) => s.path));
+    const preserved = savedSongs.filter((s) => valid.has(s.path));
+    state.originalSongs = [...baseSongs];
+    state.songs = preserved.length > 0 ? preserved : [...baseSongs];
+    state.sortMode = 'random';
+    updateSortButtons(btnSortRandom);
+    initVirtualList(searchInput.value.trim());
+    return;
+  }
+  const nextMode = SORT_BUTTONS[mode] ? mode : 'title';
+  state.sortMode = nextMode;
+  updateSortButtons(SORT_BUTTONS[nextMode]);
+  applyQueueSongs(baseSongs);
+}
+
+// 启动恢复播放队列与排序状态：保留歌名/歌手排序与 A-Z# 索引，仅在用户主动编排队列时恢复为 custom
+export function restoreSavedQueue({ songs, activeQueue, sortMode }) {
+  const mode = sortMode || 'title';
+
+  if (activeQueue && activeQueue.type === 'library') {
+    restoreTypedQueue(state.librarySongs, { type: 'library' }, songs, mode);
+    return;
+  }
+
+  if (activeQueue && activeQueue.type === 'folder') {
+    const folderSongs = folderSubtreeSongsOf(state.librarySongs, activeQueue.path);
+    if (folderSongs.length > 0) {
+      restoreTypedQueue(folderSongs, { type: 'folder', path: activeQueue.path }, songs, mode);
+      return;
+    }
+  }
+
+  if (activeQueue && activeQueue.type === 'playlist') {
+    const pl = state.playlists.find((p) => p.id === activeQueue.id);
+    if (pl && Array.isArray(pl.songs) && pl.songs.length > 0) {
+      restoreTypedQueue(pl.songs, { type: 'playlist', id: pl.id }, songs, mode);
+      return;
+    }
+  }
+
+  if (activeQueue && activeQueue.type === 'custom') {
+    setQueue(songs, { type: 'custom' });
+    return;
+  }
+
+  restoreTypedQueue(state.librarySongs, { type: 'library' }, songs, mode);
 }
 
 // 切换播放队列:曲库、歌单或自定义队列
