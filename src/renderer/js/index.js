@@ -144,9 +144,11 @@ window.addEventListener('DOMContentLoaded', async () => {
   if (platform === 'darwin') {
     const settingsKey = document.querySelector('#helpSettingsKeys kbd');
     if (settingsKey) settingsKey.textContent = '⌘';
-    const lyricsKeys = document.querySelectorAll('#helpDesktopLyricsKeys kbd');
-    if (lyricsKeys[0]) lyricsKeys[0].textContent = '⌘';
-    if (lyricsKeys[1]) lyricsKeys[1].textContent = '⌥';
+    for (const selector of ['#helpDesktopLyricsKeys kbd', '#settingsDesktopLyricsKeys kbd']) {
+      const lyricsKeys = document.querySelectorAll(selector);
+      if (lyricsKeys[0]) lyricsKeys[0].textContent = '⌘';
+      if (lyricsKeys[1]) lyricsKeys[1].textContent = '⌥';
+    }
 
     // 长按触发的修饰键：Windows 的 Alt/Ctrl/Shift 在 macOS 上分别是 ⌥/⌃/⇧
     const macKeys = [

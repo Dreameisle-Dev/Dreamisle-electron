@@ -47,16 +47,26 @@ import {
   menubarLyricsEnabledSwitch,
   taskbarLyricsStatus,
   folderSummaryEl,
+  settingsScroll,
+  settingsStage,
+  settingsStageTabs,
   desktopLyricsCapsule,
   desktopPreviewLine,
   desktopPreviewNext,
   desktopPreviewCover,
   desktopPreviewStatus,
-  desktopLyricsStyleSummary,
+  desktopCapHint,
+  lyricColorDots,
+  taskbarPreviewBar,
+  taskbarLyricsPreview,
   taskbarPreviewLine,
   taskbarPreviewNext,
   taskbarPreviewCover,
-  taskbarLyricsStyleSummary,
+  taskbarPreviewTime,
+  btnTaskbarPreviewTone,
+  menubarPreviewLine,
+  playlistDrawer,
+  playlistsDrawer,
 } from './dom.js';
 import { showSyncToast } from './helpers.js';
 import { applyPlaylistFromMain } from './playlist.js';
@@ -78,8 +88,17 @@ export { syncThemeSeg };
 
 const SETTINGS_PANEL_KEY = 'dreamisle.settings.panel';
 const SETTINGS_PANELS = new Set(['general', 'library', 'lyrics', 'equalizer']);
+const SETTINGS_SECTIONS = [
+  { id: 'general', elId: 'settingsSecGeneral', stage: 'vinyl' },
+  { id: 'library', elId: 'settingsSecLibrary', stage: 'vinyl' },
+  { id: 'lyrics', elId: 'settingsSecLyrics', stage: 'lyrics' },
+  { id: 'equalizer', elId: 'settingsSecEqualizer', stage: 'eq' },
+];
 let desktopLyricsLines = 1;
 let previewSyncTimer = null;
+let previewTaskbarLight = null;
+let currentStage = 'vinyl';
+let scrollSpyLockUntil = 0;
 
 function setSwitchState(el, on) {
   if (!el) return;
@@ -87,19 +106,61 @@ function setSwitchState(el, on) {
   el.setAttribute('aria-checked', String(!!on));
 }
 
-function activateSettingsPanel(panel, { persist = false } = {}) {
-  const next = SETTINGS_PANELS.has(panel) ? panel : 'general';
+function setNavActive(panel) {
   document.querySelectorAll('.settings-nav-item').forEach((item) => {
-    const active = item.dataset.section === next;
+    const active = item.dataset.section === panel;
     item.classList.toggle('active', active);
     if (active) item.setAttribute('aria-current', 'page');
     else item.removeAttribute('aria-current');
   });
-  document.querySelectorAll('.settings-panel').forEach((section) => {
-    section.classList.toggle('active', section.dataset.panel === next);
+}
+
+export function setSettingsStage(stage) {
+  const next = stage === 'lyrics' || stage === 'eq' ? stage : 'vinyl';
+  currentStage = next;
+  if (settingsOverlay) settingsOverlay.dataset.stage = next;
+  if (settingsStageTabs) {
+    settingsStageTabs.querySelectorAll('.stage-tab').forEach((btn) => {
+      btn.classList.toggle('active', btn.dataset.stage === next);
+    });
+  }
+}
+
+function scrollToSettingsSection(panel, smooth = true) {
+  const entry = SETTINGS_SECTIONS.find((s) => s.id === panel);
+  const target = entry ? document.getElementById(entry.elId) : null;
+  if (!settingsScroll || !target) return;
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const useSmooth = smooth && !reduceMotion;
+  scrollSpyLockUntil = Date.now() + (useSmooth ? 520 : 80);
+  const top = target.offsetTop - 12;
+  settingsScroll.scrollTo({
+    top: Math.max(0, top),
+    behavior: useSmooth ? 'smooth' : 'instant',
   });
-  const content = document.querySelector('.settings-content');
-  if (content) content.scrollTop = 0;
+}
+
+function getSavedSettingsPanel() {
+  try {
+    const saved = localStorage.getItem(SETTINGS_PANEL_KEY);
+    if (saved && SETTINGS_PANELS.has(saved)) return saved;
+  } catch (error) {
+    // 忽略
+  }
+  return 'general';
+}
+
+function activateSettingsPanel(
+  panel,
+  { persist = false, scroll = true, smooth = true, syncStage = true } = {}
+) {
+  const next = SETTINGS_PANELS.has(panel) ? panel : 'general';
+  setNavActive(next);
+  if (scroll) scrollToSettingsSection(next, smooth);
+  if (syncStage) {
+    const entry = SETTINGS_SECTIONS.find((s) => s.id === next);
+    if (entry) setSettingsStage(entry.stage);
+  }
   if (persist) {
     try {
       localStorage.setItem(SETTINGS_PANEL_KEY, next);
@@ -110,14 +171,15 @@ function activateSettingsPanel(panel, { persist = false } = {}) {
 }
 
 function restoreSettingsPanel() {
-  let panel = 'general';
-  try {
-    const saved = localStorage.getItem(SETTINGS_PANEL_KEY);
-    if (saved && SETTINGS_PANELS.has(saved)) panel = saved;
-  } catch (error) {
-    // 忽略
-  }
-  activateSettingsPanel(panel);
+  activateSettingsPanel(getSavedSettingsPanel(), { scroll: true, smooth: false, syncStage: true });
+}
+
+function syncLyricColorDots(color) {
+  if (!lyricColorDots) return;
+  const target = (color || '').toLowerCase();
+  lyricColorDots.querySelectorAll('.lyric-color-dot').forEach((dot) => {
+    dot.classList.toggle('active', (dot.dataset.color || '').toLowerCase() === target);
+  });
 }
 
 function syncDesktopLyricsPreview() {
@@ -127,23 +189,43 @@ function syncDesktopLyricsPreview() {
   desktopLyricsCapsule.style.setProperty('--preview-opacity', String(style.textOpacity / 100));
   desktopLyricsCapsule.style.setProperty('--preview-color', style.textColor);
   desktopLyricsCapsule.style.fontFamily = style.fontFamily ? `"${style.fontFamily}"` : '';
+  const enabled = desktopLyricsEnabledSwitch?.getAttribute('aria-checked') === 'true';
+  desktopLyricsCapsule.classList.toggle('disabled-stage', !enabled);
+  const clickThrough = desktopLyricsClickThroughSwitch?.getAttribute('aria-checked') !== 'false';
+  if (desktopCapHint) {
+    desktopCapHint.textContent = clickThrough
+      ? t('settings.clickThroughShort')
+      : t('settings.draggableShort');
+  }
   if (desktopPreviewNext) {
     desktopPreviewNext.hidden = desktopLyricsLines !== 2 || !desktopPreviewNext.textContent;
   }
+  syncLyricColorDots(style.textColor);
 }
 
-function updateDesktopLyricsStyleSummary() {
-  if (!desktopLyricsStyleSummary) return;
-  const style = state.currentLyricsStyle;
-  const font = style.fontFamily || t('settings.fontDefault');
-  const opacity = `${style.textOpacity ?? DEFAULT_LYRICS_STYLE.textOpacity}%`;
-  const color = style.textColor || DEFAULT_LYRICS_STYLE.textColor;
-  desktopLyricsStyleSummary.textContent = `${font} · ${opacity} · ${color}`;
+function defaultTaskbarPreviewLight() {
+  const root = document.documentElement;
+  if (root.classList.contains('theme-light')) return true;
+  if (root.classList.contains('theme-dark')) return false;
+  return window.matchMedia('(prefers-color-scheme: light)').matches;
 }
 
 function syncTaskbarLyricsPreview() {
   if (!taskbarPreviewLine || !taskbarPreviewNext) return;
-  const mainColor = taskbarStyle.textColor === 'auto' ? '#ffffff' : taskbarStyle.textColor;
+  const isAuto = taskbarStyle.textColor === 'auto';
+  const resolvedLight =
+    previewTaskbarLight === null ? defaultTaskbarPreviewLight() : previewTaskbarLight;
+  const useLightBar = isAuto && resolvedLight;
+  if (taskbarPreviewBar) {
+    taskbarPreviewBar.classList.toggle('light-tb', useLightBar);
+  }
+  if (btnTaskbarPreviewTone) {
+    btnTaskbarPreviewTone.hidden = !isAuto;
+    btnTaskbarPreviewTone.textContent = useLightBar
+      ? t('settings.taskbarDarkPreview')
+      : t('settings.taskbarLightPreview');
+  }
+  const mainColor = isAuto ? (useLightBar ? '#101010' : '#ffffff') : taskbarStyle.textColor;
   taskbarPreviewLine.style.color = mainColor;
   taskbarPreviewNext.style.color = mainColor;
   taskbarPreviewNext.style.opacity = '0.68';
@@ -153,22 +235,10 @@ function syncTaskbarLyricsPreview() {
   const weight = Number(taskbarStyle.fontWeight) || DEFAULT_TASKBAR_LYRICS_STYLE.fontWeight;
   taskbarPreviewLine.style.fontWeight = String(weight);
   taskbarPreviewNext.style.fontWeight = String(Math.max(400, weight - 100));
-}
-
-function taskbarWeightLabel(weight) {
-  if (weight === 400) return t('settings.weightRegular');
-  if (weight === 500) return t('settings.weightMedium');
-  if (weight === 700) return t('settings.weightBold');
-  return t('settings.weightSemibold');
-}
-
-function updateTaskbarLyricsStyleSummary() {
-  if (!taskbarLyricsStyleSummary) return;
-  const font = taskbarStyle.fontFamily || t('settings.fontDefault');
-  const weight = taskbarWeightLabel(taskbarStyle.fontWeight);
-  const color =
-    taskbarStyle.textColor === 'auto' ? t('settings.taskbarColorAuto') : taskbarStyle.textColor;
-  taskbarLyricsStyleSummary.textContent = `${font} · ${weight} · ${color}`;
+  const enabled = taskbarLyricsEnabledSwitch?.getAttribute('aria-checked') === 'true';
+  if (taskbarLyricsPreview) {
+    taskbarLyricsPreview.classList.toggle('disabled-stage', !enabled);
+  }
 }
 
 function updateTaskbarLyricsStatus(enabled, running) {
@@ -246,6 +316,21 @@ function syncNowPlayingPreviews() {
     taskbarPreviewNext.textContent = data.second;
     taskbarPreviewNext.hidden = !data.second;
   }
+  if (menubarPreviewLine) {
+    menubarPreviewLine.textContent = `♫ ${data.first}`;
+    const menubarOn = menubarLyricsEnabledSwitch?.getAttribute('aria-checked') === 'true';
+    menubarPreviewLine.classList.toggle('disabled-stage', !menubarOn);
+  }
+  if (taskbarPreviewTime) {
+    const now = new Date();
+    const hh = String(now.getHours()).padStart(2, '0');
+    const mm = String(now.getMinutes()).padStart(2, '0');
+    const dateStr = `${now.getFullYear()}/${now.getMonth() + 1}/${now.getDate()}`;
+    const timeEl = taskbarPreviewTime.querySelector('.tb-clock-hhmm');
+    const dateEl = taskbarPreviewTime.querySelector('.tb-clock-date');
+    if (timeEl) timeEl.textContent = `${hh}:${mm}`;
+    if (dateEl) dateEl.textContent = dateStr;
+  }
 
   const coverUrl = state.currentCoverBlobUrl || '';
   for (const image of [desktopPreviewCover, taskbarPreviewCover]) {
@@ -276,14 +361,22 @@ export function toggleSettings() {
   else openSettings();
 }
 
-export function openSettings() {
+export async function openSettings() {
+  if (playlistDrawer) playlistDrawer.classList.remove('open');
+  if (playlistsDrawer) playlistsDrawer.classList.remove('open');
+  document.body.classList.add('settings-open');
   settingsOverlay.classList.add('open');
   restoreSettingsPanel();
-  refreshSettingsUi();
   startPreviewSync();
+  await refreshSettingsUi();
+  // 文件夹列表与预设渲染完成后重校准一次滚动锚点，避免高度变化导致定位偏移
+  if (settingsOverlay.classList.contains('open')) {
+    scrollToSettingsSection(getSavedSettingsPanel(), false);
+  }
 }
 
 export function closeSettings() {
+  document.body.classList.remove('settings-open');
   settingsOverlay.classList.remove('open');
   stopPreviewSync();
 }
@@ -316,6 +409,8 @@ export async function refreshSettingsUi() {
   setSwitchState(desktopLyricsEnabledSwitch, settings.desktopLyricsVisible === true);
   setSwitchState(taskbarLyricsEnabledSwitch, settings.taskbarLyricsEnabled === true);
   setSwitchState(menubarLyricsEnabledSwitch, settings.menubarLyricsEnabled === true);
+  syncDesktopLyricsPreview();
+  syncTaskbarLyricsPreview();
   updateTaskbarLyricsStatus(
     settings.taskbarLyricsEnabled === true,
     settings.taskbarLyricsRunning === true
@@ -439,12 +534,10 @@ export function syncLyricsStyleUi(style) {
     ? `"${state.currentLyricsStyle.fontFamily}"`
     : '';
   syncDesktopLyricsPreview();
-  updateDesktopLyricsStyleSummary();
 }
 
 export function pushLyricsStyle() {
   syncDesktopLyricsPreview();
-  updateDesktopLyricsStyleSummary();
   window.dreamApi.setLyricsStyle(state.currentLyricsStyle);
 }
 
@@ -469,12 +562,10 @@ export function syncTaskbarLyricsStyleUi(style) {
   taskbarTextColor.value = auto ? lastTaskbarCustomColor : taskbarStyle.textColor;
   setSwitchState(taskbarAutoColorSwitch, auto);
   syncTaskbarLyricsPreview();
-  updateTaskbarLyricsStyleSummary();
 }
 
 export function pushTaskbarLyricsStyle() {
   syncTaskbarLyricsPreview();
-  updateTaskbarLyricsStyleSummary();
   window.dreamApi
     .setTaskbarLyricsStyle(taskbarStyle)
     .then((next) => {
@@ -562,12 +653,31 @@ function renderTaskbarFontOptions(filter = '') {
   });
 }
 
+function ensureDropdownVisible(wrapEl) {
+  if (!settingsScroll || !wrapEl) return;
+  requestAnimationFrame(() => {
+    const listEl = wrapEl.querySelector('.font-select-list');
+    if (!listEl) return;
+    const overflow =
+      listEl.getBoundingClientRect().bottom - settingsScroll.getBoundingClientRect().bottom;
+    if (overflow > 0) {
+      const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      settingsScroll.scrollTo({
+        top: settingsScroll.scrollTop + overflow + 14,
+        behavior: reduceMotion ? 'auto' : 'smooth',
+      });
+    }
+  });
+}
+
 export function bindSettingsEvents() {
   themeSeg.querySelectorAll('button').forEach((btn) => {
     btn.addEventListener('click', () => {
       const mode = btn.dataset.mode;
       syncThemeSeg(mode);
       applyThemeMode(mode);
+      syncTaskbarLyricsPreview();
+      setSettingsStage('vinyl');
       window.dreamApi.setThemeMode(mode).catch(() => {});
     });
   });
@@ -591,6 +701,18 @@ export function bindSettingsEvents() {
     pushLyricsStyle();
   });
 
+  if (lyricColorDots) {
+    lyricColorDots.querySelectorAll('.lyric-color-dot').forEach((dot) => {
+      dot.addEventListener('click', () => {
+        const color = dot.dataset.color;
+        if (!color) return;
+        state.currentLyricsStyle.textColor = color;
+        textColorInput.value = color;
+        pushLyricsStyle();
+      });
+    });
+  }
+
   btnResetStyle.addEventListener('click', () => {
     syncLyricsStyleUi(DEFAULT_LYRICS_STYLE);
     pushLyricsStyle();
@@ -600,6 +722,7 @@ export function bindSettingsEvents() {
     const next = !desktopLyricsClickThroughSwitch.classList.contains('active');
     desktopLyricsClickThroughSwitch.classList.toggle('active', next);
     desktopLyricsClickThroughSwitch.setAttribute('aria-checked', String(next));
+    syncDesktopLyricsPreview();
     window.dreamApi.setDesktopLyricsClickThrough(next).catch(() => {});
   });
 
@@ -608,6 +731,7 @@ export function bindSettingsEvents() {
     performanceModeSwitch.classList.toggle('active', next);
     performanceModeSwitch.setAttribute('aria-checked', String(next));
     applyPerformanceMode(next); // 立即生效，不等主进程落盘
+    setSettingsStage('vinyl');
     window.dreamApi.setPerformanceMode(next).catch(() => {});
   });
 
@@ -627,37 +751,55 @@ export function bindSettingsEvents() {
   desktopLyricsEnabledSwitch.addEventListener('click', async () => {
     const next = desktopLyricsEnabledSwitch.getAttribute('aria-checked') !== 'true';
     setSwitchState(desktopLyricsEnabledSwitch, next);
+    syncDesktopLyricsPreview();
     try {
       const visible = await window.dreamApi.setDesktopLyricsEnabled(next);
       setSwitchState(desktopLyricsEnabledSwitch, visible === true);
+      syncDesktopLyricsPreview();
     } catch (error) {
       setSwitchState(desktopLyricsEnabledSwitch, !next);
+      syncDesktopLyricsPreview();
     }
   });
 
   taskbarLyricsEnabledSwitch.addEventListener('click', async () => {
     const next = taskbarLyricsEnabledSwitch.getAttribute('aria-checked') !== 'true';
     setSwitchState(taskbarLyricsEnabledSwitch, next);
+    syncTaskbarLyricsPreview();
     try {
       const result = await window.dreamApi.setTaskbarLyricsEnabled(next);
       const enabled = !!(result && result.enabled);
       setSwitchState(taskbarLyricsEnabledSwitch, enabled);
+      syncTaskbarLyricsPreview();
       updateTaskbarLyricsStatus(enabled, !!(result && result.running));
     } catch (error) {
       setSwitchState(taskbarLyricsEnabledSwitch, !next);
+      syncTaskbarLyricsPreview();
     }
   });
 
   menubarLyricsEnabledSwitch.addEventListener('click', async () => {
     const next = menubarLyricsEnabledSwitch.getAttribute('aria-checked') !== 'true';
     setSwitchState(menubarLyricsEnabledSwitch, next);
+    syncNowPlayingPreviews();
     try {
       const enabled = await window.dreamApi.setMenubarLyricsEnabled(next);
       setSwitchState(menubarLyricsEnabledSwitch, enabled === true);
+      syncNowPlayingPreviews();
     } catch (error) {
       setSwitchState(menubarLyricsEnabledSwitch, !next);
+      syncNowPlayingPreviews();
     }
   });
+
+  if (btnTaskbarPreviewTone) {
+    btnTaskbarPreviewTone.addEventListener('click', () => {
+      const current =
+        previewTaskbarLight === null ? defaultTaskbarPreviewLight() : previewTaskbarLight;
+      previewTaskbarLight = !current;
+      syncTaskbarLyricsPreview();
+    });
+  }
 
   // 可见开关驱动隐藏的 checkbox，沿用已有的自动颜色逻辑
   taskbarAutoColorSwitch.addEventListener('click', () => {
@@ -688,37 +830,61 @@ export function bindSettingsEvents() {
     }
     fontSearchInput.value = '';
     renderFontOptions();
+    ensureDropdownVisible(fontSelectWrap);
     fontSearchInput.focus();
   });
 
   fontSearchInput.addEventListener('input', () => renderFontOptions(fontSearchInput.value));
 
-  // 左侧导航切换设置分区；记住上次停留的面板
+  // 顶部锚点导航：平滑滚到对应分区并联动右侧舞台预览
   document.querySelectorAll('.settings-nav-item').forEach((item) => {
     item.addEventListener('click', () => {
-      activateSettingsPanel(item.dataset.section, { persist: true });
+      activateSettingsPanel(item.dataset.section, { persist: true, scroll: true, syncStage: true });
     });
   });
 
-  // 展开“更多样式”时把内容滚进视野，避免点开只看到箭头翻转
-  document.querySelectorAll('.settings-details').forEach((details) => {
-    details.addEventListener('toggle', () => {
-      if (!details.open) return;
-      requestAnimationFrame(() => {
-        const content = document.querySelector('.settings-content');
-        if (!content) return;
-        const overflow =
-          details.getBoundingClientRect().bottom - content.getBoundingClientRect().bottom;
-        if (overflow > 0) {
-          const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-          content.scrollTo({
-            top: content.scrollTop + overflow + 16,
-            behavior: reduceMotion ? 'auto' : 'smooth',
-          });
+  // 单页滚动时自动高亮当前所在分区的锚点胶囊
+  if (settingsScroll) {
+    settingsScroll.addEventListener('scroll', () => {
+      if (Date.now() < scrollSpyLockUntil) return;
+      const atBottom =
+        settingsScroll.scrollTop + settingsScroll.clientHeight >= settingsScroll.scrollHeight - 12;
+      let activeId = atBottom ? 'equalizer' : 'general';
+      if (!atBottom) {
+        const threshold = settingsScroll.scrollTop + 44;
+        for (const sec of SETTINGS_SECTIONS) {
+          const el = document.getElementById(sec.elId);
+          if (el && el.offsetTop <= threshold) activeId = sec.id;
         }
-      });
+      }
+      setNavActive(activeId);
     });
-  });
+  }
+
+  // 右侧舞台手动切换（活黑胶 / 歌词实景 / 声学曲线）
+  if (settingsStageTabs) {
+    settingsStageTabs.querySelectorAll('.stage-tab').forEach((btn) => {
+      btn.addEventListener('click', () => setSettingsStage(btn.dataset.stage));
+    });
+  }
+
+  // 在歌词或均衡器区块里操作控件时，自动切到对应的右侧实时预览舞台
+  const lyricsSec = document.getElementById('settingsSecLyrics');
+  if (lyricsSec) {
+    const showLyricsStage = () => {
+      if (currentStage !== 'lyrics') setSettingsStage('lyrics');
+    };
+    lyricsSec.addEventListener('pointerdown', showLyricsStage);
+    lyricsSec.addEventListener('input', showLyricsStage);
+  }
+  const eqSec = document.getElementById('settingsSecEqualizer');
+  if (eqSec) {
+    const showEqStage = () => {
+      if (currentStage !== 'eq') setSettingsStage('eq');
+    };
+    eqSec.addEventListener('pointerdown', showEqStage);
+    eqSec.addEventListener('input', showEqStage);
+  }
 
   // ── 任务栏歌词外观 ──
   taskbarFontSelectBtn.addEventListener('click', async () => {
@@ -732,6 +898,7 @@ export function bindSettingsEvents() {
     }
     taskbarFontSearchInput.value = '';
     renderTaskbarFontOptions();
+    ensureDropdownVisible(taskbarFontSelectWrap);
     taskbarFontSearchInput.focus();
   });
 
@@ -762,8 +929,12 @@ export function bindSettingsEvents() {
 
   if (btnSettingsClose) btnSettingsClose.onclick = closeSettings;
   settingsOverlay.addEventListener('click', (e) => {
-    if (e.target === settingsOverlay) {
-      closeSettings(); // 点击卡片外部遮罩关闭
+    if (
+      e.target === settingsOverlay ||
+      e.target === settingsStage ||
+      (e.target.classList && e.target.classList.contains('settings-stage-hud'))
+    ) {
+      closeSettings(); // 点击右侧空白舞台收起控制中心
       return;
     }
     // 点下拉外部收起（语言、桌面歌词字体、任务栏歌词字体）

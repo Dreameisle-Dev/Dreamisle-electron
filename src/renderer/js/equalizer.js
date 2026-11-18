@@ -21,6 +21,11 @@ import {
   eqStatusEl,
   eqPreampEl,
   eqResetBtn,
+  eqCurveSvg,
+  eqStageSvg,
+  eqStageNodes,
+  eqStagePreset,
+  eqStagePreamp,
 } from './dom.js';
 import { state } from './state.js';
 import { showSyncToast } from './helpers.js';
@@ -32,7 +37,6 @@ let graphFailed = false; // 建图失败过就永不再试，避免反复弹提�
 
 let faderInputs = [];
 let faderValues = [];
-
 
 function resumeGraph() {
   if (ctx && ctx.state !== 'running') ctx.resume().catch(() => {});
@@ -99,7 +103,6 @@ function applyToGraph() {
   resumeGraph();
 }
 
-
 // 每次改动都写主进程。写的是 electron-store 的 JSON，和小节里的歌词样式滑块同款。
 function commit() {
   window.dreamApi.setEqualizer(state.equalizer).catch(() => {});
@@ -132,7 +135,6 @@ function resetEq() {
   state.equalizer.gains = [...FLAT_GAINS];
   commit();
 }
-
 
 // +12 / 0 / −6：正数带符号，减号用 U+2212（和刻度、音量显示的排版一致）
 function formatDb(value) {
@@ -192,6 +194,58 @@ export function renderEqPresets() {
   }
 }
 
+// 绘制平滑三次贝塞尔频响曲线：10 段横坐标落在 10 等分网格中心 ((i + 0.5) / 10)，与推子/频率刻字对齐。
+function buildCurvePaths(gains, width, height, padY) {
+  const usableH = height - padY * 2;
+  const pts = gains.map((g, i) => ({
+    x: ((i + 0.5) / gains.length) * width,
+    y: padY + ((EQ_GAIN_LIMIT - g) / (2 * EQ_GAIN_LIMIT)) * usableH,
+  }));
+  let body = `M ${pts[0].x.toFixed(1)} ${pts[0].y.toFixed(1)}`;
+  for (let i = 0; i < pts.length - 1; i++) {
+    const p0 = pts[i];
+    const p1 = pts[i + 1];
+    const cx = ((p0.x + p1.x) / 2).toFixed(1);
+    body += ` C ${cx} ${p0.y.toFixed(1)}, ${cx} ${p1.y.toFixed(1)}, ${p1.x.toFixed(1)} ${p1.y.toFixed(1)}`;
+  }
+  const d = `M 0 ${pts[0].y.toFixed(1)} L ${body.slice(2)} L ${width} ${pts[pts.length - 1].y.toFixed(1)}`;
+  const area = `${d} L ${width} ${height} L 0 ${height} Z`;
+  return { d, area, pts };
+}
+
+function syncEqCurves(gains, enabled, presetLabel, preampText) {
+  if (eqCurveSvg) {
+    const { d, area } = buildCurvePaths(gains, 600, 132, 5);
+    const areaPath = eqCurveSvg.querySelector('.eq-curve-area');
+    const strokePath = eqCurveSvg.querySelector('.eq-curve-stroke');
+    if (areaPath) areaPath.setAttribute('d', area);
+    if (strokePath) strokePath.setAttribute('d', d);
+    eqCurveSvg.closest('.eq-bank')?.classList.toggle('bypassed', !enabled);
+  }
+
+  if (eqStageSvg) {
+    const { d, area, pts } = buildCurvePaths(gains, 600, 160, 20);
+    const areaPath = eqStageSvg.querySelector('.eq-stage-area');
+    const strokePath = eqStageSvg.querySelector('.eq-stage-stroke');
+    if (areaPath) areaPath.setAttribute('d', area);
+    if (strokePath) strokePath.setAttribute('d', d);
+    if (eqStageNodes) {
+      eqStageNodes.innerHTML = '';
+      for (const pt of pts) {
+        const dot = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+        dot.setAttribute('cx', pt.x.toFixed(1));
+        dot.setAttribute('cy', pt.y.toFixed(1));
+        dot.setAttribute('r', '4');
+        eqStageNodes.appendChild(dot);
+      }
+    }
+    eqStageSvg.closest('.stage-eq-card')?.classList.toggle('bypassed', !enabled);
+  }
+
+  if (eqStagePreset) eqStagePreset.textContent = presetLabel;
+  if (eqStagePreamp) eqStagePreamp.textContent = preampText;
+}
+
 export function syncEqUi() {
   const { enabled, gains } = state.equalizer;
   const currentId = matchPresetId(gains);
@@ -219,16 +273,17 @@ export function syncEqUi() {
       : currentId === 'custom'
         ? t('settings.eqCustom')
         : t(`eq.preset.${currentId}`);
-  eqStatusEl.textContent = t('settings.eqCurrent', { name });
+  const statusText = t('settings.eqCurrent', { name });
+  eqStatusEl.textContent = statusText;
 
   // 前级读数按**实际生效**的曲线算：关闭时推的是平直，读数就该是 0dB，
   // 否则会写着「自动前级 −6dB」却什么都没发生
   const preamp = computePreampDb(enabled ? gains : FLAT_GAINS);
-  eqPreampEl.textContent = `${t('settings.eqPreamp', {
-    v: formatDb(preamp),
-  })} · ${t('settings.eqPreampHint')}`;
-}
+  const preampShort = t('settings.eqPreamp', { v: formatDb(preamp) });
+  eqPreampEl.textContent = `${preampShort} · ${t('settings.eqPreampHint')}`;
 
+  syncEqCurves(gains, enabled, statusText, preampShort);
+}
 
 export function initEqualizer(rawEq) {
   state.equalizer = normalizeEq(rawEq);

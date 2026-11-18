@@ -79,7 +79,10 @@ export const taskbarAutoColor = document.getElementById('taskbarAutoColor');
 export const taskbarAutoColorSwitch = document.getElementById('taskbarAutoColorSwitch');
 export const taskbarTextColor = document.getElementById('taskbarTextColor');
 
-// 新设置页：歌词开关 / 预览 / 导航徽标 / 文件夹摘要
+// 新设置页：控制中心 / 预览舞台 / 歌词开关 / 导航徽标
+export const settingsScroll = document.getElementById('settingsScroll');
+export const settingsStage = document.getElementById('settingsStage');
+export const settingsStageTabs = document.getElementById('settingsStageTabs');
 export const settingsLibraryBadge = document.getElementById('settingsLibraryBadge');
 export const desktopLyricsEnabledSwitch = document.getElementById('desktopLyricsEnabledSwitch');
 export const taskbarLyricsEnabledSwitch = document.getElementById('taskbarLyricsEnabledSwitch');
@@ -92,12 +95,16 @@ export const desktopPreviewLine = document.getElementById('desktopPreviewLine');
 export const desktopPreviewNext = document.getElementById('desktopPreviewNext');
 export const desktopPreviewCover = document.getElementById('desktopPreviewCover');
 export const desktopPreviewStatus = document.getElementById('desktopPreviewStatus');
-export const desktopLyricsStyleSummary = document.getElementById('desktopLyricsStyleSummary');
+export const desktopCapHint = document.getElementById('desktopCapHint');
+export const lyricColorDots = document.getElementById('lyricColorDots');
+export const taskbarPreviewBar = document.getElementById('taskbarPreviewBar');
 export const taskbarLyricsPreview = document.getElementById('taskbarLyricsPreview');
 export const taskbarPreviewLine = document.getElementById('taskbarPreviewLine');
 export const taskbarPreviewNext = document.getElementById('taskbarPreviewNext');
 export const taskbarPreviewCover = document.getElementById('taskbarPreviewCover');
-export const taskbarLyricsStyleSummary = document.getElementById('taskbarLyricsStyleSummary');
+export const taskbarPreviewTime = document.getElementById('taskbarPreviewTime');
+export const btnTaskbarPreviewTone = document.getElementById('btnTaskbarPreviewTone');
+export const menubarPreviewLine = document.getElementById('menubarPreviewLine');
 
 // 均衡器面板元素（推子与预设胶囊由 equalizer.js 动态生成）
 export const eqEnableSwitch = document.getElementById('eqEnable');
@@ -106,6 +113,11 @@ export const eqFadersEl = document.getElementById('eqFaders');
 export const eqStatusEl = document.getElementById('eqStatus');
 export const eqPreampEl = document.getElementById('eqPreamp');
 export const eqResetBtn = document.getElementById('eqReset');
+export const eqCurveSvg = document.getElementById('eqCurveSvg');
+export const eqStageSvg = document.getElementById('eqStageSvg');
+export const eqStageNodes = document.getElementById('eqStageNodes');
+export const eqStagePreset = document.getElementById('eqStagePreset');
+export const eqStagePreamp = document.getElementById('eqStagePreamp');
 
 // 小窗单行歌词元素
 // 小窗四行歌词，按显示顺序：上一句 / 当前句 / 下一句 / 再下一句。
