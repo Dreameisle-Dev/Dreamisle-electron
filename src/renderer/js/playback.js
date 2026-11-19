@@ -163,6 +163,7 @@ export async function updateCoverAndColor(song) {
   const token = ++coverRequestToken;
   coverImg.style.display = 'none';
   defaultCover.style.display = 'flex';
+  if (barThumb) barThumb.removeAttribute('src');
   updateThemeColor(null);
 
   if (state.currentCoverBlobUrl) {
@@ -185,7 +186,6 @@ export async function updateCoverAndColor(song) {
     setMediaMetadata(song, coverUrl); // 系统浮层的封面
     onCoverReady(coverUrl);
   } else {
-    if (barThumb) barThumb.removeAttribute('src');
     onCoverReady(null);
   }
 }
@@ -280,7 +280,9 @@ export function resetToEmptyLibrary() {
   }
   coverImg.style.display = 'none';
   defaultCover.style.display = 'flex';
+  if (barThumb) barThumb.removeAttribute('src');
   updateThemeColor(null);
+  onCoverReady(null);
   if (mediaSession) {
     mediaSession.metadata = null;
     mediaSession.playbackState = 'none';

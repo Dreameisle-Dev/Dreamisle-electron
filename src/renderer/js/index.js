@@ -37,6 +37,7 @@ import {
   initSongInfo,
   updatePlayButton,
   playNext,
+  playPrev,
   saveStateOnChange,
   bindPlaybackEvents,
 } from './playback.js';
@@ -89,12 +90,7 @@ function setupIpcListeners() {
     saveStateOnChange();
   });
   window.dreamApi.onTrayNext(() => playNext(false));
-  window.dreamApi.onTrayPrev(() => {
-    let prev = state.currentIndex - 1;
-    if (state.playMode === 2) prev = Math.floor(Math.random() * state.songs.length);
-    else if (prev < 0) prev = state.songs.length - 1;
-    playSong(prev);
-  });
+  window.dreamApi.onTrayPrev(() => playPrev());
 }
 
 window.addEventListener('DOMContentLoaded', async () => {

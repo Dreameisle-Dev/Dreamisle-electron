@@ -2628,8 +2628,7 @@ body.mini-mode .playlists-drawer {
   display: none !important;
 }
 
-/* ⚠️ 右键菜单宽度 = 216 + 左右各 6px = **228px**，playlists.js 里的 MENU_W 必须同步，
-   否则菜单贴到窗口右边会出界。 */
+/* 右键菜单定位由 playlists.js 的 placeContextMenu() 按实测尺寸动态贴边。 */
 .context-menu {
   position: fixed;
   z-index: 200;

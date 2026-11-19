@@ -186,6 +186,15 @@ function updateSortButtons(activeBtn) {
   if (activeBtn) activeBtn.classList.add('active');
 }
 
+function shuffleSongs(list) {
+  const copy = [...list];
+  for (let i = copy.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [copy[i], copy[j]] = [copy[j], copy[i]];
+  }
+  return copy;
+}
+
 /**
  * 执行队列重排并更新播放指针
  */
@@ -203,8 +212,7 @@ export function applySort(mode, btnEl, { persist = true } = {}) {
   } else if (mode === 'artist') {
     state.songs = [...state.originalSongs].sort((a, b) => compareByInitial(a.artist, b.artist));
   } else if (mode === 'random') {
-    // 洗牌算法重新排列
-    state.songs = [...state.originalSongs].sort(() => Math.random() - 0.5);
+    state.songs = shuffleSongs(state.originalSongs);
   }
 
   if (currentPlayingSong) {
