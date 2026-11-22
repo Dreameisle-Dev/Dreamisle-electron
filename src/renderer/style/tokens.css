@@ -43,7 +43,7 @@
      调到让浅色/深色两侧压深幅度接近，否则条会和背景裂成两块。 */
   --bar-bg: light-dark(rgba(255, 255, 255, 0.48), rgba(17, 12, 23, 0.66));
   --bar-border: light-dark(rgba(46, 39, 57, 0.08), rgba(255, 255, 255, 0.1));
-  --panel-bg: light-dark(rgba(255, 255, 255, 0.54), rgba(16, 11, 22, 0.86));
+  --panel-bg: light-dark(rgba(252, 250, 255, 0.74), rgba(16, 11, 22, 0.86));
   --panel-border: light-dark(rgba(46, 39, 57, 0.10), rgba(255, 255, 255, 0.11));
   /* 浮层比抽屉实一点：抽屉底下只有氛围色，浮层底下是整个 UI，太透会糊在一起 */
   --modal-bg: light-dark(rgba(253, 251, 255, 0.88), rgba(20, 14, 26, 0.9));

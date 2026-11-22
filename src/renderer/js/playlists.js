@@ -8,7 +8,9 @@ import {
   playlistsListEl,
   playlistsCountEl,
   btnNewPlaylist,
+  playlistsDetailMeta,
   playlistsDetailName,
+  playlistsDetailCount,
   playlistsRenameInput,
   btnPlaylistsBack,
   btnRenamePlaylist,
@@ -24,16 +26,12 @@ import {
 } from './dom.js';
 import { escapeHtml, showToast } from './helpers.js';
 import { buildFolderTree } from '../../shared/folder.js';
-import {
-  addSongToQueueEnd,
-  moveSongToNext,
-  removeSongFromQueue,
-  setQueue,
-} from './playlist.js';
+import { addSongToQueueEnd, moveSongToNext, removeSongFromQueue, setQueue } from './playlist.js';
 import { playSong } from './playback.js';
 
-// 文件夹树里被折叠的节点（会话级，不持久化）
+// 文件夹树里被折叠的节点与分组折叠态（会话级，不持久化）
 const collapsedFolders = new Set();
+let foldersSectionCollapsed = false;
 
 // 拉取主进程歌单并缓存
 export async function loadPlaylists() {
@@ -57,31 +55,53 @@ export async function prunePlaylistsFromLibrary() {
   if (active) setQueue(active.songs, state.activeQueue);
 }
 
+// 歌单抽屉内联图标（统一 1.8 线宽，随文字色继承）
+const ICON_LIBRARY = `<svg class="playlists-card-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18V5l12-2v13"></path><circle cx="6" cy="18" r="3"></circle><circle cx="18" cy="16" r="3"></circle></svg>`;
+const ICON_CHEVRON = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"></path></svg>`;
+const ICON_FOLDER = `<svg class="folder-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path></svg>`;
+const ICON_EMPTY_PLAYLIST = `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18V5l12-2v13"></path><circle cx="6" cy="18" r="3"></circle><circle cx="18" cy="16" r="3"></circle></svg>`;
+const ICON_REMOVE = `<svg width="11" height="11" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" aria-hidden="true"><line x1="1.5" y1="1.5" x2="8.5" y2="8.5"></line><line x1="8.5" y1="1.5" x2="1.5" y2="8.5"></line></svg>`;
+
 // 渲染歌单卡片列表(含顶部固定的"全部歌曲"项)
 export function renderPlaylistsList() {
-  playlistsListEl.innerHTML = '';
+  const prevScrollTop = playlistsListEl.scrollTop;
+  const fragment = document.createDocumentFragment();
   playlistsCountEl.innerText = t('playlists.count', { n: state.playlists.length });
 
   // 固定"全部歌曲"项:切回完整曲库队列
   const allSongs = document.createElement('li');
   allSongs.className = `playlists-card all-songs${state.activeQueue.type === 'library' ? ' active' : ''}`;
-  // 左侧图标已移除：每个卡片都是同一个通用图标，纯装饰、零信息。
   allSongs.innerHTML = `
+    ${ICON_LIBRARY}
     <span class="playlists-card-name">${escapeHtml(t('playlists.allSongs'))}</span>
     <span class="playlists-card-count">${t('playlist.count', { n: state.librarySongs.length })}</span>`;
   allSongs.onclick = () => {
     setQueue(state.librarySongs, { type: 'library' });
     renderPlaylistsList();
   };
-  playlistsListEl.appendChild(allSongs);
+  fragment.appendChild(allSongs);
+
+  const appendDivider = () => {
+    const divider = document.createElement('li');
+    divider.className = 'playlists-section-sep';
+    divider.setAttribute('aria-hidden', 'true');
+    fragment.appendChild(divider);
+  };
 
   // 文件夹树：以设置的曲库根目录为根，父文件夹包含子文件夹的歌曲
   const folderRoots = buildFolderTree(state.librarySongs, state.musicFolders);
   if (folderRoots.length > 0) {
+    appendDivider();
     const folderLabel = document.createElement('li');
-    folderLabel.className = 'playlists-section-label';
-    folderLabel.textContent = t('folders.section');
-    playlistsListEl.appendChild(folderLabel);
+    folderLabel.className = 'playlists-section-label-wrap';
+    folderLabel.innerHTML = `<button type="button" class="playlists-section-toggle" aria-expanded="${!foldersSectionCollapsed}" title="${escapeHtml(
+      foldersSectionCollapsed ? t('folders.expand') : t('folders.collapse')
+    )}"><span>${escapeHtml(t('folders.section'))}</span>${ICON_CHEVRON}</button>`;
+    folderLabel.querySelector('.playlists-section-toggle').onclick = () => {
+      foldersSectionCollapsed = !foldersSectionCollapsed;
+      renderPlaylistsList();
+    };
+    fragment.appendChild(folderLabel);
 
     const appendFolderNode = (node, depth, isConfiguredRoot) => {
       // 纯容器的根目录（本身没有直接歌曲）不显示，把子文件夹提上来
@@ -90,11 +110,10 @@ export function renderPlaylistsList() {
         return;
       }
 
-      const active =
-        state.activeQueue.type === 'folder' && state.activeQueue.path === node.path;
+      const active = state.activeQueue.type === 'folder' && state.activeQueue.path === node.path;
       const li = document.createElement('li');
-      li.className = `playlists-card folder-card${active ? ' active' : ''}`;
-      li.style.paddingLeft = `${16 + depth * 18}px`;
+      li.className = `playlists-card folder-card${depth > 0 ? ' folder-card-child' : ''}${active ? ' active' : ''}`;
+      li.style.setProperty('--depth', String(depth));
       li.title = node.path;
 
       const hasChildren = node.children.length > 0;
@@ -102,10 +121,11 @@ export function renderPlaylistsList() {
       const caret = hasChildren
         ? `<button class="folder-caret" type="button" aria-label="${escapeHtml(
             collapsed ? t('folders.expand') : t('folders.collapse')
-          )}" aria-expanded="${!collapsed}">${collapsed ? '▸' : '▾'}</button>`
-        : '<span class="folder-caret folder-caret-empty"></span>';
+          )}" aria-expanded="${!collapsed}">${ICON_CHEVRON}</button>`
+        : '<span class="folder-caret folder-caret-empty" aria-hidden="true"></span>';
       li.innerHTML =
         caret +
+        ICON_FOLDER +
         `<span class="playlists-card-name">${escapeHtml(node.name)}</span>` +
         `<span class="playlists-card-count">${t('playlist.count', { n: node.songs.length })}</span>`;
 
@@ -129,48 +149,51 @@ export function renderPlaylistsList() {
         renderPlaylistsList();
       };
 
-      playlistsListEl.appendChild(li);
+      fragment.appendChild(li);
 
       if (hasChildren && !collapsed) {
         for (const child of node.children) appendFolderNode(child, depth + 1, false);
       }
     };
 
-    for (const root of folderRoots) appendFolderNode(root, 0, true);
-
-    // 文件夹与歌单之间用一条细线分开
-    const divider = document.createElement('li');
-    divider.className = 'playlists-section-sep';
-    playlistsListEl.appendChild(divider);
-
-    const playlistLabel = document.createElement('li');
-    playlistLabel.className = 'playlists-section-label';
-    playlistLabel.textContent = t('playlists.title');
-    playlistsListEl.appendChild(playlistLabel);
+    if (!foldersSectionCollapsed) {
+      for (const root of folderRoots) appendFolderNode(root, 0, true);
+    }
   }
+
+  // 分隔“全部歌曲/文件夹”与用户自建歌单区域
+  appendDivider();
+  const playlistLabel = document.createElement('li');
+  playlistLabel.className = 'playlists-section-label';
+  playlistLabel.textContent = t('playlists.title');
+  fragment.appendChild(playlistLabel);
 
   for (const pl of state.playlists) {
     const li = document.createElement('li');
-    li.className = `playlists-card${state.activeQueue.type === 'playlist' && state.activeQueue.id === pl.id ? ' active' : ''}`;
+    li.className = `playlists-card playlist-item-card${state.activeQueue.type === 'playlist' && state.activeQueue.id === pl.id ? ' active' : ''}`;
     li.dataset.playlistId = pl.id;
     li.innerHTML = `
       <span class="playlists-card-name">${escapeHtml(pl.name)}</span>
-      <span class="playlists-card-count">${t('playlist.count', { n: pl.songs.length })}</span>
-      <button class="playlists-card-btn" data-role="rename-playlist" title="${escapeHtml(t('playlists.rename'))}">
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"></path>
-        </svg>
-      </button>
-      <button class="playlists-card-btn" data-role="delete-playlist" title="${escapeHtml(t('playlists.delete'))}">
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M3 6h18"></path>
-          <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"></path>
-          <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-        </svg>
-      </button>
-      <svg class="playlists-card-arrow" data-role="open-detail" title="${escapeHtml(t('playlists.manage'))}" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M9 6l6 6-6 6"></path>
-      </svg>`;
+      <span class="playlists-card-meta">
+        <span class="playlists-card-count">${t('playlist.count', { n: pl.songs.length })}</span>
+        <span class="playlists-card-actions">
+          <button type="button" class="playlists-card-btn" data-role="rename-playlist" title="${escapeHtml(t('playlists.rename'))}" aria-label="${escapeHtml(t('playlists.rename'))}">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"></path>
+            </svg>
+          </button>
+          <button type="button" class="playlists-card-btn" data-role="delete-playlist" title="${escapeHtml(t('playlists.delete'))}" aria-label="${escapeHtml(t('playlists.delete'))}">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M3 6h18"></path>
+              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"></path>
+              <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+            </svg>
+          </button>
+        </span>
+      </span>
+      <button type="button" class="playlists-card-btn playlists-card-open" data-role="open-detail" title="${escapeHtml(t('playlists.manage'))}" aria-label="${escapeHtml(t('playlists.manage'))}">
+        ${ICON_CHEVRON}
+      </button>`;
     li.onclick = (e) => {
       if (e.detail === 0) return; // 拖放后合成的 click(detail 0),不是真实点击
       // 点击按钮/箭头/输入框等管理控件不触发播放
@@ -198,15 +221,18 @@ export function renderPlaylistsList() {
       const pl = state.playlists.find((p) => p.id === li.dataset.playlistId);
       if (pl) await addSongToPlaylist(pl, song);
     });
-    playlistsListEl.appendChild(li);
+    fragment.appendChild(li);
   }
 
   if (state.playlists.length === 0) {
     const empty = document.createElement('li');
     empty.className = 'playlists-empty';
-    empty.textContent = t('playlists.empty');
-    playlistsListEl.appendChild(empty);
+    empty.innerHTML = `${ICON_EMPTY_PLAYLIST}<span>${escapeHtml(t('playlists.empty'))}</span>`;
+    fragment.appendChild(empty);
   }
+
+  playlistsListEl.replaceChildren(fragment);
+  playlistsListEl.scrollTop = prevScrollTop;
 }
 
 function getDetailPlaylist() {
@@ -217,28 +243,40 @@ function getDetailPlaylist() {
 function renderDetailSongs() {
   const pl = getDetailPlaylist();
   if (!pl) return;
-  playlistsSongListEl.innerHTML = '';
+  if (playlistsDetailCount) {
+    playlistsDetailCount.textContent = t('playlist.count', { n: pl.songs.length });
+  }
+  const prevScrollTop = playlistsSongListEl.scrollTop;
+  const fragment = document.createDocumentFragment();
 
   if (pl.songs.length === 0) {
     const empty = document.createElement('li');
     empty.className = 'playlists-empty';
-    empty.textContent = t('playlists.emptySongs');
-    playlistsSongListEl.appendChild(empty);
+    empty.innerHTML = `${ICON_EMPTY_PLAYLIST}<span>${escapeHtml(t('playlists.emptySongs'))}</span>`;
+    fragment.appendChild(empty);
+    playlistsSongListEl.replaceChildren(fragment);
     return;
   }
 
+  const playingPath =
+    state.activeQueue.type === 'playlist' && state.activeQueue.id === pl.id
+      ? state.songs[state.currentIndex]?.path
+      : null;
+
   pl.songs.forEach((song, index) => {
     const li = document.createElement('li');
-    li.className = 'playlists-song-item';
+    const isPlaying = playingPath && song.path === playingPath;
+    li.className = `playlists-song-item${isPlaying ? ' active' : ''}`;
     li.draggable = true;
     li.dataset.index = index;
-    // 标题占满一行、歌手在下一行，与队列行同构
+    // 序号 + 标题/歌手双行，与播放队列保持一致的扫视节奏
     li.innerHTML = `
+      <span class="playlists-song-index">${index + 1}</span>
       <div class="item-meta">
         <div class="playlists-song-title">${escapeHtml(song.title)}</div>
         <div class="playlists-song-artist">${escapeHtml(song.artist)}</div>
       </div>
-      <button class="playlists-song-remove" title="${escapeHtml(t('playlists.remove'))}">✕</button>`;
+      <button type="button" class="playlists-song-remove" title="${escapeHtml(t('playlists.remove'))}" aria-label="${escapeHtml(t('playlists.remove'))}">${ICON_REMOVE}</button>`;
     li.addEventListener('dragstart', () => {
       dragFrom = Number(li.dataset.index);
     });
@@ -249,13 +287,17 @@ function renderDetailSongs() {
       const sortedIndex = state.songs.findIndex((s) => s.path === song.path);
       playSong(sortedIndex >= 0 ? sortedIndex : 0); // 排序激活时按 path 重定位
       renderPlaylistsList(); // 同步卡片高亮
+      renderDetailSongs(); // 同步详情内当前播放行高亮
     };
     li.querySelector('.playlists-song-remove').onclick = (e) => {
       e.stopPropagation();
       removeSongFromDetail(song.path);
     };
-    playlistsSongListEl.appendChild(li);
+    fragment.appendChild(li);
   });
+
+  playlistsSongListEl.replaceChildren(fragment);
+  playlistsSongListEl.scrollTop = prevScrollTop;
 }
 
 function renderDetail() {
@@ -315,8 +357,7 @@ function openContextMenu(x, y, song, queueIndex = -1) {
   contextQueueIndex = queueIndex;
   contextAnchor = { x, y };
   // 在当前播放队列里的歌才显示“从播放队列移除”
-  const inQueue =
-    queueIndex >= 0 || (song && state.songs.some((item) => item.path === song.path));
+  const inQueue = queueIndex >= 0 || (song && state.songs.some((item) => item.path === song.path));
   ctxRemoveFromQueue.style.display = inQueue ? 'block' : 'none';
   ctxAddToPlaylist.style.display = 'block';
   ctxPlaylistOptions.style.display = 'none';
@@ -414,7 +455,7 @@ async function commitRename() {
   if (!pl) return;
   const name = playlistsRenameInput.value.trim();
   playlistsRenameInput.style.display = 'none';
-  playlistsDetailName.style.display = 'block';
+  if (playlistsDetailMeta) playlistsDetailMeta.style.display = '';
   if (!name || name === pl.name) return;
   const { ok, playlist } = await window.dreamApi.playlists.rename(pl.id, name);
   if (!ok) return;
@@ -428,7 +469,7 @@ function cancelRename() {
   renameCancelled = true; // 先置位再隐藏,blur 触发的 commitRename 将被吞掉
   const pl = getDetailPlaylist();
   playlistsRenameInput.style.display = 'none';
-  playlistsDetailName.style.display = 'block';
+  if (playlistsDetailMeta) playlistsDetailMeta.style.display = '';
   if (pl) playlistsDetailName.textContent = pl.name;
 }
 
@@ -534,6 +575,7 @@ export async function togglePlaylistsDrawer() {
     playlistsDrawer.classList.add('open');
     await loadPlaylists();
     renderPlaylistsList();
+    if (state.playlistsView === 'detail') renderDetail();
   }
 }
 
@@ -546,6 +588,7 @@ export function bindPlaylistsEvents() {
     const { playlist } = await window.dreamApi.playlists.create();
     state.playlists.push(playlist);
     renderPlaylistsList();
+    playlistsListEl.scrollTop = playlistsListEl.scrollHeight;
   };
 
   // 卡片控件委托:箭头 → 详情视图;重命名/删除按钮 → 对应操作(卡片 onclick 已拦截这些控件,不会误触发播放)
@@ -571,7 +614,7 @@ export function bindPlaylistsEvents() {
   btnRenamePlaylist.onclick = () => {
     const pl = getDetailPlaylist();
     if (!pl) return;
-    playlistsDetailName.style.display = 'none';
+    if (playlistsDetailMeta) playlistsDetailMeta.style.display = 'none';
     playlistsRenameInput.style.display = 'block';
     playlistsRenameInput.value = pl.name;
     playlistsRenameInput.focus();
@@ -612,13 +655,31 @@ export function bindPlaylistsEvents() {
   });
 
   // 歌单内拖拽排序
+  const clearSongDragOver = () => {
+    playlistsSongListEl
+      .querySelectorAll('.playlists-song-item.drag-over')
+      .forEach((el) => el.classList.remove('drag-over'));
+  };
   playlistsSongListEl.addEventListener('dragover', (e) => {
     const target = e.target.closest('.playlists-song-item');
     if (!target || dragFrom === null) return;
     e.preventDefault();
+    if (!target.classList.contains('drag-over')) {
+      clearSongDragOver();
+      target.classList.add('drag-over');
+    }
+  });
+  playlistsSongListEl.addEventListener('dragleave', (e) => {
+    const target = e.target.closest('.playlists-song-item');
+    if (target && !target.contains(e.relatedTarget)) target.classList.remove('drag-over');
+  });
+  playlistsSongListEl.addEventListener('dragend', () => {
+    dragFrom = null;
+    clearSongDragOver();
   });
   playlistsSongListEl.addEventListener('drop', async (e) => {
     const target = e.target.closest('.playlists-song-item');
+    clearSongDragOver();
     if (!target || dragFrom === null) return;
     e.preventDefault();
     const from = dragFrom;

@@ -316,17 +316,34 @@
     <div class="playlists-drawer" id="playlistsDrawer">
       <div class="playlists-list-view" id="playlistsListView">
         <div class="playlists-header">
-          <span data-i18n="playlists.title">歌单</span>
-          <span id="playlistsCount" style="font-size: 12px; opacity: 0.5; margin-left: 10px"></span>
+          <span class="playlists-header-title" data-i18n="playlists.title">歌单</span>
+          <span id="playlistsCount"></span>
         </div>
         <ul class="playlists-list" id="playlistsList"></ul>
-        <button class="playlists-add-btn" id="btnNewPlaylist" data-i18n="playlists.new">
-          新建歌单
-        </button>
+        <div class="playlists-footer">
+          <button type="button" class="playlists-add-btn" id="btnNewPlaylist">
+            <svg
+              width="15"
+              height="15"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <line x1="12" y1="5" x2="12" y2="19"></line>
+              <line x1="5" y1="12" x2="19" y2="12"></line>
+            </svg>
+            <span data-i18n="playlists.new">新建歌单</span>
+          </button>
+        </div>
       </div>
       <div class="playlists-detail-view" id="playlistsDetailView" style="display: none">
         <div class="playlists-detail-header">
           <button
+            type="button"
             class="playlists-back-btn"
             id="btnPlaylistsBack"
             data-i18n-title="playlists.back"
@@ -341,11 +358,15 @@
               stroke-width="2"
               stroke-linecap="round"
               stroke-linejoin="round"
+              aria-hidden="true"
             >
               <path d="M15 18l-6-6 6-6"></path>
             </svg>
           </button>
-          <span class="playlists-detail-name" id="playlistsDetailName"></span>
+          <div class="playlists-detail-meta" id="playlistsDetailMeta">
+            <span class="playlists-detail-name" id="playlistsDetailName"></span>
+            <span class="playlists-detail-count" id="playlistsDetailCount"></span>
+          </div>
           <input
             type="text"
             class="playlists-rename-input"
@@ -355,6 +376,7 @@
           />
           <span class="playlists-detail-actions">
             <button
+              type="button"
               class="playlists-icon-btn"
               id="btnRenamePlaylist"
               data-i18n-title="playlists.rename"
@@ -369,11 +391,13 @@
                 stroke-width="2"
                 stroke-linecap="round"
                 stroke-linejoin="round"
+                aria-hidden="true"
               >
                 <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"></path>
               </svg>
             </button>
             <button
+              type="button"
               class="playlists-icon-btn"
               id="btnDeletePlaylist"
               data-i18n-title="playlists.delete"
@@ -388,6 +412,7 @@
                 stroke-width="2"
                 stroke-linecap="round"
                 stroke-linejoin="round"
+                aria-hidden="true"
               >
                 <path d="M3 6h18"></path>
                 <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"></path>
