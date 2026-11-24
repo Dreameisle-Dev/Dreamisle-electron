@@ -14,6 +14,7 @@ import {
 import { updatePlayButton } from './playback.js';
 import universalLyricParser from '../../shared/universal-lyric-parser.js';
 import { parseLyricsText, parseSyncLyrics } from '../../shared/lyrics-parse.js';
+import { decodeLyricsBuffer, repairMojibakeText } from '../../shared/lyrics-decode.js';
 import { stripSongHeader } from '../../shared/lyrics-credits.js';
 import { buildLyricDocument } from '../../shared/taskbar-lyrics-document.js';
 import { renderWordSpans, updateWordSpansProgress } from '../../shared/lyric-word-dom.js';
@@ -187,18 +188,22 @@ export async function loadAndRenderLyrics(song) {
   let parsed = { metadata: {}, lines: [] };
   if (lrcData) {
     if (typeof lrcData === 'object' && lrcData !== null) {
-      if (Array.isArray(lrcData.syncText) && lrcData.syncText.length > 0) {
+      if (lrcData instanceof Uint8Array || ArrayBuffer.isView(lrcData)) {
+        try {
+          parsed = parseLyricsText(decodeLyricsBuffer(lrcData));
+        } catch (e) {}
+      } else if (Array.isArray(lrcData.syncText) && lrcData.syncText.length > 0) {
         // 富格式歌词源:统一转 LRC 文本走解析器,使内嵌同步歌词同样支持行内双语拆分
         parsed = parseSyncLyrics(lrcData.syncText);
       } else if (typeof lrcData.text === 'string') {
-        parsed = parseLyricsText(lrcData.text);
+        parsed = parseLyricsText(repairMojibakeText(lrcData.text));
       } else if (lrcData.type === 'Buffer') {
         try {
-          parsed = parseLyricsText(new TextDecoder().decode(new Uint8Array(lrcData.data)));
+          parsed = parseLyricsText(decodeLyricsBuffer(lrcData.data));
         } catch (e) {}
       }
     } else if (typeof lrcData === 'string') {
-      parsed = parseLyricsText(lrcData);
+      parsed = parseLyricsText(repairMojibakeText(lrcData));
     }
   }
 

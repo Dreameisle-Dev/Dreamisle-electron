@@ -5,6 +5,7 @@ import { app, nativeImage, protocol } from 'electron';
 import { parseFile } from 'music-metadata';
 import fs from 'fs/promises';
 import { AUDIO_EXTENSIONS, resolveAllowedLibraryFile } from './security.js';
+import { decodeLyricsBuffer, repairMojibakeText } from '../shared/lyrics-decode.js';
 
 const MAX_LRC_BYTES = 2 * 1024 * 1024;
 // 只存 58 字节的稳定协议 URL 字符串（dream-thumb://cover/<sha1>.jpg），500 条总计仅约 30KB 内存，零 Buffer 常驻
@@ -320,7 +321,31 @@ export async function readCoverThumbnail(filePath, allowedFolders, maxSize = 320
   return job;
 }
 
-// 优先读取同目录同名 .lrc 文件，其次读取内嵌歌词
+function normalizeEmbeddedLyrics(raw) {
+  if (!raw) return null;
+  if (typeof raw === 'string') return repairMojibakeText(raw);
+  if (Buffer.isBuffer(raw) || raw instanceof Uint8Array) return decodeLyricsBuffer(raw);
+  if (typeof raw === 'object') {
+    if (raw.type === 'Buffer' && Array.isArray(raw.data)) {
+      return decodeLyricsBuffer(raw.data);
+    }
+    const copy = { ...raw };
+    if (typeof copy.text === 'string') {
+      copy.text = repairMojibakeText(copy.text);
+    }
+    if (Array.isArray(copy.syncText) && copy.syncText.length > 0) {
+      copy.syncText = copy.syncText.map((item) =>
+        item && typeof item.text === 'string'
+          ? { ...item, text: repairMojibakeText(item.text) }
+          : item
+      );
+    }
+    return copy;
+  }
+  return raw;
+}
+
+// 优先读取同目录同名 .lrc 文件（自动识别 UTF-8/UTF-16/GBK/GB18030/Big5/Shift_JIS/EUC-KR/Win1252），其次读取内嵌歌词
 export async function readLyrics(audioPath, allowedFolders) {
   const safeAudioPath = await resolveAllowedLibraryFile(audioPath, allowedFolders);
   if (!safeAudioPath) return null;
@@ -334,7 +359,8 @@ export async function readLyrics(audioPath, allowedFolders) {
     if (safeLrcPath) {
       const stat = await fs.stat(safeLrcPath);
       if (stat.isFile() && stat.size <= MAX_LRC_BYTES) {
-        return await fs.readFile(safeLrcPath, 'utf-8');
+        const rawBytes = await fs.readFile(safeLrcPath);
+        return decodeLyricsBuffer(rawBytes);
       }
     }
   } catch (e) {}
@@ -342,7 +368,7 @@ export async function readLyrics(audioPath, allowedFolders) {
   try {
     const metadata = await parseFile(safeAudioPath, { skipCovers: true });
     if (metadata.common && metadata.common.lyrics && metadata.common.lyrics.length > 0) {
-      return metadata.common.lyrics[0];
+      return normalizeEmbeddedLyrics(metadata.common.lyrics[0]);
     }
   } catch (err) {}
   return null;

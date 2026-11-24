@@ -61,8 +61,9 @@ export function parseLyricsText(lrcText) {
   if (!lrcText || typeof lrcText !== 'string') {
     return { metadata: {}, lines: [] };
   }
+  const normalizedText = lrcText.charCodeAt(0) === 0xfeff ? lrcText.slice(1) : lrcText;
 
-  const parsed = universalLyricParser.parse(lrcText);
+  const parsed = universalLyricParser.parse(normalizedText);
   // 只要解析出过带时间戳的行，就不再走静态降级：
   // 即使这些行全是 credits，也应该返回空歌词，而不是把带时间戳的 credits 当正文。
   if (parsed.lines.length > 0) {
@@ -70,7 +71,7 @@ export function parseLyricsText(lrcText) {
   }
 
   // 无时间戳的纯文本歌词:降级为静态行(渲染时不可点击跳转)
-  const staticLines = lrcText
+  const staticLines = normalizedText
     .split(/\r?\n/)
     .map((line) => line.trim())
     .filter((line) => line.length > 0 && !/^\[.*?\]$/.test(line) && !/^\{"t":\d+,"c":\[/.test(line))
