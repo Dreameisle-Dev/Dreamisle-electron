@@ -26,8 +26,10 @@ import {
 } from './dom.js';
 import { escapeHtml, showToast } from './helpers.js';
 import { buildFolderTree } from '../../shared/folder.js';
+import { groupSongsByAlbum } from '../../shared/albums.js';
 import { addSongToQueueEnd, moveSongToNext, removeSongFromQueue, setQueue } from './playlist.js';
 import { playSong } from './playback.js';
+import { openAlbums, closeAlbums } from './albums.js';
 
 // 文件夹树里被折叠的节点与分组折叠态（会话级，不持久化）
 const collapsedFolders = new Set();
@@ -57,6 +59,7 @@ export async function prunePlaylistsFromLibrary() {
 
 // 歌单抽屉内联图标（统一 1.8 线宽，随文字色继承）
 const ICON_LIBRARY = `<svg class="playlists-card-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18V5l12-2v13"></path><circle cx="6" cy="18" r="3"></circle><circle cx="18" cy="16" r="3"></circle></svg>`;
+const ICON_ALBUMS = `<svg class="playlists-card-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="4" width="12" height="16" rx="2"></rect><path d="M16 7.5a4.5 4.5 0 1 1 0 9"></path><circle cx="16" cy="12" r="1.2" fill="currentColor" stroke="none"></circle></svg>`;
 const ICON_CHEVRON = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"></path></svg>`;
 const ICON_FOLDER = `<svg class="folder-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path></svg>`;
 const ICON_EMPTY_PLAYLIST = `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18V5l12-2v13"></path><circle cx="6" cy="18" r="3"></circle><circle cx="18" cy="16" r="3"></circle></svg>`;
@@ -77,9 +80,24 @@ export function renderPlaylistsList() {
     <span class="playlists-card-count">${t('playlist.count', { n: state.librarySongs.length })}</span>`;
   allSongs.onclick = () => {
     setQueue(state.librarySongs, { type: 'library' });
+    closeAlbums();
     renderPlaylistsList();
   };
   fragment.appendChild(allSongs);
+
+  // 固定"专辑"入口:打开 Cover Flow 专辑墙
+  const albumCount = groupSongsByAlbum(state.librarySongs).length;
+  const albumsEntry = document.createElement('li');
+  albumsEntry.className = `playlists-card albums-entry-card${state.activeQueue.type === 'album' ? ' active' : ''}`;
+  albumsEntry.id = 'btnDrawerAlbums';
+  albumsEntry.innerHTML = `
+    ${ICON_ALBUMS}
+    <span class="playlists-card-name">${escapeHtml(t('albums.title'))}</span>
+    <span class="playlists-card-count">${t('albums.count', { n: albumCount })}</span>`;
+  albumsEntry.onclick = () => {
+    openAlbums();
+  };
+  fragment.appendChild(albumsEntry);
 
   const appendDivider = () => {
     const divider = document.createElement('li');
@@ -146,6 +164,7 @@ export function renderPlaylistsList() {
         const keepPlaying = node.songs.some((song) => song.path === playingPath);
         setQueue(node.songs, { type: 'folder', path: node.path });
         if (!keepPlaying) playSong(0);
+        closeAlbums();
         renderPlaylistsList();
       };
 
@@ -205,6 +224,7 @@ export function renderPlaylistsList() {
         return;
       setQueue(pl.songs, { type: 'playlist', id: pl.id });
       if (pl.songs.length > 0) playSong(0); // 切换歌单:直接播放第一首
+      closeAlbums();
       renderPlaylistsList();
     };
     li.addEventListener('dragover', (e) => {
@@ -744,6 +764,11 @@ export function bindPlaylistsEvents() {
   document.addEventListener('click', (e) => {
     if (contextMenu.classList.contains('open') && !contextMenu.contains(e.target))
       closeContextMenu();
+  });
+
+  // 队列在外部变更（如从专辑墙点播）且抽屉正开着时，实时同步高亮状态
+  window.addEventListener('dreamisle:queue-changed', () => {
+    if (playlistsDrawer.classList.contains('open')) renderPlaylistsList();
   });
 
   // 从右侧列表拖拽歌曲时,靠近左缘自动展开歌单抽屉作为投放目标;拖拽结束恢复原状

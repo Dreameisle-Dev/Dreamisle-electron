@@ -152,7 +152,7 @@ export function setTaskbarLyricsSetting(enabled) {
 // 播放队列快照：跨重启恢复当前播放队列。配置可能被手改，
 // 读取和写入都归一化，只保留可播放的字段并限制长度。
 const MAX_PLAY_QUEUE_LENGTH = 1000;
-const VALID_SORT_MODES = new Set(['title', 'artist', 'random', 'custom']);
+const VALID_SORT_MODES = new Set(['title', 'artist', 'random', 'custom', 'album']);
 
 function normalizeQueueEntry(song) {
   if (!song || typeof song !== 'object' || typeof song.path !== 'string' || !song.path) return null;
@@ -184,6 +184,14 @@ function normalizeActiveQueue(raw) {
     raw.path.length <= 4096
   ) {
     return { type: 'folder', path: raw.path };
+  }
+  if (
+    raw.type === 'album' &&
+    typeof raw.key === 'string' &&
+    raw.key.length > 0 &&
+    raw.key.length <= 512
+  ) {
+    return { type: 'album', key: raw.key };
   }
   return null;
 }

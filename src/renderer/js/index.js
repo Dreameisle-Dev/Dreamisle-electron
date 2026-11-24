@@ -44,6 +44,13 @@ import {
 import { bindLyricsEvents, setLyricsTranslationVisible } from './lyrics.js';
 import { toggleSettings, closeSettings, bindSettingsEvents } from './settings.js';
 import { toggleStats, closeStats, isStatsOpen, bindStatsEvents } from './stats.js';
+import {
+  bindAlbumsEvents,
+  toggleAlbums,
+  closeAlbums,
+  isAlbumsOpen,
+  handleAlbumsKeydown,
+} from './albums.js';
 import { initMouseFollow, updateProgressStyle, applyThemeMode } from './theme.js';
 import { applyPerformanceMode } from './performance.js';
 import { initAutoHide, setAutoHideEnabled } from './autohide.js';
@@ -104,6 +111,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   bindSettingsEvents();
   bindPlaylistEvents();
   bindPlaylistsEvents();
+  bindAlbumsEvents();
   bindStatsEvents();
   bindEqEvents();
 
@@ -189,8 +197,10 @@ window.addEventListener('DOMContentLoaded', async () => {
       shiftTimer = null;
     }
 
+    const activeEl = document.activeElement;
     const isInputActive =
-      document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA';
+      (activeEl && activeEl.tagName === 'INPUT' && activeEl.type !== 'range') ||
+      (activeEl && activeEl.tagName === 'TEXTAREA');
 
     // F5：独立于输入框外，任何时候均允许切换窗口模式
     if (e.key === 'F5') {
@@ -227,12 +237,18 @@ window.addEventListener('DOMContentLoaded', async () => {
         e.preventDefault();
         playlistDrawer.classList.remove('open');
         playlistsDrawer.classList.remove('open');
+      } else if (isAlbumsOpen()) {
+        e.preventDefault();
+        closeAlbums();
       }
       return;
     }
 
     // 焦点位于搜索框或输入框时，屏蔽以下快捷键
     if (isInputActive) return;
+
+    // 专辑墙打开时，方向键与 Enter 优先交由 Cover Flow 浏览与翻面
+    if (handleAlbumsKeydown(e)) return;
 
     // Space：播放/暂停
     if (e.code === 'Space') {
@@ -256,6 +272,12 @@ window.addEventListener('DOMContentLoaded', async () => {
     if (e.code === 'KeyR') {
       e.preventDefault();
       btnMode.click();
+    }
+
+    // A：打开/关闭专辑 Cover Flow 浮层
+    if (e.code === 'KeyA') {
+      e.preventDefault();
+      toggleAlbums();
     }
 
     // H：打开/关闭帮助浮层
@@ -345,6 +367,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   window.dreamApi.onWindowModeChanged((mode) => {
     if (mode === 'mini') {
       state.isMiniMode = true;
+      closeAlbums();
       document.body.classList.add('mini-mode');
     } else {
       state.isMiniMode = false;

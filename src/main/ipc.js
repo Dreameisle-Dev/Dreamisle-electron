@@ -32,6 +32,7 @@ import {
   scanAllFolders,
   collectDiskPaths,
   readCover,
+  readCoverThumbnail,
   readLyrics,
   diffPlaylistPaths,
   applySyncToPlaylist,
@@ -185,6 +186,10 @@ export function registerIpcHandlers() {
 
   handleMainIpc('app:getCover', async (event, filePath) => {
     return readCover(filePath, getMusicFolders());
+  });
+
+  handleMainIpc('app:getCoverThumb', async (event, filePath, maxSize) => {
+    return readCoverThumbnail(filePath, getMusicFolders(), maxSize);
   });
 
   handleMainIpc('app:savePlaybackState', async (event, state) => {

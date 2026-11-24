@@ -18,6 +18,7 @@ import {
 } from './dom.js';
 import { compareByInitial, buildLetterIndex } from '../../shared/initial-letter.js';
 import { folderSubtreeSongsOf } from '../../shared/folder.js';
+import { albumSongsOf } from '../../shared/albums.js';
 import { playSong, resetToEmptyLibrary } from './playback.js';
 import { saveQueueSnapshot } from './play-queue.js';
 import { resetLyrics } from './lyrics.js';
@@ -257,11 +258,17 @@ function applyQueueSongs(songs) {
     // 手动排序的队列不套用歌名/歌手/随机排序
     state.sortMode = 'custom';
     initVirtualList(searchInput.value.trim());
+  } else if (state.activeQueue.type === 'album') {
+    // 专辑播放默认保持专辑原曲序（用户仍可手动点击右侧排序按钮重排）
+    state.sortMode = 'album';
+    updateSortButtons(null);
+    initVirtualList(searchInput.value.trim());
   } else {
     applyActiveSort({ persist: false });
   }
   syncQueueControls();
   saveQueueSnapshot(state.songs, state.activeQueue, state.sortMode); // 队列切换后同步重启恢复用的快照
+  window.dispatchEvent(new Event('dreamisle:queue-changed'));
 }
 
 const SORT_BUTTONS = {
@@ -313,6 +320,18 @@ export function restoreSavedQueue({ songs, activeQueue, sortMode }) {
     }
   }
 
+  if (activeQueue && activeQueue.type === 'album') {
+    const albumSongs = albumSongsOf(state.librarySongs, activeQueue.key);
+    if (albumSongs.length > 0) {
+      if (mode === 'album') {
+        setQueue(albumSongs, { type: 'album', key: activeQueue.key });
+      } else {
+        restoreTypedQueue(albumSongs, { type: 'album', key: activeQueue.key }, songs, mode);
+      }
+      return;
+    }
+  }
+
   if (activeQueue && activeQueue.type === 'custom') {
     setQueue(songs, { type: 'custom' });
     return;
@@ -330,10 +349,18 @@ export function setQueue(songs, activeQueue) {
 // 用主进程返回的新播放列表替换本地列表:曲库上下文,同时更新曲库缓存
 export function applyPlaylistFromMain(playlist) {
   state.librarySongs = [...playlist];
+  window.dispatchEvent(new Event('dreamisle:library-changed'));
   // 文件夹视图中增删文件夹/重新扫描后，继续停留在这个文件夹（含子文件夹）
   if (state.activeQueue.type === 'folder') {
     setQueue(folderSubtreeSongsOf(playlist, state.activeQueue.path), state.activeQueue);
     return;
+  }
+  if (state.activeQueue.type === 'album') {
+    const albumSongs = albumSongsOf(playlist, state.activeQueue.key);
+    if (albumSongs.length > 0) {
+      setQueue(albumSongs, state.activeQueue);
+      return;
+    }
   }
   setQueue(playlist, { type: 'library' });
 }

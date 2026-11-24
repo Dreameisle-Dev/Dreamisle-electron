@@ -34,10 +34,12 @@ export async function syncLibrary({ manual = false } = {}) {
     if (state.activeQueue.type === 'playlist') {
       // 歌单队列中：只更新曲库缓存，不打断播放；随后清理歌单里已失效的歌曲
       state.librarySongs = [...result.playlist];
+      window.dispatchEvent(new Event('dreamisle:library-changed'));
       await prunePlaylistsFromLibrary();
     } else if (state.activeQueue.type === 'custom') {
       // 手动排序的队列：剔除曲库里已不存在的歌，再按当前队列重建
       state.librarySongs = [...result.playlist];
+      window.dispatchEvent(new Event('dreamisle:library-changed'));
       const valid = new Set(state.librarySongs.map((song) => song.path));
       setQueue(
         state.songs.filter((song) => valid.has(song.path)),

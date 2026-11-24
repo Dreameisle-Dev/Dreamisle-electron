@@ -29,6 +29,7 @@ import { classifyTier, formatBitrate, formatSampleRate } from '../../shared/stat
 import { resolveSongMeta } from '../../shared/song-metadata.js';
 import { escapeHtml } from './helpers.js';
 import { playSong } from './playback.js';
+import { closeAlbums } from './albums.js';
 
 const TIER_LABELS = { hires: 'Hi-Res', sq: 'SQ', hq: 'HQ', other: 'Other' };
 const CHART_LIMIT = 20;
@@ -42,9 +43,10 @@ export function isStatsOpen() {
 
 export function openStats() {
   statsOverlay.classList.add('open');
-  // 互斥:打开统计面板时收起两个抽屉
+  // 互斥:打开统计面板时收起两个抽屉与专辑墙
   playlistDrawer.classList.remove('open');
   playlistsDrawer.classList.remove('open');
+  closeAlbums();
   syncVinylSpin();
   refreshStats();
 }

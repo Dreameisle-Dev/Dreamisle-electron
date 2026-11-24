@@ -17,6 +17,15 @@ contextBridge.exposeInMainWorld('dreamApi', {
     return null;
   },
 
+  getCoverThumb: async (path, maxSize = 440) => {
+    const res = await ipcRenderer.invoke('app:getCoverThumb', path, maxSize);
+    if (res && res.buffer) {
+      const blob = new Blob([res.buffer], { type: res.format });
+      return URL.createObjectURL(blob);
+    }
+    return null;
+  },
+
   getLyrics: (path) => ipcRenderer.invoke('app:getLyrics', path),
   updateDesktopLyrics: (payload) => ipcRenderer.invoke('app:updateDesktopLyrics', payload),
   // 任务栏歌词数据流（fire-and-forget，避免高频 invoke 的 Promise 开销）

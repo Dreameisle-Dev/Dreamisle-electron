@@ -116,6 +116,7 @@ export function initSongInfo(index) {
   updateCoverAndColor(song);
   loadAndRenderLyrics(song);
   onSongChanged();
+  window.dispatchEvent(new Event('dreamisle:song-changed'));
   pushTaskbarPlayback(true);
 }
 
@@ -138,6 +139,7 @@ export function playSong(index) {
   updateCoverAndColor(song);
   loadAndRenderLyrics(song);
   onSongChanged();
+  window.dispatchEvent(new Event('dreamisle:song-changed'));
 
   saveStateOnChange();
   pushTaskbarPlayback(true);
@@ -283,6 +285,7 @@ export function resetToEmptyLibrary() {
   if (barThumb) barThumb.removeAttribute('src');
   updateThemeColor(null);
   onCoverReady(null);
+  window.dispatchEvent(new Event('dreamisle:song-changed'));
   if (mediaSession) {
     mediaSession.metadata = null;
     mediaSession.playbackState = 'none';

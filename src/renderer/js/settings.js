@@ -72,6 +72,7 @@ import { showSyncToast } from './helpers.js';
 import { applyPlaylistFromMain } from './playlist.js';
 import { syncLibrary } from './library-sync.js';
 import { renderPlaylistsList } from './playlists.js';
+import { closeAlbums } from './albums.js';
 import { applyThemeMode } from './theme.js';
 import { applyPerformanceMode } from './performance.js';
 import { renderEqPresets, syncEqUi } from './equalizer.js';
@@ -364,6 +365,7 @@ export function toggleSettings() {
 export async function openSettings() {
   if (playlistDrawer) playlistDrawer.classList.remove('open');
   if (playlistsDrawer) playlistsDrawer.classList.remove('open');
+  closeAlbums();
   document.body.classList.add('settings-open');
   settingsOverlay.classList.add('open');
   restoreSettingsPanel();

@@ -12,7 +12,7 @@ let isHidden = false;
 let lastEngaged = true;
 
 // 浮层打开时不能收：设置/统计盖住整屏，条在下面收不收看不见，
-// 但关掉浮层那一刻会露出一个空底，很突兀。
+// 但关掉浮层那一刻会露出一个空底，很突兀。专辑墙共享主舞台且需要自动隐藏播放条，不在此列。
 function overlayOpen() {
   return !!document.querySelector('.help-overlay.open, .stats-overlay.open');
 }
