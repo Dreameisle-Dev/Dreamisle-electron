@@ -157,6 +157,11 @@ export function createWindow() {
   mainWindow.on('hide', () => {
     mainWindow.webContents.send('window-visibility-changed', false);
   });
+  mainWindow.on('closed', () => {
+    clearTimeout(boundsSaveTimer);
+    boundsSaveTimer = null;
+    mainWindow = null;
+  });
 }
 
 // 小窗模式切换：置顶 + 固定尺寸 + 通知前端

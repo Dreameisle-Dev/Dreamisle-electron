@@ -10,8 +10,9 @@ function isLightTheme() {
   return matchMedia('(prefers-color-scheme: light)').matches;
 }
 
-// 最近一次用过的封面地址：切换主题后要拿它重算色斑
+// 最近一次用过的封面地址与请求代次：切换主题重算色斑、连切歌曲时丢弃过期图片回调
 let lastCoverSrc = null;
+let themeColorToken = 0;
 
 // 切换主题模式。'system' 时不挂类，交给 prefers-color-scheme；
 // 'light'/'dark' 挂类覆盖（tokens.css 里的 :root.theme-* 选择器）。
@@ -129,6 +130,7 @@ function extractPalette(data, count) {
 // 写的是「颜色值」而非 rgb 三元组 —— 淡出到同色零透明由 CSS 的
 // 相对颜色语法 rgb(from var(--c1) r g b / 0) 处理。
 export function updateThemeColor(src) {
+  const token = ++themeColorToken;
   lastCoverSrc = src || null;
   const root = document.documentElement;
   if (!src) {
@@ -137,25 +139,32 @@ export function updateThemeColor(src) {
     return;
   }
   const img = new Image();
-  img.src = src;
+  const cleanup = () => {
+    img.onload = null;
+    img.onerror = null;
+    img.src = '';
+  };
   img.onload = () => {
+    if (token !== themeColorToken) {
+      cleanup();
+      return;
+    }
     const ctx = canvas.getContext('2d', { willReadFrequently: true });
     ctx.clearRect(0, 0, 50, 50);
     ctx.drawImage(img, 0, 0, 50, 50);
     const data = ctx.getImageData(0, 0, 50, 50).data;
 
     // 浅色模式的色斑本身就要更透：白遮罩盖深色斑等于去饱和，会洗成惨白
-    const alphas = isLightTheme()
-      ? [0.72, 0.68, 0.6, 0.56]
-      : [0.9, 0.85, 0.72, 0.66];
+    const alphas = isLightTheme() ? [0.72, 0.68, 0.6, 0.56] : [0.9, 0.85, 0.72, 0.66];
     extractPalette(data, 4).forEach((c, i) => {
       root.style.setProperty(`--c${i + 1}`, `rgba(${c.r}, ${c.g}, ${c.b}, ${alphas[i]})`);
     });
 
     ctx.clearRect(0, 0, 50, 50);
-    img.onload = null;
-    img.src = '';
+    cleanup();
   };
+  img.onerror = cleanup;
+  img.src = src;
 }
 
 // 进度可视化：已播放段是频谱条，其余是一条暗线，交界处是播放头。

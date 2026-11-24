@@ -43,13 +43,15 @@ import { playSong, updatePlayButton, saveStateOnChange } from './playback.js';
 // 固定 15 槽位卡片池覆盖 ±6 预挂载视窗与翻面保活，全程 0 DOM 建删
 const MOUNT_RADIUS = 6;
 const POOL_SIZE = 15;
-const COVER_THUMB_SIZE = 384;
-const MAX_COVER_CACHE = 400;
-const MAX_WARM_DECODED = 72;
-const MAX_COVER_CONCURRENCY = 4;
-const FAST_COVER_CONCURRENCY = 3;
-const IDLE_PREWARM_CONCURRENCY = 2;
-const LOOKAHEAD_COUNT = 12;
+const COVER_THUMB_SIZE = 320;
+// 严格控内存：使用稳定 dream-thumb:// URL（0 Blob 分配、0 二进制常驻），热解码池仅留 20 张（~8MB），关闭浮层清空
+const MAX_COVER_CACHE = 300;
+const MAX_WARM_DECODED = 20;
+const MAX_COVER_CONCURRENCY = 3;
+const FAST_COVER_CONCURRENCY = 2;
+const IDLE_PREWARM_CONCURRENCY = 1;
+const IDLE_PREWARM_RADIUS = 16;
+const LOOKAHEAD_COUNT = 6;
 const FAST_VELOCITY_THRESHOLD = 9;
 const TANH_1 = Math.tanh(1.85);
 const TANH_Z = Math.tanh(2.1);
@@ -122,6 +124,7 @@ const pendingCoverQueue = [];
 const pendingCoverKeys = new Set();
 let activeCoverLoads = 0;
 let idlePrewarmCursor = 0;
+let openGeneration = 0;
 
 function hashString(str) {
   let h = 2166136261;
@@ -197,7 +200,7 @@ function isMovingFast() {
   );
 }
 
-// 后台热解码 384px 缩略图并保留最近 72 张引用，避免快速复用槽位时出现 1-2 帧解码空白
+// 后台热解码 320px 缩略图并保留最近 28 张引用（约 11MB 上限），淘汰时显式清空 src 立即释放位图
 function warmDecodeCover(albumKey, url) {
   if (!url) return Promise.resolve();
   const existing = warmDecodedImages.get(albumKey);
@@ -215,13 +218,47 @@ function warmDecodeCover(albumKey, url) {
 
   if (warmDecodedImages.size > MAX_WARM_DECODED) {
     const oldestKey = warmDecodedImages.keys().next().value;
-    if (oldestKey !== albumKey) warmDecodedImages.delete(oldestKey);
+    if (oldestKey !== albumKey) {
+      const oldImg = warmDecodedImages.get(oldestKey);
+      if (oldImg) oldImg.src = '';
+      warmDecodedImages.delete(oldestKey);
+    }
   }
 
   return img.decode().catch(() => {});
 }
 
+function clearWarmDecodedImages() {
+  for (const img of warmDecodedImages.values()) {
+    img.src = '';
+  }
+  warmDecodedImages.clear();
+}
+
+function revokeIfBlob(url) {
+  if (typeof url === 'string' && url.startsWith('blob:')) URL.revokeObjectURL(url);
+}
+
+function clearAllCoverCache() {
+  pendingCoverQueue.length = 0;
+  pendingCoverKeys.clear();
+  clearWarmDecodedImages();
+  // 只清理未完成的 loading 项与兜底 blob: URL；稳定 dream-thumb:// 字符串极轻且跨次复用 Chromium 纹理缓存
+  for (const [key, entry] of coverCache) {
+    if (!entry || entry.status !== 'ready') {
+      coverCache.delete(key);
+    } else if (entry.url && entry.url.startsWith('blob:')) {
+      URL.revokeObjectURL(entry.url);
+      coverCache.delete(key);
+    }
+  }
+}
+
 function touchCoverCache(key, entry) {
+  const prev = coverCache.get(key);
+  if (prev && prev.url && prev.url !== entry.url) {
+    revokeIfBlob(prev.url);
+  }
   coverCache.delete(key);
   coverCache.set(key, entry);
 
@@ -234,8 +271,12 @@ function touchCoverCache(key, entry) {
   for (const [oldKey, oldEntry] of coverCache) {
     if (coverCache.size <= MAX_COVER_CACHE) break;
     if (oldKey === key || mountedKeys.has(oldKey) || oldEntry.status === 'loading') continue;
-    warmDecodedImages.delete(oldKey);
-    if (oldEntry.url) URL.revokeObjectURL(oldEntry.url);
+    const oldWarm = warmDecodedImages.get(oldKey);
+    if (oldWarm) {
+      oldWarm.src = '';
+      warmDecodedImages.delete(oldKey);
+    }
+    revokeIfBlob(oldEntry.url);
     coverCache.delete(oldKey);
   }
 }
@@ -304,11 +345,13 @@ function queueDirectionalCovers() {
       if (d > 0 && tgtCenter - d >= 0) enqueueCoverLoad(filteredAlbums[tgtCenter - d]);
     }
   }
-  // 3. 沿当前滑动方向提前预读 12 张
-  const dir = swipeDirection >= 0 ? 1 : -1;
-  for (let step = MOUNT_RADIUS + 1; step <= MOUNT_RADIUS + LOOKAHEAD_COUNT; step++) {
-    const idx = curCenter + dir * step;
-    if (idx >= 0 && idx < filteredAlbums.length) enqueueCoverLoad(filteredAlbums[idx]);
+  // 3. 仅在非高速拖滑时才沿前进方向预读，避免滑轨扫过上百张专辑时无谓上传 GPU 纹理
+  if (!isMovingFast()) {
+    const dir = swipeDirection >= 0 ? 1 : -1;
+    for (let step = MOUNT_RADIUS + 1; step <= MOUNT_RADIUS + LOOKAHEAD_COUNT; step++) {
+      const idx = curCenter + dir * step;
+      if (idx >= 0 && idx < filteredAlbums.length) enqueueCoverLoad(filteredAlbums[idx]);
+    }
   }
 }
 
@@ -356,13 +399,23 @@ function pumpCoverQueue() {
     pendingCoverKeys.delete(album.key);
     if (coverCache.has(album.key)) continue;
 
+    const gen = openGeneration;
     activeCoverLoads++;
     coverCache.set(album.key, { status: 'loading', url: null });
 
+    // 浮层已关闭或已切换打开代次：立刻释放刚拿到的 blob URL，杜绝跨代次泄漏
     loadAlbumCover(album)
       .then(async (url) => {
-        // 先在后台解完 384px 位图再挂到 DOM，避免刚切换 src 时露出半帧底色
+        if (gen !== openGeneration || !isAlbumsOpen()) {
+          revokeIfBlob(url);
+          return;
+        }
+        // 先在后台解完 320px 位图再挂到 DOM，避免刚切换 src 时露出半帧底色
         if (url) await warmDecodeCover(album.key, url);
+        if (gen !== openGeneration || !isAlbumsOpen()) {
+          revokeIfBlob(url);
+          return;
+        }
         const entry = { status: 'ready', url };
         touchCoverCache(album.key, entry);
 
@@ -374,14 +427,16 @@ function pumpCoverQueue() {
       })
       .finally(() => {
         activeCoverLoads--;
-        pumpCoverQueue();
-        scheduleIdlePrewarm(45);
+        if (gen === openGeneration && isAlbumsOpen()) {
+          pumpCoverQueue();
+          scheduleIdlePrewarm(80);
+        }
       });
   }
 }
 
-// 闲时向外波纹预热整库缩略图（低并发 2，不抢占动画帧，同时帮磁盘缓存预热后续滑动 0 延迟）
-function scheduleIdlePrewarm(delay = 120) {
+// 闲时只对当前专辑周边 ±18 张做单路串行预热，避免一口气全库解析撑爆主进程原生位图内存
+function scheduleIdlePrewarm(delay = 140) {
   clearTimeout(idlePrewarmTimer);
   if (!isAlbumsOpen() || filteredAlbums.length === 0) return;
   idlePrewarmTimer = setTimeout(() => {
@@ -399,9 +454,9 @@ function runIdlePrewarmStep() {
 
   const total = filteredAlbums.length;
   const origin = clampIndex(activeIdx);
-  const maxReach = Math.min(total, MAX_COVER_CACHE);
+  const maxSteps = Math.min(total, IDLE_PREWARM_RADIUS * 2);
 
-  while (idlePrewarmCursor < maxReach && activeCoverLoads < IDLE_PREWARM_CONCURRENCY) {
+  while (idlePrewarmCursor < maxSteps && activeCoverLoads < IDLE_PREWARM_CONCURRENCY) {
     const ring = Math.floor(idlePrewarmCursor / 2) + 1;
     const candidateIdx = idlePrewarmCursor % 2 === 0 ? origin + ring : origin - ring;
     idlePrewarmCursor++;
@@ -410,13 +465,22 @@ function runIdlePrewarmStep() {
     const album = filteredAlbums[candidateIdx];
     if (!album || coverCache.has(album.key) || pendingCoverKeys.has(album.key)) continue;
 
+    const gen = openGeneration;
     activeCoverLoads++;
     coverCache.set(album.key, { status: 'loading', url: null });
 
     loadAlbumCover(album)
       .then(async (url) => {
+        if (gen !== openGeneration || !isAlbumsOpen()) {
+          revokeIfBlob(url);
+          return;
+        }
         if (url && Math.abs(candidateIdx - pos) <= MOUNT_RADIUS + LOOKAHEAD_COUNT) {
           await warmDecodeCover(album.key, url);
+        }
+        if (gen !== openGeneration || !isAlbumsOpen()) {
+          revokeIfBlob(url);
+          return;
         }
         const entry = { status: 'ready', url };
         touchCoverCache(album.key, entry);
@@ -429,8 +493,9 @@ function runIdlePrewarmStep() {
       })
       .finally(() => {
         activeCoverLoads--;
+        if (gen !== openGeneration || !isAlbumsOpen()) return;
         if (pendingCoverQueue.length > 0) pumpCoverQueue();
-        else scheduleIdlePrewarm(24);
+        else scheduleIdlePrewarm(80);
       });
   }
 }
@@ -708,6 +773,10 @@ function releaseSlot(slot) {
   slot.albumIdx = -1;
   slot.albumKey = null;
   slot.boundBackKey = null;
+  slot.frontImg.removeAttribute('src');
+  slot.frontImg.classList.remove('loaded');
+  slot.reflImg.removeAttribute('src');
+  slot.reflImg.classList.remove('loaded');
   slot.el.removeAttribute('data-index');
   slot.el.classList.add('is-pooled-hidden');
   slot.el.classList.remove(
@@ -1061,11 +1130,13 @@ function rebuildAlbums({ preferKey = null, focusCurrent = false } = {}) {
 
 export function openAlbums() {
   if (!albumsOverlay || state.isMiniMode) return;
+  openGeneration++;
   playlistDrawer.classList.remove('open');
   playlistsDrawer.classList.remove('open');
-  if (statsOverlay) statsOverlay.classList.remove('open');
+  if (statsOverlay) statsOverlay.classList.remove('open', 'playing');
   if (helpOverlayEl) helpOverlayEl.classList.remove('open');
   if (settingsOverlay) settingsOverlay.classList.remove('open');
+  window.dispatchEvent(new Event('dreamisle:albums-opened'));
 
   document.body.classList.add('albums-open');
   albumsOverlay.classList.add('open');
@@ -1083,6 +1154,7 @@ export function openAlbums() {
 
 export function closeAlbums() {
   if (!albumsOverlay || !isAlbumsOpen()) return;
+  openGeneration++;
   stopLoop();
   clearTimeout(clickFlipTimer);
   clearTimeout(metaTimer);
@@ -1092,6 +1164,10 @@ export function closeAlbums() {
   albumsOverlay.classList.remove('open');
   albumsOverlay.setAttribute('aria-hidden', 'true');
   if (btnAlbums) btnAlbums.classList.remove('active');
+
+  // 关闭时彻底回收槽位引用、热解码位图与全部 Blob URL（下次打开从主进程/磁盘缩略图缓存毫秒级重建）
+  releaseAllSlots();
+  clearAllCoverCache();
 }
 
 export function toggleAlbums() {

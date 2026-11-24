@@ -17,8 +17,9 @@ contextBridge.exposeInMainWorld('dreamApi', {
     return null;
   },
 
-  getCoverThumb: async (path, maxSize = 440) => {
+  getCoverThumb: async (path, maxSize = 320) => {
     const res = await ipcRenderer.invoke('app:getCoverThumb', path, maxSize);
+    if (typeof res === 'string') return res;
     if (res && res.buffer) {
       const blob = new Blob([res.buffer], { type: res.format });
       return URL.createObjectURL(blob);

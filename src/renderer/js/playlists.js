@@ -34,6 +34,17 @@ import { openAlbums, closeAlbums } from './albums.js';
 // 文件夹树里被折叠的节点与分组折叠态（会话级，不持久化）
 const collapsedFolders = new Set();
 let foldersSectionCollapsed = false;
+// 按 librarySongs 引用缓存专辑数，避免每次抽屉重渲染重复全量分组
+let cachedAlbumCountSource = null;
+let cachedAlbumCount = 0;
+
+function getAlbumCount() {
+  if (cachedAlbumCountSource !== state.librarySongs) {
+    cachedAlbumCountSource = state.librarySongs;
+    cachedAlbumCount = groupSongsByAlbum(state.librarySongs).length;
+  }
+  return cachedAlbumCount;
+}
 
 // 拉取主进程歌单并缓存
 export async function loadPlaylists() {
@@ -86,7 +97,7 @@ export function renderPlaylistsList() {
   fragment.appendChild(allSongs);
 
   // 固定"专辑"入口:打开 Cover Flow 专辑墙
-  const albumCount = groupSongsByAlbum(state.librarySongs).length;
+  const albumCount = getAlbumCount();
   const albumsEntry = document.createElement('li');
   albumsEntry.className = `playlists-card albums-entry-card${state.activeQueue.type === 'album' ? ' active' : ''}`;
   albumsEntry.id = 'btnDrawerAlbums';
@@ -288,8 +299,9 @@ function renderDetailSongs() {
     const isPlaying = playingPath && song.path === playingPath;
     li.className = `playlists-song-item${isPlaying ? ' active' : ''}`;
     li.draggable = true;
-    li.dataset.index = index;
-    // 序号 + 标题/歌手双行，与播放队列保持一致的扫视节奏
+    li.dataset.index = String(index);
+    li.dataset.path = song.path;
+    // 序号 + 标题/歌手双行，与播放队列保持一致的扫视节奏；交互走容器事件委托
     li.innerHTML = `
       <span class="playlists-song-index">${index + 1}</span>
       <div class="item-meta">
@@ -297,22 +309,6 @@ function renderDetailSongs() {
         <div class="playlists-song-artist">${escapeHtml(song.artist)}</div>
       </div>
       <button type="button" class="playlists-song-remove" title="${escapeHtml(t('playlists.remove'))}" aria-label="${escapeHtml(t('playlists.remove'))}">${ICON_REMOVE}</button>`;
-    li.addEventListener('dragstart', () => {
-      dragFrom = Number(li.dataset.index);
-    });
-    li.onclick = (e) => {
-      if (e.target.closest('.playlists-song-remove')) return;
-      if (e.detail === 0) return; // 拖放后合成的 click(detail 0),不是真实点击
-      setQueue(pl.songs, { type: 'playlist', id: pl.id }); // 队列与歌单一致
-      const sortedIndex = state.songs.findIndex((s) => s.path === song.path);
-      playSong(sortedIndex >= 0 ? sortedIndex : 0); // 排序激活时按 path 重定位
-      renderPlaylistsList(); // 同步卡片高亮
-      renderDetailSongs(); // 同步详情内当前播放行高亮
-    };
-    li.querySelector('.playlists-song-remove').onclick = (e) => {
-      e.stopPropagation();
-      removeSongFromDetail(song.path);
-    };
     fragment.appendChild(li);
   });
 
@@ -345,6 +341,7 @@ function closePlaylistDetail() {
   state.detailPlaylistId = null;
   playlistsDetailView.style.display = 'none';
   playlistsListView.style.display = 'flex';
+  playlistsSongListEl.replaceChildren(); // 立即释放详情页歌曲 DOM
   renderPlaylistsList(); // 同步歌曲数等变化
 }
 
@@ -570,7 +567,14 @@ function startCardRename(card) {
 }
 
 // 卡片两段式删除:按钮进入确认态,再点一次执行删除
+const cardDeleteTimers = new WeakMap();
+
 function handleCardDelete(btn) {
+  const prevTimer = cardDeleteTimers.get(btn);
+  if (prevTimer) {
+    clearTimeout(prevTimer);
+    cardDeleteTimers.delete(btn);
+  }
   if (btn.classList.contains('confirm-danger')) {
     const card = btn.closest('.playlists-card');
     btn.classList.remove('confirm-danger');
@@ -579,10 +583,12 @@ function handleCardDelete(btn) {
   } else {
     btn.classList.add('confirm-danger');
     btn.title = t('playlists.confirmDelete');
-    setTimeout(() => {
+    const timer = setTimeout(() => {
+      cardDeleteTimers.delete(btn);
       btn.classList.remove('confirm-danger');
       btn.title = t('playlists.delete');
     }, 3000);
+    cardDeleteTimers.set(btn, timer);
   }
 }
 
@@ -590,6 +596,7 @@ function handleCardDelete(btn) {
 export async function togglePlaylistsDrawer() {
   if (playlistsDrawer.classList.contains('open')) {
     playlistsDrawer.classList.remove('open');
+    if (state.playlistsView === 'detail') playlistsSongListEl.replaceChildren();
   } else {
     playlistDrawer.classList.remove('open');
     playlistsDrawer.classList.add('open');
@@ -662,6 +669,32 @@ export function bindPlaylistsEvents() {
       deleteConfirmTimer = setTimeout(resetDeleteConfirm, 3000);
     }
   };
+
+  // 歌单详情行交互统一走事件委托，避免大歌单为每行绑定多个独立闭包
+  playlistsSongListEl.addEventListener('dragstart', (e) => {
+    const item = e.target.closest('.playlists-song-item');
+    if (!item) return;
+    dragFrom = Number(item.dataset.index);
+  });
+
+  playlistsSongListEl.addEventListener('click', (e) => {
+    const item = e.target.closest('.playlists-song-item');
+    if (!item) return;
+    if (e.target.closest('.playlists-song-remove')) {
+      e.stopPropagation();
+      if (item.dataset.path) removeSongFromDetail(item.dataset.path);
+      return;
+    }
+    if (e.detail === 0) return; // 拖放后合成的 click(detail 0),不是真实点击
+    const pl = getDetailPlaylist();
+    const song = pl && pl.songs[Number(item.dataset.index)];
+    if (!pl || !song) return;
+    setQueue(pl.songs, { type: 'playlist', id: pl.id }); // 队列与歌单一致
+    const sortedIndex = state.songs.findIndex((s) => s.path === song.path);
+    playSong(sortedIndex >= 0 ? sortedIndex : 0); // 排序激活时按 path 重定位
+    renderPlaylistsList(); // 同步卡片高亮
+    renderDetailSongs(); // 同步详情内当前播放行高亮
+  });
 
   // 歌单详情里右键同样可以加入播放队列 / 添加到歌单
   playlistsSongListEl.addEventListener('contextmenu', (e) => {
@@ -780,7 +813,10 @@ export function bindPlaylistsEvents() {
     if (e.clientX < 60 && !playlistsDrawer.classList.contains('open')) {
       playlistsDrawer.classList.add('open');
       loadPlaylists()
-        .then(() => renderPlaylistsList())
+        .then(() => {
+          renderPlaylistsList();
+          if (state.playlistsView === 'detail') renderDetail();
+        })
         .catch(() => {});
       state.dragAutoOpenedDrawer = true;
     }

@@ -97,6 +97,7 @@ const SETTINGS_SECTIONS = [
 ];
 let desktopLyricsLines = 1;
 let previewSyncTimer = null;
+let closeCleanupTimer = null;
 let previewTaskbarLight = null;
 let currentStage = 'vinyl';
 let scrollSpyLockUntil = 0;
@@ -346,6 +347,19 @@ function syncNowPlayingPreviews() {
   }
 }
 
+function clearPreviewCovers() {
+  for (const image of [desktopPreviewCover, taskbarPreviewCover]) {
+    if (!image) continue;
+    image.removeAttribute('src');
+    image.hidden = true;
+  }
+}
+
+function closeFontDropdown(wrapEl, optionsEl) {
+  if (wrapEl) wrapEl.classList.remove('open');
+  if (optionsEl) optionsEl.replaceChildren();
+}
+
 function startPreviewSync() {
   stopPreviewSync();
   syncNowPlayingPreviews();
@@ -363,6 +377,8 @@ export function toggleSettings() {
 }
 
 export async function openSettings() {
+  clearTimeout(closeCleanupTimer);
+  closeCleanupTimer = null;
   if (playlistDrawer) playlistDrawer.classList.remove('open');
   if (playlistsDrawer) playlistsDrawer.classList.remove('open');
   closeAlbums();
@@ -381,6 +397,14 @@ export function closeSettings() {
   document.body.classList.remove('settings-open');
   settingsOverlay.classList.remove('open');
   stopPreviewSync();
+  if (langSelectWrap) langSelectWrap.classList.remove('open');
+  closeFontDropdown(fontSelectWrap, fontOptions);
+  closeFontDropdown(taskbarFontSelectWrap, taskbarFontOptions);
+  clearTimeout(closeCleanupTimer);
+  closeCleanupTimer = setTimeout(() => {
+    closeCleanupTimer = null;
+    if (!settingsOverlay.classList.contains('open')) clearPreviewCovers();
+  }, 280);
 }
 
 // 打开时同步主进程中的设置到控件
@@ -597,46 +621,60 @@ export async function ensureSystemFonts() {
   }
 }
 
-// 字体下拉的通用渲染：桌面歌词与任务栏歌词各用一套 DOM 和回调。
-function renderFontOptionsInto({ optionsEl, valueEl, wrapEl, selectedFamily, onSelect, filter }) {
-  optionsEl.innerHTML = '';
+// 仅给当前滚入下拉视窗（及上下 80px 缓冲）的字体项挂 font-family，
+// 避免展开时一次性光栅化数百款系统字体撑爆内存/显存。
+function applyVisibleFontFamilies(optionsEl) {
+  if (!optionsEl || optionsEl.childElementCount === 0) return;
+  const rootRect = optionsEl.getBoundingClientRect();
+  if (rootRect.height <= 0) return;
+  const minY = rootRect.top - 80;
+  const maxY = rootRect.bottom + 80;
+
+  for (const li of optionsEl.children) {
+    const fam = li.dataset.fontFamily;
+    if (!fam) continue;
+    const rect = li.getBoundingClientRect();
+    if (rect.bottom < minY) continue;
+    if (rect.top > maxY) break;
+    li.style.fontFamily = `"${fam}"`;
+    delete li.dataset.fontFamily;
+  }
+}
+
+// 字体下拉的通用渲染：桌面歌词与任务栏歌词各用一套 DOM 和事件委托。
+function renderFontOptionsInto({ optionsEl, selectedFamily, filter }) {
+  optionsEl.replaceChildren();
+  optionsEl.scrollTop = 0;
   const query = (filter || '').trim().toLowerCase();
+  const fragment = document.createDocumentFragment();
 
   const makeOption = (family, label, ownFont) => {
     const safeFamily = sanitizeFontFamily(family);
     const li = document.createElement('li');
     li.className = 'font-select-option';
-    if (ownFont && safeFamily) li.style.fontFamily = `"${safeFamily}"`;
     li.textContent = label;
     li.dataset.value = safeFamily;
+    li.dataset.label = label;
+    if (ownFont && safeFamily) li.dataset.fontFamily = safeFamily;
     if (safeFamily === (selectedFamily || '')) li.classList.add('selected');
-    li.addEventListener('click', () => {
-      valueEl.textContent = label;
-      valueEl.style.fontFamily = ownFont && safeFamily ? `"${safeFamily}"` : '';
-      wrapEl.classList.remove('open');
-      onSelect(safeFamily);
-    });
-    optionsEl.appendChild(li);
+    fragment.appendChild(li);
   };
 
   // 首项固定为默认字体，不参与搜索过滤
   makeOption('', t('settings.fontDefault'), false);
-  for (const family of state.systemFonts) {
+  for (const family of state.systemFonts || []) {
     if (query && !family.toLowerCase().includes(query)) continue;
     makeOption(family, family, true);
   }
+
+  optionsEl.appendChild(fragment);
+  applyVisibleFontFamilies(optionsEl);
 }
 
 export function renderFontOptions(filter = '') {
   renderFontOptionsInto({
     optionsEl: fontOptions,
-    valueEl: fontSelectValue,
-    wrapEl: fontSelectWrap,
     selectedFamily: state.currentLyricsStyle.fontFamily,
-    onSelect: (family) => {
-      state.currentLyricsStyle.fontFamily = family;
-      pushLyricsStyle();
-    },
     filter,
   });
 }
@@ -644,13 +682,7 @@ export function renderFontOptions(filter = '') {
 function renderTaskbarFontOptions(filter = '') {
   renderFontOptionsInto({
     optionsEl: taskbarFontOptions,
-    valueEl: taskbarFontSelectValue,
-    wrapEl: taskbarFontSelectWrap,
     selectedFamily: taskbarStyle.fontFamily,
-    onSelect: (family) => {
-      taskbarStyle.fontFamily = family;
-      pushTaskbarLyricsStyle();
-    },
     filter,
   });
 }
@@ -823,17 +855,35 @@ export function bindSettingsEvents() {
 
   fontSelectBtn.addEventListener('click', async () => {
     const willOpen = !fontSelectWrap.classList.contains('open');
-    fontSelectWrap.classList.toggle('open');
-    if (!willOpen) return;
+    if (!willOpen) {
+      closeFontDropdown(fontSelectWrap, fontOptions);
+      return;
+    }
+    fontSelectWrap.classList.add('open');
     await ensureSystemFonts(); // 读取失败时仅提示，不展开列表
     if (state.fontsLoadFailed) {
-      fontSelectWrap.classList.remove('open');
+      closeFontDropdown(fontSelectWrap, fontOptions);
       return;
     }
     fontSearchInput.value = '';
     renderFontOptions();
     ensureDropdownVisible(fontSelectWrap);
     fontSearchInput.focus();
+  });
+
+  fontOptions.addEventListener('click', (e) => {
+    const li = e.target.closest('.font-select-option');
+    if (!li) return;
+    const family = li.dataset.value || '';
+    const label = li.dataset.label || li.textContent || t('settings.fontDefault');
+    fontSelectValue.textContent = label;
+    fontSelectValue.style.fontFamily = family ? `"${family}"` : '';
+    closeFontDropdown(fontSelectWrap, fontOptions);
+    state.currentLyricsStyle.fontFamily = family;
+    pushLyricsStyle();
+  });
+  fontOptions.addEventListener('scroll', () => applyVisibleFontFamilies(fontOptions), {
+    passive: true,
   });
 
   fontSearchInput.addEventListener('input', () => renderFontOptions(fontSearchInput.value));
@@ -891,11 +941,14 @@ export function bindSettingsEvents() {
   // ── 任务栏歌词外观 ──
   taskbarFontSelectBtn.addEventListener('click', async () => {
     const willOpen = !taskbarFontSelectWrap.classList.contains('open');
-    taskbarFontSelectWrap.classList.toggle('open');
-    if (!willOpen) return;
+    if (!willOpen) {
+      closeFontDropdown(taskbarFontSelectWrap, taskbarFontOptions);
+      return;
+    }
+    taskbarFontSelectWrap.classList.add('open');
     await ensureSystemFonts();
     if (state.fontsLoadFailed) {
-      taskbarFontSelectWrap.classList.remove('open');
+      closeFontDropdown(taskbarFontSelectWrap, taskbarFontOptions);
       return;
     }
     taskbarFontSearchInput.value = '';
@@ -903,6 +956,23 @@ export function bindSettingsEvents() {
     ensureDropdownVisible(taskbarFontSelectWrap);
     taskbarFontSearchInput.focus();
   });
+
+  taskbarFontOptions.addEventListener('click', (e) => {
+    const li = e.target.closest('.font-select-option');
+    if (!li) return;
+    const family = li.dataset.value || '';
+    const label = li.dataset.label || li.textContent || t('settings.fontDefault');
+    taskbarFontSelectValue.textContent = label;
+    taskbarFontSelectValue.style.fontFamily = family ? `"${family}"` : '';
+    closeFontDropdown(taskbarFontSelectWrap, taskbarFontOptions);
+    taskbarStyle.fontFamily = family;
+    pushTaskbarLyricsStyle();
+  });
+  taskbarFontOptions.addEventListener(
+    'scroll',
+    () => applyVisibleFontFamilies(taskbarFontOptions),
+    { passive: true }
+  );
 
   taskbarFontSearchInput.addEventListener('input', () =>
     renderTaskbarFontOptions(taskbarFontSearchInput.value)
@@ -941,8 +1011,26 @@ export function bindSettingsEvents() {
     }
     // 点下拉外部收起（语言、桌面歌词字体、任务栏歌词字体）
     if (!langSelectWrap.contains(e.target)) langSelectWrap.classList.remove('open');
-    if (!fontSelectWrap.contains(e.target)) fontSelectWrap.classList.remove('open');
-    if (!taskbarFontSelectWrap.contains(e.target)) taskbarFontSelectWrap.classList.remove('open');
+    if (fontSelectWrap.classList.contains('open') && !fontSelectWrap.contains(e.target)) {
+      closeFontDropdown(fontSelectWrap, fontOptions);
+    }
+    if (
+      taskbarFontSelectWrap.classList.contains('open') &&
+      !taskbarFontSelectWrap.contains(e.target)
+    ) {
+      closeFontDropdown(taskbarFontSelectWrap, taskbarFontOptions);
+    }
+  });
+  window.addEventListener('dreamisle:song-changed', () => {
+    if (!settingsOverlay.classList.contains('open')) clearPreviewCovers();
+  });
+  window.addEventListener('dreamisle:albums-opened', () => {
+    if (
+      settingsOverlay.classList.contains('open') ||
+      document.body.classList.contains('settings-open')
+    ) {
+      closeSettings();
+    }
   });
   if (btnAddFolder) btnAddFolder.onclick = handleAddFolder;
   if (btnRescanLibrary) btnRescanLibrary.onclick = handleRescanLibrary;

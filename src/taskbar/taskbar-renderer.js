@@ -24,6 +24,10 @@ let lastRenderKey = '';
 let reportedWidth = -1;
 let currentWords = null;
 let currentWordSpans = [];
+let rafId = 0;
+let lineTimerId = null;
+// 复用游标对象，避免高频调度时每帧新建 playback 浅拷贝对象
+const playbackCursor = { songPath: null, currentTimeMs: 0 };
 
 // 用一拍播放状态重置本地时钟。切歌时即使 songPath 与文档不一致也照常记录：
 // resolveDisplay 会拒绝拿它定位旧文档的歌词行。
@@ -49,10 +53,10 @@ function currentTimeMs() {
 }
 
 function resolveNow() {
-  return resolveDisplay({
-    doc,
-    playback: playback ? { ...playback, currentTimeMs: currentTimeMs() } : null,
-  });
+  if (!playback) return resolveDisplay({ doc, playback: null });
+  playbackCursor.songPath = playback.songPath;
+  playbackCursor.currentTimeMs = currentTimeMs();
+  return resolveDisplay({ doc, playback: playbackCursor });
 }
 
 // 行切换：类里用 transition:none 立即落到起始态，移除类后按基础规则 180ms 淡入。
@@ -243,7 +247,7 @@ function applyConfig(next) {
 
   // 翻译开关/字体/粗细/颜色/兜底文案都可能变化，强制重新渲染一次
   lastRenderKey = '';
-  updateDisplay(resolveNow());
+  syncNow();
   requestAnimationFrame(() => {
     applyMarquee();
     reportWidth();
@@ -261,18 +265,97 @@ function applyCover(url) {
   }
   // 封面出现/消失会改变文字可用宽度，强制重算一次
   lastRenderKey = '';
-  updateDisplay(resolveNow());
+  syncNow();
   requestAnimationFrame(() => {
     applyMarquee();
     reportWidth();
   });
 }
 
+function stopScheduler() {
+  if (rafId) {
+    cancelAnimationFrame(rafId);
+    rafId = 0;
+  }
+  if (lineTimerId !== null) {
+    clearTimeout(lineTimerId);
+    lineTimerId = null;
+  }
+}
+
+function hasActiveTimedLyrics() {
+  return Boolean(
+    clock.playing &&
+    doc &&
+    doc.songPath &&
+    !doc.isStatic &&
+    Array.isArray(doc.lines) &&
+    doc.lines.length > 0 &&
+    playback &&
+    playback.songPath === doc.songPath
+  );
+}
+
+// 按需驱动刷新：暂停/无时轴歌词时完全停机（0 rAF、0 定时唤醒）；
+// 逐字歌词播放期间使用 rAF 平滑推进；普通按行歌词按下一行边界单次定时唤醒。
+function scheduleNextUpdate(display) {
+  if (!hasActiveTimedLyrics()) {
+    stopScheduler();
+    return;
+  }
+
+  if (currentWords && currentWordSpans.length > 0) {
+    if (lineTimerId !== null) {
+      clearTimeout(lineTimerId);
+      lineTimerId = null;
+    }
+    if (!rafId) rafId = requestAnimationFrame(frame);
+    return;
+  }
+
+  if (rafId) {
+    cancelAnimationFrame(rafId);
+    rafId = 0;
+  }
+  if (lineTimerId !== null) {
+    clearTimeout(lineTimerId);
+    lineTimerId = null;
+  }
+
+  const nextIdx = display.lineIndex + 1;
+  if (nextIdx >= 0 && nextIdx < doc.lines.length) {
+    const remainingMs = (doc.lines[nextIdx].time - currentTimeMs()) / clock.rate;
+    const delay = Math.max(16, Math.min(60000, Math.ceil(remainingMs) + 4));
+    lineTimerId = setTimeout(() => {
+      lineTimerId = null;
+      syncNow();
+    }, delay);
+  }
+}
+
+function syncNow() {
+  const display = resolveNow();
+  updateDisplay(display);
+  if (currentWords && currentWordSpans.length > 0) {
+    updateWordSpansProgress(currentWordSpans, currentWords, currentTimeMs(), { smooth: true });
+  }
+  scheduleNextUpdate(display);
+}
+
+function frame() {
+  rafId = 0;
+  syncNow();
+}
+
 window.taskbarApi.onConfig(applyConfig);
 window.taskbarApi.onDocument((next) => {
   doc = next || null;
+  syncNow();
 });
-window.taskbarApi.onPlayback(applyPlayback);
+window.taskbarApi.onPlayback((next) => {
+  applyPlayback(next);
+  syncNow();
+});
 window.taskbarApi.onCover(applyCover);
 
 window.addEventListener('resize', () => {
@@ -289,14 +372,5 @@ if (document.fonts && document.fonts.ready) {
     .catch(() => {});
 }
 
-// 本地时钟主循环：本地推算时间 → resolveDisplay → 仅在变化时改 DOM；逐字歌词同步推算进度
-function frame() {
-  updateDisplay(resolveNow());
-  if (currentWords && currentWordSpans.length > 0) {
-    updateWordSpansProgress(currentWordSpans, currentWords, currentTimeMs(), { smooth: true });
-  }
-  requestAnimationFrame(frame);
-}
-
-requestAnimationFrame(frame);
+syncNow();
 window.taskbarApi.ready();

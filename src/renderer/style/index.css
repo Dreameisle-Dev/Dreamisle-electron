@@ -1460,13 +1460,20 @@ body.mini-mode .mini-lyric.now .lyric-word.sweeping {
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   opacity: 0;
+  visibility: hidden;
   pointer-events: none;
-  transition: opacity 0.25s ease;
+  transition:
+    opacity 0.25s ease,
+    visibility 0s linear 0.25s;
 }
 
 .help-overlay.open {
   opacity: 1;
+  visibility: visible;
   pointer-events: auto;
+  transition:
+    opacity 0.25s ease,
+    visibility 0s linear 0s;
 }
 
 .help-card {
@@ -3028,13 +3035,20 @@ body.mini-mode .playlists-drawer {
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   opacity: 0;
+  visibility: hidden;
   pointer-events: none;
-  transition: opacity 0.25s ease;
+  transition:
+    opacity 0.25s ease,
+    visibility 0s linear 0.25s;
 }
 
 .stats-overlay.open {
   opacity: 1;
+  visibility: visible;
   pointer-events: auto;
+  transition:
+    opacity 0.25s ease,
+    visibility 0s linear 0s;
 }
 
 .stats-card {
@@ -3110,8 +3124,8 @@ body.mini-mode .playlists-drawer {
     inset 0 0 0 1px var(--disc-edge);
 }
 
-/* 播放时转，与主界面同一个 keyframes */
-.stats-overlay.playing .stats-vinyl {
+/* 仅在统计浮层打开且播放时转，关闭时立刻停止后台合成动画 */
+.stats-overlay.open.playing .stats-vinyl {
   animation: discSpin 45s linear infinite;
 }
 
@@ -5001,9 +5015,18 @@ body.albums-open .lyric-translation.overflowing {
   pointer-events: none;
 }
 
+/* 专辑墙关闭时彻底摘除 3D 渲染子树与 GPU 合成层，释放全部 Cover Flow 显存 */
+.albums-overlay:not(.open) .albums-track {
+  display: none;
+}
+
+.albums-overlay:not(.open) .albums-card {
+  will-change: auto;
+  display: none;
+}
+
 .albums-card.is-pooled-hidden {
-  visibility: hidden;
-  opacity: 0 !important;
+  display: none;
   pointer-events: none !important;
 }
 

@@ -850,6 +850,7 @@ function failEnablement(error, notifyUser) {
     nativeError: getNativeInitError(),
   });
   enabled = false;
+  clearCachedCover();
   stopMonitors();
   clearTimeout(recreateTimer);
   recreateTimer = null;
@@ -1101,6 +1102,7 @@ function enableRuntime({ notifyUser }) {
     enabled = true;
     bindIpcOnce();
     startMonitors();
+    ensureCoverLoaded();
     // 首次启用：嵌入是异步完成的，did-finish-load 里的失败会走 failEnablement
     createWindow({ pending: true, notifyUser });
     return true;
@@ -1112,6 +1114,7 @@ function enableRuntime({ notifyUser }) {
 
 function disableRuntime() {
   enabled = false;
+  clearCachedCover();
   stopMonitors();
   clearTimeout(recreateTimer);
   recreateTimer = null;
@@ -1200,18 +1203,43 @@ export function setTaskbarLyricsEnabled(value) {
   return getTaskbarLyricsSetting();
 }
 
+function clearCachedCover() {
+  coverToken++;
+  coverSongPath = null;
+  lastCover = null;
+}
+
+// 仅在任务栏歌词启用时按 songPath 去重读取封面，停用期间不做无谓解码与缓存滞留
+function ensureCoverLoaded() {
+  const songPath = lastDoc?.songPath || null;
+  if (!enabled) {
+    if (coverSongPath !== null || lastCover !== null) clearCachedCover();
+    return;
+  }
+  if (songPath === coverSongPath) return;
+  coverSongPath = songPath;
+  coverToken++;
+  if (songPath) {
+    loadCover(songPath, coverToken);
+  } else {
+    lastCover = null;
+    sendToWindow('taskbar:cover', null);
+  }
+}
+
 // 读取并缩放封面。72px 高足够 36 CSS px 的条在 200% DPI 下清晰；
 // 用 data URL 传给渲染进程，避免 blob/临时文件的生命周期问题。
 async function loadCover(songPath, token) {
   try {
     const cover = await readCover(songPath, getMusicFolders());
-    if (token !== coverToken) return;
+    if (token !== coverToken || !enabled) return;
     if (!cover?.buffer) {
       lastCover = null;
       sendToWindow('taskbar:cover', null);
       return;
     }
-    const image = nativeImage.createFromBuffer(Buffer.from(cover.buffer));
+    const rawBuf = Buffer.isBuffer(cover.buffer) ? cover.buffer : Buffer.from(cover.buffer);
+    const image = nativeImage.createFromBuffer(rawBuf);
     if (image.isEmpty()) {
       lastCover = null;
       sendToWindow('taskbar:cover', null);
@@ -1220,7 +1248,7 @@ async function loadCover(songPath, token) {
     lastCover = image.resize({ height: 72, quality: 'good' }).toDataURL();
     sendToWindow('taskbar:cover', lastCover);
   } catch (error) {
-    if (token !== coverToken) return;
+    if (token !== coverToken || !enabled) return;
     console.warn('[taskbar-lyrics] failed to read the cover', error);
     lastCover = null;
     sendToWindow('taskbar:cover', null);
@@ -1232,18 +1260,7 @@ export function updateTaskbarLyricsDocument(doc) {
   const hadSong = hasSong;
   hasSong = !!lastDoc?.songPath;
 
-  // 切歌才重新读封面；歌词文档在占位/完整之间更新时 songPath 不变，不重复读
-  const songPath = lastDoc?.songPath || null;
-  if (songPath !== coverSongPath) {
-    coverSongPath = songPath;
-    coverToken++;
-    if (songPath) {
-      loadCover(songPath, coverToken);
-    } else {
-      lastCover = null;
-      sendToWindow('taskbar:cover', null);
-    }
-  }
+  ensureCoverLoaded();
 
   if (lastDoc) sendToWindow('taskbar:document', lastDoc);
   // 文档可能在窗口创建前到达：有 songPath 且有空档就显示，空文档（空库复位）就隐藏
@@ -1276,6 +1293,7 @@ export function refreshTaskbarLyricsConfig() {
 
 export function disposeTaskbarLyrics() {
   enabled = false;
+  clearCachedCover();
   stopMonitors();
   clearTimeout(recreateTimer);
   recreateTimer = null;

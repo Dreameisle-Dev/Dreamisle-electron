@@ -1,4 +1,4 @@
-import { app, globalShortcut, Menu, session, nativeTheme } from 'electron';
+import { app, globalShortcut, Menu, session, nativeTheme, protocol } from 'electron';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
@@ -14,6 +14,7 @@ import { createWindow, getMainWindow, flushWindowBounds } from './window.js';
 import { createTray, rebuildTrayMenu } from './tray.js';
 import { registerIpcHandlers } from './ipc.js';
 import { registerPlaylistsIpc } from './playlists.js';
+import { registerCoverThumbProtocol } from './music-library.js';
 import {
   registerLyricsHotkey,
   disposeLyrics,
@@ -64,6 +65,14 @@ function registerTaskbarLyricsHotkey() {
 app.isQuitting = false;
 if (process.platform === 'darwin') app.setName('Dreamisle');
 app.setAppUserModelId('org.dreamisle-dev.dreamisle');
+
+// 必须在 app ready 前声明自定义缩略图协议为安全标准协议，供 Cover Flow 直接复用 Chromium 图像缓存
+protocol.registerSchemesAsPrivileged([
+  {
+    scheme: 'dream-thumb',
+    privileges: { standard: true, secure: true, bypassCSP: false },
+  },
+]);
 
 // 单实例锁：歌单、统计和播放队列都写在同一份 config.json 里，
 // 两个实例同时运行会互相覆盖。第二个实例只负责把已有实例唤到前台，然后退出。
@@ -138,6 +147,7 @@ if (gotSingleInstanceLock) {
     if (process.platform === 'darwin' && app.dock && !app.isPackaged) {
       app.dock.setIcon(path.join(__dirname, '../assets/icon_512x512.png'));
     }
+    registerCoverThumbProtocol();
     registerIpcHandlers();
     registerPlaylistsIpc();
     createWindow();

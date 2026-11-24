@@ -36,12 +36,15 @@ const CHART_LIMIT = 20;
 
 // 最近一次从主进程拉取的统计(计数卡与排行渲染共用)
 let statsData = { plays: {}, firstPlayDate: null };
+let closeCleanupTimer = null;
 
 export function isStatsOpen() {
   return statsOverlay.classList.contains('open');
 }
 
 export function openStats() {
+  clearTimeout(closeCleanupTimer);
+  closeCleanupTimer = null;
   statsOverlay.classList.add('open');
   // 互斥:打开统计面板时收起两个抽屉与专辑墙
   playlistDrawer.classList.remove('open');
@@ -52,7 +55,15 @@ export function openStats() {
 }
 
 export function closeStats() {
-  statsOverlay.classList.remove('open');
+  statsOverlay.classList.remove('open', 'playing');
+  // 等 250ms 淡出结束后再清空封面引用与排行 DOM，避免收起瞬间闪烁同时释放位图/节点
+  clearTimeout(closeCleanupTimer);
+  closeCleanupTimer = setTimeout(() => {
+    closeCleanupTimer = null;
+    if (isStatsOpen()) return;
+    applyVinylCover(null);
+    statsChartList.replaceChildren();
+  }, 280);
 }
 
 export function toggleStats() {
@@ -65,9 +76,10 @@ export function onSongChanged() {
   if (isStatsOpen()) refreshLiveCard();
 }
 
-// 封面就绪时由 playback.js 调用,更新唱片贴纸
+// 封面就绪时由 playback.js 调用,更新唱片贴纸；面板关闭时清掉旧 blob URL 引用
 export function onCoverReady(coverUrl) {
   if (isStatsOpen()) applyVinylCover(coverUrl);
+  else if (statsVinylCover.getAttribute('src')) applyVinylCover(null);
 }
 
 export function bindStatsEvents() {
@@ -94,6 +106,7 @@ export function bindStatsEvents() {
   // 唱片旋转跟随播放状态
   audio.addEventListener('play', syncVinylSpin);
   audio.addEventListener('pause', syncVinylSpin);
+  window.addEventListener('dreamisle:albums-opened', closeStats);
 }
 
 async function refreshStats() {
@@ -108,7 +121,7 @@ async function refreshStats() {
 }
 
 function syncVinylSpin() {
-  statsOverlay.classList.toggle('playing', !audio.paused);
+  statsOverlay.classList.toggle('playing', isStatsOpen() && !audio.paused);
 }
 
 function applyVinylCover(url) {
@@ -117,7 +130,7 @@ function applyVinylCover(url) {
     statsVinylCover.style.display = 'block';
     statsVinylFallback.style.display = 'none';
   } else {
-    statsVinylCover.src = '';
+    statsVinylCover.removeAttribute('src');
     statsVinylCover.style.display = 'none';
     statsVinylFallback.style.display = 'block';
   }

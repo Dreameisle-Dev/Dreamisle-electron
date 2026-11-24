@@ -45,6 +45,13 @@ let user32 = null;
 let advapi32 = null;
 let initError = null;
 
+// 同步 Win32 查询复用固定 Buffer：避免 koffi.alloc 未配对 koffi.free 导致原生 C 堆持续泄漏，
+// 同时消除 1s/2s 轮询中的高频临时缓冲区分配。
+const REG_DATA_BUF = Buffer.allocUnsafe(4);
+const REG_SIZE_BUF = Buffer.allocUnsafe(4);
+const MONITORINFO_BUF = Buffer.alloc(MONITORINFO_SIZE);
+const CLASS_NAME_BUF = Buffer.alloc(512);
+
 // 可选函数绑定失败时不要拖垮整个功能：任务栏嵌入只强依赖窗口/坐标相关 API，
 // 主题读取、DPI 查询、快捷键守卫各有降级路径。
 function bindOptional(lib, prototype) {
@@ -139,7 +146,7 @@ function ensureNative() {
       advapi32 = {
         RegGetValueW: bindOptional(
           advapi32Lib,
-          'int __stdcall RegGetValueW(intptr_t hkey, const char16_t *lpSubKey, const char16_t *lpValue, uint dwFlags, uint *pdwType, _Out_ uint *pvData, uint *pcbData)'
+          'int __stdcall RegGetValueW(intptr_t hkey, const char16_t *lpSubKey, const char16_t *lpValue, uint dwFlags, uint *pdwType, _Out_ uint8_t *pvData, _Inout_ uint8_t *pcbData)'
         ),
       };
     } catch {
@@ -170,20 +177,19 @@ function asHwnd(value) {
 function readRegDword(subKey, valueName) {
   if (!ensureNative() || !advapi32?.RegGetValueW) return null;
   try {
-    const data = koffi.alloc('uint', 1);
-    const size = koffi.alloc('uint', 1);
-    koffi.encode(size, 'uint', 4);
+    REG_DATA_BUF.writeUInt32LE(0, 0);
+    REG_SIZE_BUF.writeUInt32LE(4, 0);
     const status = advapi32.RegGetValueW(
       HKEY_CURRENT_USER,
       subKey,
       valueName,
       RRF_RT_REG_DWORD,
       null,
-      data,
-      size
+      REG_DATA_BUF,
+      REG_SIZE_BUF
     );
     if (status !== 0) return null;
-    return koffi.decode(data, 'uint');
+    return REG_DATA_BUF.readUInt32LE(0);
   } catch {
     return null;
   }
@@ -289,16 +295,16 @@ export function getMonitorRect(hwnd) {
   if (!monitor) return null;
 
   try {
-    // koffi 对嵌套 _Out_ 结构的回写不可靠，这里用原始缓冲区按 MONITORINFO 布局解码：
+    // koffi 对嵌套 _Out_ 结构的回写不可靠，这里用复用 Buffer 按 MONITORINFO 布局解码：
     // cbSize@0, rcMonitor.left/top/right/bottom@4/8/12/16, rcWork@20, dwFlags@36。
-    const buffer = koffi.alloc('uint8_t', MONITORINFO_SIZE);
-    koffi.encode(buffer, 0, 'uint', MONITORINFO_SIZE);
-    if (!user32.GetMonitorInfoW(monitor, buffer)) return null;
+    MONITORINFO_BUF.fill(0);
+    MONITORINFO_BUF.writeUInt32LE(MONITORINFO_SIZE, 0);
+    if (!user32.GetMonitorInfoW(monitor, MONITORINFO_BUF)) return null;
     return {
-      left: koffi.decode(buffer, 4, 'int'),
-      top: koffi.decode(buffer, 8, 'int'),
-      right: koffi.decode(buffer, 12, 'int'),
-      bottom: koffi.decode(buffer, 16, 'int'),
+      left: MONITORINFO_BUF.readInt32LE(4),
+      top: MONITORINFO_BUF.readInt32LE(8),
+      right: MONITORINFO_BUF.readInt32LE(12),
+      bottom: MONITORINFO_BUF.readInt32LE(16),
     };
   } catch {
     return null;
@@ -386,10 +392,9 @@ export function getClassName(hwnd) {
   if (!h) return '';
 
   try {
-    const buf = Buffer.alloc(512);
-    const length = user32.GetClassNameW(h, buf, buf.length / 2);
+    const length = user32.GetClassNameW(h, CLASS_NAME_BUF, CLASS_NAME_BUF.length / 2);
     if (!length || length <= 0) return '';
-    return buf.subarray(0, length * 2).toString('utf16le');
+    return CLASS_NAME_BUF.subarray(0, length * 2).toString('utf16le');
   } catch {
     return '';
   }
