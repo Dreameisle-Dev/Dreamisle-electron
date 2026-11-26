@@ -30,7 +30,15 @@
       "!packages/lyrics-without-credits/CONTRIBUTING.md",
       "!packages/lyrics-without-credits/.editorconfig",
       "!packages/lyrics-without-credits/.prettierrc",
-      "!packages/lyrics-without-credits/.gitignore"
+      "!packages/lyrics-without-credits/.gitignore",
+      "!packages/universal-lyric-parser/.github{,/**/*}",
+      "!packages/universal-lyric-parser/test{,/**/*}",
+      "!packages/universal-lyric-parser/types{,/**/*}",
+      "!packages/universal-lyric-parser/README*.md",
+      "!packages/universal-lyric-parser/CONTRIBUTING.md",
+      "!packages/universal-lyric-parser/.editorconfig",
+      "!packages/universal-lyric-parser/.prettierrc",
+      "!packages/universal-lyric-parser/.gitignore"
     ],
     "win": {
       "icon": "src/assets/app_icon.ico",

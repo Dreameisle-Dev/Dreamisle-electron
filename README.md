@@ -17,7 +17,7 @@
 - **播放队列**：底部按钮打开当前播放队列；右键歌曲可「下一首播放 / 添加到播放队列 / 从播放队列移除」；支持拖动排序和清空，重启后恢复。
 - **歌单**：创建、重命名、删除歌单；右键添加歌曲、拖动排序；点击歌单将其歌曲作为播放队列。
 - **文件夹视图**：按设置的曲库根目录生成文件夹树，父文件夹包含其子文件夹的歌曲；点击文件夹可将整棵子树的歌曲作为播放队列，不创建歌单。
-- **歌词**：优先读取同目录同名 `.lrc`，其次读取内嵌歌词；支持同时间戳双语、`[offset:]` 校正、翻译开关、点击跳转和长行水平滚动。作词、作曲、制作、赞助、版权、平台翻译声明以及歌名/歌手头部由独立开源规则库 [lyrics-without-credits](https://github.com/Dreameisle-Dev/lyrics-without-credits) 自动隐藏，欢迎前往贡献漏剔除或误剔除的歌词文本。
+- **歌词**：优先读取同目录同名 `.lrc`，其次读取内嵌歌词；由独立开源模块 [universal-lyric-parser](https://github.com/Dreameisle-Dev/universal-lyric-parser) 提供双语自动拆分、同时间戳双语合并、增强型逐字时间戳与 `[offset:]` 校正，支持翻译开关、点击跳转和长行水平滚动。作词、作曲、制作、赞助、版权、平台翻译声明以及歌名/歌手头部由独立开源规则库 [lyrics-without-credits](https://github.com/Dreameisle-Dev/lyrics-without-credits) 自动隐藏，欢迎前往贡献漏剔除或误剔除的歌词文本。
 - **桌面歌词**：置顶悬浮窗；可调背景/文字不透明度、颜色和字体；支持单行/双行显示（第二行优先显示翻译，没有翻译时显示下一句）；支持鼠标穿透，关闭穿透后可拖动窗口；`Ctrl+Alt+L` / `Cmd+Option+L` 或设置页开关。
 - **任务栏歌词（Windows 10/11）**：在任务栏空档显示封面和两行歌词；字体、字重、颜色独立设置；`Ctrl+Alt+T`、托盘菜单或设置页开关。
 - **菜单栏歌词（macOS）**：在状态栏图标旁显示当前歌词行；无时间轴歌词时显示歌名/歌手；超长行截断；`Cmd+Option+T`、托盘菜单或设置页开关。
@@ -126,7 +126,8 @@ Dreamisle-electron/
 ├── build/                     # electron-builder 资源（NSIS 自定义、macOS entitlements）
 ├── img/                       # 文档截图
 ├── packages/
-│   └── lyrics-without-credits/ # 独立开源的歌词制作信息/头部剔除规则库与引擎（Git Submodule）
+│   ├── lyrics-without-credits/ # 独立开源的歌词制作信息/头部剔除规则库与引擎（Git Submodule）
+│   └── universal-lyric-parser/ # 独立开源的双语 + 增强型逐字 LRC 歌词解析器（Git Submodule）
 └── src/
     ├── main/                  # 主进程：窗口、托盘、曲库、歌单、播放队列持久化、IPC
     ├── preload/               # 预加载桥接（主窗口 / 桌面歌词 / 任务栏歌词）

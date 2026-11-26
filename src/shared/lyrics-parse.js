@@ -1,6 +1,6 @@
 // 歌词解析入口:通用解析器 + 无时间戳纯文本歌词的静态降级。
 // 无 Electron 依赖,可被 node --test 直接测试。
-import universalLyricParser from './universal-lyric-parser.js';
+import universalLyricParser, { formatSyncLyricsToLrc } from './universal-lyric-parser.js';
 import { isCreditLine, stripCreditLines } from './lyrics-credits.js';
 
 export function parseLyricsText(lrcText) {
@@ -9,7 +9,7 @@ export function parseLyricsText(lrcText) {
   }
   const normalizedText = lrcText.charCodeAt(0) === 0xfeff ? lrcText.slice(1) : lrcText;
 
-  const parsed = universalLyricParser.parse(normalizedText);
+  const parsed = universalLyricParser.parse(normalizedText, { isCreditLine });
   // 只要解析出过带时间戳的行，就不再走静态降级：
   // 即使这些行全是 credits，也应该返回空歌词，而不是把带时间戳的 credits 当正文。
   if (parsed.lines.length > 0) {
@@ -30,19 +30,9 @@ export function parseLyricsText(lrcText) {
 // 同步歌词(music-metadata 的 syncText:毫秒时间戳数组)转为 LRC 文本后统一走解析器,
 // 使内嵌同步歌词同样支持行内双语拆分与容差合并
 export function parseSyncLyrics(syncText) {
-  if (!Array.isArray(syncText) || syncText.length === 0) {
+  const lrcText = formatSyncLyricsToLrc(syncText);
+  if (!lrcText) {
     return { metadata: {}, lines: [] };
   }
-
-  const lrcText = syncText
-    .map((item) => {
-      const ms = Math.round(Math.max(0, Number(item.timestamp) || 0));
-      const min = Math.floor(ms / 60000);
-      const sec = Math.floor((ms % 60000) / 1000);
-      const rest = ms % 1000;
-      return `[${String(min).padStart(2, '0')}:${String(sec).padStart(2, '0')}.${String(rest).padStart(3, '0')}]${item.text || ''}`;
-    })
-    .join('\n');
-
   return parseLyricsText(lrcText);
 }

@@ -2,3 +2,7 @@
 	path = packages/lyrics-without-credits
 	url = https://github.com/Dreameisle-Dev/lyrics-without-credits.git
 	branch = main
+[submodule "packages/universal-lyric-parser"]
+	path = packages/universal-lyric-parser
+	url = https://github.com/Dreameisle-Dev/universal-lyric-parser.git
+	branch = main
