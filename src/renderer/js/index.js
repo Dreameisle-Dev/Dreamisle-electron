@@ -136,8 +136,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   initMouseFollow();
   initAutoHide();
 
-  // 频谱：这里是**模拟**频谱，与上面的均衡器无关，不读 Web Audio 的实时分析
-  // （理由见 visualizer.js 顶部注释）。
+  // 实时频谱：与上方均衡器共用 audio-graph.js 的同一条 Web Audio 链路
   initVisualizer(audio, document.getElementById('vizBars'));
 
   // 检测当前系统并添加类标识

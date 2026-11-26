@@ -1,11 +1,9 @@
-// 均衡器：<audio> → MediaElementSource → Biquad ×10 → 前级 Gain → destination。
-// 图是惰性建的 —— createMediaElementSource 每个元素只能调一次且拆不掉，所以关着时索性不建，
-// 用户真启用才接管音频链路。AudioContext 停在 suspended 会整体静音，建图后与每次 play 都要 resume。
+// 均衡器：复用 audio-graph.js 提供的共享 Web Audio 链路（10 段 Biquad + 自动前级 Gain），
+// 与实时频谱共用同一个 AudioContext / MediaElementSource，避免二次接管 <audio> 抛错。
 
 import { t } from '../../shared/i18n.js';
 import {
   EQ_BANDS,
-  EQ_BAND_Q,
   EQ_GAIN_LIMIT,
   EQ_PRESETS,
   FLAT_GAINS,
@@ -14,7 +12,6 @@ import {
   normalizeEq,
 } from '../../shared/equalizer.js';
 import {
-  audio,
   eqEnableSwitch,
   eqPresetsEl,
   eqFadersEl,
@@ -29,85 +26,27 @@ import {
 } from './dom.js';
 import { state } from './state.js';
 import { showSyncToast } from './helpers.js';
+import { ensureAudioGraph, applyEqualizerToGraph, resumeAudioGraph } from './audio-graph.js';
 
-let ctx = null; // AudioContext，未启用时为 null（= 没碰过音频链路）
-let filters = []; // 10 个 BiquadFilterNode
-let preampNode = null; // 自动前级
-let graphFailed = false; // 建图失败过就永不再试，避免反复弹提示
+let eqWarnedFailure = false; // 建图失败只提示一次，避免反复弹 toast
 
 let faderInputs = [];
 let faderValues = [];
 
-function resumeGraph() {
-  if (ctx && ctx.state !== 'running') ctx.resume().catch(() => {});
-}
-
-// 建图。返回是否可用；失败时音频保持元素直出，功能降级但不影响播放。
-function ensureGraph() {
-  if (ctx) return true;
-  if (graphFailed) return false;
-
-  let built = null;
-  try {
-    built = new AudioContext();
-
-    const chain = EQ_BANDS.map((freq) => {
-      const node = built.createBiquadFilter();
-      node.type = 'peaking';
-      node.frequency.value = freq;
-      node.Q.value = EQ_BAND_Q;
-      node.gain.value = 0;
-      return node;
-    });
-    const preamp = built.createGain();
-    let tail = chain[0];
-    for (let i = 1; i < chain.length; i++) {
-      tail.connect(chain[i]);
-      tail = chain[i];
-    }
-    tail.connect(preamp);
-    preamp.connect(built.destination);
-
-    // 最后一步才接管 <audio>
-    built.createMediaElementSource(audio).connect(chain[0]);
-
-    ctx = built;
-    filters = chain;
-    preampNode = preamp;
-    resumeGraph();
-    return true;
-  } catch (e) {
-    // 走到这里说明接管失败。若停在 source 之前，音频链路是干净的；
-    // 若 source 已建而后续抛了（实际不可能），声音会静掉 —— 那种情况下
-    // 关掉 AudioContext 与留着都是静音，索性关掉省资源。
-    graphFailed = true;
-    ctx = null;
-    filters = [];
-    preampNode = null;
-    try {
-      if (built) built.close();
-    } catch (e2) {}
+function ensureGraphForEq() {
+  const g = ensureAudioGraph();
+  if (!g && !eqWarnedFailure) {
+    eqWarnedFailure = true;
     showSyncToast(t('settings.eqUnavailable'));
-    return false;
   }
-}
-
-// 把当前曲线推给滤波器。关闭时推平直（= 旁通），而不是保留曲线不动。
-function applyToGraph() {
-  if (!ctx) return;
-  const effective = state.equalizer.enabled ? state.equalizer.gains : FLAT_GAINS;
-  filters.forEach((node, i) => {
-    node.gain.value = effective[i];
-  });
-  preampNode.gain.value = Math.pow(10, computePreampDb(effective) / 20); // dB → 线性
-  resumeGraph();
+  return Boolean(g);
 }
 
 // 每次改动都写主进程。写的是 electron-store 的 JSON，和小节里的歌词样式滑块同款。
 function commit() {
   window.dreamApi.setEqualizer(state.equalizer).catch(() => {});
-  if (state.equalizer.enabled) ensureGraph();
-  applyToGraph();
+  if (state.equalizer.enabled) ensureGraphForEq();
+  applyEqualizerToGraph(state.equalizer);
   syncEqUi();
 }
 
@@ -293,8 +232,8 @@ export function initEqualizer(rawEq) {
   // 启动时均衡器就是开着的：趁还没开始播放先把图建好，
   // 避免播放中途接管输出链路产生爆音
   if (state.equalizer.enabled) {
-    ensureGraph();
-    applyToGraph();
+    ensureGraphForEq();
+    applyEqualizerToGraph(state.equalizer);
   }
 }
 
@@ -309,6 +248,6 @@ export function bindEqEvents() {
     setGain(Number(input.dataset.index), Number(input.value));
   });
 
-  // AudioContext 被系统挂起后再播放会整体静音，每次播放都兜一次
-  audio.addEventListener('play', resumeGraph);
+  // 播放时兜底唤醒共享 AudioContext（audio-graph 内也已监听，这里保留兼容）
+  resumeAudioGraph();
 }
