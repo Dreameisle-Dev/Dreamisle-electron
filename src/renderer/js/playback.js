@@ -12,6 +12,12 @@ import {
   albumEl,
   currentTimeEl,
   totalTimeEl,
+  vizWrap,
+  vizHoverLine,
+  vizTooltip,
+  vizTooltipTime,
+  vizTooltipLyric,
+  miniProgress,
   btnPlay,
   btnMode,
   iconLoop,
@@ -20,7 +26,7 @@ import {
 } from './dom.js';
 import { formatTime } from './helpers.js';
 import { updateVirtualList } from './playlist.js';
-import { loadAndRenderLyrics, syncLyrics } from './lyrics.js';
+import { loadAndRenderLyrics, syncLyrics, getLyricPreviewAt } from './lyrics.js';
 import { updateThemeColor, updateProgressStyle } from './theme.js';
 import { buildPlaybackState } from '../../shared/taskbar-lyrics-document.js';
 import { createShuffleSession } from '../../shared/shuffle.js';
@@ -151,6 +157,7 @@ window.addEventListener('dreamisle:language-changed', () => {
 
 export function initSongInfo(index, { preloadedCoverUrl, preloadedLyrics } = {}) {
   if (index < 0 || index >= state.songs.length) return;
+  if (cancelActiveScrub) cancelActiveScrub(false);
   state.currentIndex = index;
   if (state.playMode === 2) shuffleSession.syncCurrent(state.songs, index);
   const song = state.songs[index];
@@ -169,6 +176,7 @@ export function initSongInfo(index, { preloadedCoverUrl, preloadedLyrics } = {})
 
 export function playSong(index, { fromShuffle = false } = {}) {
   if (index < 0 || index >= state.songs.length) return;
+  if (cancelActiveScrub) cancelActiveScrub(false);
   state.currentIndex = index;
   if (state.playMode === 2 && !fromShuffle) {
     shuffleSession.syncCurrent(state.songs, index);
@@ -550,6 +558,7 @@ function registerMediaSessionHandlers() {
 
 // 空库复位（如移除最后一个文件夹）：停止播放并复位界面与封面状态
 export function resetToEmptyLibrary() {
+  if (cancelActiveScrub) cancelActiveScrub(false);
   coverRequestToken++;
   clearTimeout(coverCoalesceTimer);
   coverCoalesceTimer = null;
@@ -597,6 +606,222 @@ export function saveStateOnChange() {
   if (state.songs.length > 0) savePlaybackState();
 }
 
+// 拖动进度条状态：在切歌/播完/空库复位/按 Esc 时通过 cancelActiveScrub 安全取消并复位
+let cancelActiveScrub = null;
+
+// 进度条悬停预览 + 拖动预览 + 松手提交（覆盖主窗口 #vizWrap 与小窗 #miniProgress）
+function bindProgressScrub() {
+  let dragTarget = null; // vizWrap | miniProgress
+  let dragPointerId = null;
+  let dragRatio = 0;
+
+  const hasValidDuration = () => Number.isFinite(audio.duration) && audio.duration > 0;
+
+  const ratioFromEvent = (el, e) => {
+    const r = el.getBoundingClientRect();
+    if (!r.width) return 0;
+    return Math.min(1, Math.max(0, (e.clientX - r.left) / r.width));
+  };
+
+  const updateTooltipAt = (ratio) => {
+    if (!vizWrap || !vizTooltip || !hasValidDuration()) return;
+    const previewTime = ratio * audio.duration;
+    if (vizTooltipTime) vizTooltipTime.textContent = formatTime(previewTime);
+    if (vizTooltipLyric) {
+      const lyricText = getLyricPreviewAt(previewTime);
+      if (lyricText) {
+        vizTooltipLyric.textContent = lyricText;
+        vizTooltipLyric.hidden = false;
+      } else {
+        vizTooltipLyric.textContent = '';
+        vizTooltipLyric.hidden = true;
+      }
+    }
+
+    const r = vizWrap.getBoundingClientRect();
+    const x = ratio * r.width;
+    if (vizHoverLine) vizHoverLine.style.left = `${(ratio * 100).toFixed(3)}%`;
+
+    // 气泡横坐标夹在 [halfW, width - halfW] 内，两端 0:00 / 末尾绝不越界裁切
+    const halfW = (vizTooltip.offsetWidth || 44) / 2;
+    const clampedX =
+      r.width > halfW * 2 ? Math.max(halfW, Math.min(r.width - halfW, x)) : r.width / 2;
+    vizTooltip.style.left = `${clampedX.toFixed(1)}px`;
+  };
+
+  const applyDragPreview = (ratio) => {
+    dragRatio = ratio;
+    state.scrubProgress = ratio;
+    updateProgressStyle(ratio * 100);
+    if (hasValidDuration()) {
+      currentTimeEl.innerText = formatTime(ratio * audio.duration);
+      if (dragTarget === vizWrap) updateTooltipAt(ratio);
+    }
+  };
+
+  const restoreToActualPlayback = () => {
+    if (hasValidDuration()) {
+      const pct = Math.min(100, Math.max(0, (audio.currentTime / audio.duration) * 100));
+      updateProgressStyle(pct);
+      currentTimeEl.innerText = formatTime(audio.currentTime);
+    } else {
+      updateProgressStyle(0);
+      currentTimeEl.innerText = formatTime(0);
+    }
+  };
+
+  const endDrag = ({ commit = false, keepHover = false } = {}) => {
+    if (!state.isDragging) return;
+    const target = dragTarget;
+    const pointerId = dragPointerId;
+    const finalRatio = dragRatio;
+
+    state.isDragging = false;
+    state.scrubProgress = null;
+    dragTarget = null;
+    dragPointerId = null;
+
+    if (target && pointerId !== null) {
+      try {
+        if (target.hasPointerCapture && target.hasPointerCapture(pointerId)) {
+          target.releasePointerCapture(pointerId);
+        }
+      } catch (e) {}
+    }
+
+    if (vizWrap) {
+      vizWrap.classList.remove('dragging');
+      if (!keepHover) vizWrap.classList.remove('hovering');
+    }
+
+    if (commit && hasValidDuration()) {
+      const targetTime = Math.min(audio.duration, Math.max(0, finalRatio * audio.duration));
+      audio.currentTime = targetTime;
+      updateProgressStyle((targetTime / audio.duration) * 100);
+      currentTimeEl.innerText = formatTime(targetTime);
+      syncLyrics(targetTime);
+      setPositionState();
+      pushTaskbarPlayback(true);
+    } else {
+      restoreToActualPlayback();
+    }
+  };
+
+  cancelActiveScrub = (restore = true) => {
+    if (!state.isDragging) {
+      if (vizWrap) vizWrap.classList.remove('hovering');
+      return;
+    }
+    if (restore) {
+      endDrag({ commit: false, keepHover: false });
+    } else {
+      const target = dragTarget;
+      const pointerId = dragPointerId;
+      state.isDragging = false;
+      state.scrubProgress = null;
+      dragTarget = null;
+      dragPointerId = null;
+      if (target && pointerId !== null) {
+        try {
+          if (target.hasPointerCapture && target.hasPointerCapture(pointerId)) {
+            target.releasePointerCapture(pointerId);
+          }
+        } catch (e) {}
+      }
+      if (vizWrap) vizWrap.classList.remove('dragging', 'hovering');
+    }
+  };
+
+  const attachScrubTarget = (el, { withHover = false } = {}) => {
+    if (!el) return;
+
+    if (withHover) {
+      el.addEventListener('pointerenter', (e) => {
+        if (state.isDragging || !hasValidDuration()) return;
+        el.classList.add('hovering');
+        updateTooltipAt(ratioFromEvent(el, e));
+      });
+      el.addEventListener('pointerleave', () => {
+        if (!state.isDragging) el.classList.remove('hovering');
+      });
+      el.addEventListener('pointermove', (e) => {
+        if (state.isDragging || !hasValidDuration()) return;
+        if (!el.classList.contains('hovering')) el.classList.add('hovering');
+        updateTooltipAt(ratioFromEvent(el, e));
+      });
+    }
+
+    el.addEventListener('pointerdown', (e) => {
+      if (e.button !== 0 || !hasValidDuration()) return;
+      e.preventDefault();
+      dragTarget = el;
+      dragPointerId = e.pointerId;
+      state.isDragging = true;
+      if (withHover) {
+        el.classList.add('dragging');
+        el.classList.remove('hovering');
+      }
+      try {
+        el.setPointerCapture(e.pointerId);
+      } catch (err) {}
+      applyDragPreview(ratioFromEvent(el, e));
+    });
+  };
+
+  attachScrubTarget(vizWrap, { withHover: true });
+  attachScrubTarget(miniProgress, { withHover: false });
+
+  // 在 window 上承接拖拽中的 move/up/cancel：即使光标移出轨道、移出窗口或不支持 pointer capture 也能顺滑跟手
+  window.addEventListener('pointermove', (e) => {
+    if (!state.isDragging || !dragTarget || e.pointerId !== dragPointerId) return;
+    if (!hasValidDuration()) return;
+    applyDragPreview(ratioFromEvent(dragTarget, e));
+  });
+
+  window.addEventListener('pointerup', (e) => {
+    if (!state.isDragging || !dragTarget || e.pointerId !== dragPointerId) return;
+    const el = dragTarget;
+    const withHover = el === vizWrap;
+    const r = el.getBoundingClientRect();
+    const inside =
+      withHover &&
+      e.clientX >= r.left &&
+      e.clientX <= r.right &&
+      e.clientY >= r.top &&
+      e.clientY <= r.bottom;
+    dragRatio = ratioFromEvent(el, e);
+    endDrag({ commit: true, keepHover: inside });
+    if (inside) {
+      el.classList.add('hovering');
+      updateTooltipAt(dragRatio);
+    }
+  });
+
+  window.addEventListener('pointercancel', (e) => {
+    if (state.isDragging && e.pointerId === dragPointerId) {
+      endDrag({ commit: false, keepHover: false });
+    }
+  });
+
+  // 拖动期间按 Esc 直接取消本次拖拽并还原进度，不误关抽屉或浮层
+  window.addEventListener(
+    'keydown',
+    (e) => {
+      if (state.isDragging && e.code === 'Escape') {
+        e.preventDefault();
+        e.stopPropagation();
+        endDrag({ commit: false, keepHover: false });
+      }
+    },
+    true
+  );
+
+  // 窗口失焦时若正处于拖拽态，自动安全取消避免卡死在 isDragging = true
+  window.addEventListener('blur', () => {
+    if (state.isDragging) endDrag({ commit: false, keepHover: false });
+  });
+}
+
 export function bindPlaybackEvents() {
   btnMode.addEventListener('click', () => {
     state.playMode = (state.playMode + 1) % 3;
@@ -626,20 +851,7 @@ export function bindPlaybackEvents() {
     pushTaskbarPlayback();
   });
 
-  // 进度可视化不是 range input，seek 由点击位置的比例直接算出。
-  // 原来的 input/change 两个监听器（拖拽预览 + 提交）因此一并去掉。
-  const vizWrap = document.getElementById('vizWrap');
-  if (vizWrap) {
-    vizWrap.addEventListener('click', (e) => {
-      if (!audio.duration) return;
-      const r = vizWrap.getBoundingClientRect();
-      const ratio = Math.min(1, Math.max(0, (e.clientX - r.left) / r.width));
-      audio.currentTime = ratio * audio.duration;
-      updateProgressStyle(ratio * 100);
-      currentTimeEl.innerText = formatTime(audio.currentTime);
-      syncLyrics(audio.currentTime);
-    });
-  }
+  bindProgressScrub();
 
   btnPlay.addEventListener('click', () => {
     if (audio.paused) {
@@ -673,6 +885,7 @@ export function bindPlaybackEvents() {
   }
 
   audio.addEventListener('ended', () => {
+    if (cancelActiveScrub) cancelActiveScrub(false);
     // 完整播放计次;单曲循环模式下额外计一次循环重播(在切歌前捕获当前歌曲)
     const finished = state.songs[state.currentIndex];
     if (finished && Date.now() - lastSeekAt > 1000) {

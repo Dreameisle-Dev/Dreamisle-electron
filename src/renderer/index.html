@@ -372,8 +372,8 @@
 
       <!-- 传输条：进度可视化（已播放段是频谱）+ 歌曲信息 + 控制键。高度固定 130px。 -->
       <div class="player-bar">
-        <!-- 小窗模式专用：主区那条频谱在小窗里退化成这根细线 -->
-        <div class="mini-progress"><i></i></div>
+        <!-- 小窗模式专用：主区那条频谱在小窗里退化成这根细线（同样支持点击/拖拽跳转） -->
+        <div class="mini-progress" id="miniProgress"><i></i></div>
 
         <span class="bar-time left" id="currentTime">0:00</span>
         <span class="bar-time right" id="totalTime">0:00</span>
@@ -381,7 +381,12 @@
         <div class="viz-wrap" id="vizWrap">
           <div class="viz-rest"></div>
           <div class="viz-bars" id="vizBars"></div>
+          <div class="viz-hover-line" id="vizHoverLine" aria-hidden="true"></div>
           <div class="viz-head" id="vizHead"></div>
+          <div class="viz-tooltip" id="vizTooltip" aria-hidden="true">
+            <span class="viz-tooltip-time" id="vizTooltipTime">0:00</span>
+            <span class="viz-tooltip-lyric" id="vizTooltipLyric" hidden></span>
+          </div>
         </div>
 
         <img id="barThumb" class="bar-thumb" src="" alt="" />

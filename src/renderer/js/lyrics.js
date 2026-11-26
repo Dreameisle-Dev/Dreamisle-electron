@@ -359,6 +359,15 @@ export function renderLyricsToDom() {
   }
 }
 
+// 只读查询指定秒数对应的时轴歌词原文（供进度条悬停/拖动预览气泡使用，不触发滚动与桌面歌词推送）
+export function getLyricPreviewAt(timeSec) {
+  if (!state.currentLyrics.length || state.currentLyrics[0]?.isStatic) return '';
+  const idx = universalLyricParser.getCurrentIndex(state.currentLyrics, timeSec * 1000);
+  if (idx < 0 || !state.currentLyrics[idx]) return '';
+  const line = state.currentLyrics[idx];
+  return (line.text || line.translation || '').trim();
+}
+
 export function syncLyrics(currentTime) {
   if (
     !state.currentLyrics.length ||

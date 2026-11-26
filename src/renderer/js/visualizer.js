@@ -9,6 +9,7 @@
 // 绘制仍复用单块 canvas 与预分配 TypedArray，零 DOM 回流、零每帧堆分配。
 
 import { ensureAudioGraph, getAudioGraph, resumeAudioGraph } from './audio-graph.js';
+import { state } from './state.js';
 
 const BAR_COUNT = 160;
 const BAR_MAX_H = 28; // 与 .viz-bars 的高度一致
@@ -130,7 +131,12 @@ export function initVisualizer(audioEl, containerElArg) {
   function getActiveSpan() {
     const duration = audioEl.duration;
     if (!Number.isFinite(duration) || duration <= 0) return 1;
-    const progress = Math.min(1, Math.max(0, (audioEl.currentTime || 0) / duration));
+    // 拖动进度条预览时跟随预览位置展开频谱，避免拖到未播放区出现空白断层
+    const rawProgress =
+      state.isDragging && Number.isFinite(state.scrubProgress)
+        ? state.scrubProgress
+        : (audioEl.currentTime || 0) / duration;
+    const progress = Math.min(1, Math.max(0, rawProgress));
     // 多留 1 根缓冲，避免 4Hz timeupdate 与 60fps 渲染之间在播放头边缘出现细缝
     return Math.min(BAR_COUNT, Math.max(1, Math.ceil(progress * BAR_COUNT) + 1));
   }

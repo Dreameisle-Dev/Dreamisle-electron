@@ -571,7 +571,7 @@ body.bar-hidden .lyric-translation-toggle {
 }
 
 /* 进度可视化：已播放段是频谱，未播放段一条暗线，交界处是播放头。
-   整条可点击跳转 —— 原来这里是 <input type=range>，现在 seek 由点击位置比例算出。 */
+   支持悬停时间/歌词预览、按住拖动预览与松手提交跳转。 */
 .viz-wrap {
   position: absolute;
   /* 固定值：两端要给 2:25 / 3:40 留位（时间在 left/right 26px，宽约 35px） */
@@ -580,6 +580,8 @@ body.bar-hidden .lyric-translation-toggle {
   top: 6px;
   height: 28px;
   cursor: pointer;
+  touch-action: none;
+  user-select: none;
 }
 .viz-rest {
   position: absolute;
@@ -589,6 +591,14 @@ body.bar-hidden .lyric-translation-toggle {
   height: 2px;
   border-radius: 2px;
   background: var(--track);
+  transition:
+    height 0.14s ease,
+    top 0.14s ease,
+    background-color 0.14s ease;
+}
+.viz-wrap.dragging .viz-rest {
+  top: 12.5px;
+  height: 3px;
 }
 .viz-bars {
   position: absolute;
@@ -625,13 +635,41 @@ body.bar-hidden .lyric-translation-toggle {
   border-radius: 2px;
   background: var(--ink1);
   opacity: 0;
-  transition: opacity 0.25s ease;
+  transition:
+    opacity 0.25s ease,
+    height 0.14s ease,
+    top 0.14s ease;
+}
+
+.viz-wrap.dragging .viz-bars::after {
+  top: 12.5px;
+  height: 3px;
 }
 
 .viz-bars.paused::after {
   opacity: 1;
 }
-/* 播放头：高度与频谱最大高度一致（28px），原来 38px 比条高出一截 */
+
+/* 悬停定位参考线（拖动时由播放头本身跟随，自动隐藏） */
+.viz-hover-line {
+  position: absolute;
+  left: 0;
+  top: 4px;
+  bottom: 4px;
+  width: 1.5px;
+  border-radius: 1px;
+  background: var(--ink2);
+  transform: translateX(-50%);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.14s ease;
+}
+
+.viz-wrap.hovering:not(.dragging) .viz-hover-line {
+  opacity: 0.55;
+}
+
+/* 播放头：高度与频谱最大高度一致（28px），拖动时微微加粗并增强光晕 */
 .viz-head {
   position: absolute;
   left: 0;
@@ -641,6 +679,85 @@ body.bar-hidden .lyric-translation-toggle {
   background: var(--ink1);
   border-radius: 2px;
   box-shadow: 0 0 10px rgba(255, 255, 255, 0.9);
+  pointer-events: none;
+  transition:
+    width 0.12s ease,
+    box-shadow 0.12s ease,
+    transform 0.12s ease;
+}
+
+.viz-wrap.dragging {
+  cursor: grabbing;
+}
+
+.viz-wrap.dragging .viz-head {
+  width: 3px;
+  transform: translateX(-0.5px);
+  box-shadow:
+    0 0 12px var(--ink1),
+    0 0 0 3px color-mix(in srgb, var(--ink1) 18%, transparent);
+}
+
+/* 悬停 / 拖动时的悬浮预览气泡：时间 + 当前时间戳对应歌词（无时轴歌词时自动收窄为纯时间胶囊） */
+.viz-tooltip {
+  position: absolute;
+  left: 0;
+  bottom: calc(100% + 10px);
+  transform: translateX(-50%) translateY(4px);
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  max-width: min(320px, 72vw);
+  padding: 5px 10px;
+  border-radius: 9px;
+  background: var(--panel-bg);
+  border: 1px solid var(--panel-border);
+  backdrop-filter: blur(22px) saturate(150%);
+  -webkit-backdrop-filter: blur(22px) saturate(150%);
+  box-shadow: 0 8px 24px -6px var(--shade-2);
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 20;
+  opacity: 0;
+  transition:
+    opacity 0.14s ease,
+    transform 0.14s ease;
+}
+
+.viz-wrap.hovering .viz-tooltip,
+.viz-wrap.dragging .viz-tooltip {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+.viz-tooltip-time {
+  font-size: 12px;
+  font-weight: 650;
+  line-height: 1.25;
+  letter-spacing: 0.03em;
+  color: var(--ink1);
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
+}
+
+.viz-tooltip-lyric {
+  font-size: 12px;
+  line-height: 1.25;
+  color: var(--ink2);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding-left: 7px;
+  border-left: 1px solid var(--hair);
+}
+
+.viz-tooltip-lyric[hidden] {
+  display: none;
+}
+
+body.performance-mode .viz-tooltip {
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  background: var(--base);
 }
 
 /* 条内歌曲信息全部用固定 px，不乘 --u：内部间距若跟着缩放，缩略图 left 会缩而 width
@@ -1323,6 +1440,18 @@ body.mini-mode .mini-progress {
   height: 5px;
   border-radius: 3px;
   background: var(--track);
+  -webkit-app-region: no-drag;
+  cursor: pointer;
+  touch-action: none;
+  user-select: none;
+}
+body.mini-mode .mini-progress::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: -7px;
+  bottom: -7px;
 }
 body.mini-mode .mini-progress i {
   border-radius: 3px;

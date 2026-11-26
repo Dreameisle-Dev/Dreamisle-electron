@@ -28,15 +28,13 @@ export function showBar() {
 }
 
 function scheduleHide() {
-  // 小窗里条就是全部内容，收起来等于没界面 —— 所以永远不收。
-  // 守卫放在这里而不是各个事件监听里：这是唯一会写 bar-hidden 的出口，
-  // 堵在这里，以后再加事件监听也不会漏（click 就漏过一次：
-  // 它没像 mousemove / mouseleave 那样判迷你模式，而 lastEngaged 又只在
-  // mousemove 里更新 —— 小窗里点一下控制键就把条收走且再也叫不回来）。
-  if (state.isMiniMode) return;
+  // 小窗里条就是全部内容，收起来等于没界面 —— 所以永远不收；
+  // 拖动进度条预览期间即使光标往上偏离底栏区域，也不能把传输条抽走。
+  if (state.isMiniMode || state.isDragging) return;
   if (hideTimer || isHidden) return;
   hideTimer = setTimeout(() => {
     hideTimer = null;
+    if (state.isMiniMode || state.isDragging) return;
     isHidden = true;
     document.body.classList.add('bar-hidden');
   }, DELAY);
@@ -50,7 +48,7 @@ function isEngaged(e) {
 }
 
 function reevaluate() {
-  if (overlayOpen() || lastEngaged) showBar();
+  if (overlayOpen() || lastEngaged || state.isDragging) showBar();
   else scheduleHide();
 }
 

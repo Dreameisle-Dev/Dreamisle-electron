@@ -27,6 +27,12 @@ export const albumEl = document.getElementById('barAlbum');
 export const barThumb = document.getElementById('barThumb');
 export const currentTimeEl = document.getElementById('currentTime');
 export const totalTimeEl = document.getElementById('totalTime');
+export const vizWrap = document.getElementById('vizWrap');
+export const vizHoverLine = document.getElementById('vizHoverLine');
+export const vizTooltip = document.getElementById('vizTooltip');
+export const vizTooltipTime = document.getElementById('vizTooltipTime');
+export const vizTooltipLyric = document.getElementById('vizTooltipLyric');
+export const miniProgress = document.getElementById('miniProgress');
 export const canvas = document.getElementById('colorCanvas');
 // progressBar 已移除：进度不再是 <input type=range>，
 // 改由 .viz-bars 的宽度 + .viz-head 的位置表达，驱动逻辑在 theme.js 的 updateProgressStyle。

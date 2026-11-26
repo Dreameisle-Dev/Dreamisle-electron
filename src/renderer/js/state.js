@@ -25,6 +25,7 @@ export const state = {
 
   // 播放进度
   isDragging: false,
+  scrubProgress: null, // 拖动进度条预览期间的 0..1 比例，供实时频谱同步展开宽度
   volumeTimeout: null,
 
   // 歌词
