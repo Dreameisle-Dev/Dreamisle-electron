@@ -19,7 +19,19 @@ import {
 import { compareByInitial, buildLetterIndex } from '../../shared/initial-letter.js';
 import { folderSubtreeSongsOf } from '../../shared/folder.js';
 import { albumSongsOf } from '../../shared/albums.js';
-import { playSong, resetToEmptyLibrary } from './playback.js';
+import { buildShuffledSongs } from '../../shared/shuffle.js';
+import {
+  playSong,
+  resetToEmptyLibrary,
+  resetShuffle,
+  syncShuffleCurrent,
+  isShuffleNext,
+  pinShuffleNext,
+  syncShuffleOnReorder,
+  syncShuffleOnMoveToNext,
+  syncShuffleOnInsert,
+  syncShuffleOnRemove,
+} from './playback.js';
 import { saveQueueSnapshot } from './play-queue.js';
 import { resetLyrics } from './lyrics.js';
 import { resolveRestoredIndex } from './playback-restore.js';
@@ -188,12 +200,7 @@ function updateSortButtons(activeBtn) {
 }
 
 function shuffleSongs(list) {
-  const copy = [...list];
-  for (let i = copy.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [copy[i], copy[j]] = [copy[j], copy[i]];
-  }
-  return copy;
+  return buildShuffledSongs(list);
 }
 
 /**
@@ -219,6 +226,8 @@ export function applySort(mode, btnEl, { persist = true } = {}) {
   if (currentPlayingSong) {
     state.currentIndex = state.songs.findIndex((s) => s.path === currentPlayingSong.path);
   }
+  resetShuffle();
+  syncShuffleCurrent(state.currentIndex);
 
   // 刷新前端过滤和列表渲染，保留搜索框已有字符
   initVirtualList(searchInput.value.trim());
@@ -257,11 +266,15 @@ function applyQueueSongs(songs) {
   if (state.activeQueue.type === 'custom') {
     // 手动排序的队列不套用歌名/歌手/随机排序
     state.sortMode = 'custom';
+    resetShuffle();
+    syncShuffleCurrent(state.currentIndex);
     initVirtualList(searchInput.value.trim());
   } else if (state.activeQueue.type === 'album') {
     // 专辑播放默认保持专辑原曲序（用户仍可手动点击右侧排序按钮重排）
     state.sortMode = 'album';
     updateSortButtons(null);
+    resetShuffle();
+    syncShuffleCurrent(state.currentIndex);
     initVirtualList(searchInput.value.trim());
   } else {
     applyActiveSort({ persist: false });
@@ -286,6 +299,7 @@ function restoreTypedQueue(baseSongs, activeQueue, savedSongs, mode) {
     state.songs = preserved.length > 0 ? preserved : [...baseSongs];
     state.sortMode = 'random';
     updateSortButtons(btnSortRandom);
+    resetShuffle();
     initVirtualList(searchInput.value.trim());
     return;
   }
@@ -391,6 +405,7 @@ function reorderQueue(from, to) {
   state.activeQueue = { type: 'custom' };
   state.sortMode = 'custom';
   state.originalSongs = [...state.songs];
+  syncShuffleOnReorder(from, to);
   saveQueueSnapshot(state.songs);
 
   initVirtualList(searchInput.value.trim());
@@ -431,13 +446,21 @@ export function moveSongToNext(song, queueIndex = -1) {
 
   if (state.songs.length === 0) {
     state.songs.push({ ...song });
+    resetShuffle();
     beginQueueEdit();
     renderQueueAfterEdit();
     return 'added';
   }
 
   const insertAt = Math.max(0, state.currentIndex + 1);
-  if (existing === insertAt) return 'alreadyNext';
+  if (existing === insertAt) {
+    // 随机模式下，队列物理位置已在下一行并不代表随机下一首也是它：需钉到洗牌袋下一首
+    if (state.playMode === 2 && !isShuffleNext(existing)) {
+      pinShuffleNext(existing);
+      return 'moved';
+    }
+    return 'alreadyNext';
+  }
 
   if (existing !== -1) {
     const [moved] = state.songs.splice(existing, 1);
@@ -451,8 +474,10 @@ export function moveSongToNext(song, queueIndex = -1) {
       if (insert <= next) next += 1;
       state.currentIndex = next;
     }
+    syncShuffleOnMoveToNext(existing, insert);
   } else {
     state.songs.splice(insertAt, 0, { ...song });
+    syncShuffleOnInsert(insertAt, { playNext: true });
   }
 
   beginQueueEdit();
@@ -465,6 +490,7 @@ export function addSongToQueueEnd(song) {
   if (!song || typeof song.path !== 'string') return 'invalid';
 
   state.songs.push({ ...song });
+  syncShuffleOnInsert(state.songs.length - 1, { playNext: false });
   beginQueueEdit();
   renderQueueAfterEdit();
   return 'added';
@@ -480,6 +506,7 @@ export function removeSongFromQueue(song, queueIndex = -1) {
 
   state.songs.splice(index, 1);
   if (state.currentIndex >= 0 && index < state.currentIndex) state.currentIndex -= 1;
+  syncShuffleOnRemove(index);
 
   beginQueueEdit();
   renderQueueAfterEdit();

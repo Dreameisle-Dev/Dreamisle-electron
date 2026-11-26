@@ -24,6 +24,53 @@ import { loadAndRenderLyrics, syncLyrics } from './lyrics.js';
 import { updateThemeColor, updateProgressStyle } from './theme.js';
 import { onSongChanged, onCoverReady } from './stats.js';
 import { buildPlaybackState } from '../../shared/taskbar-lyrics-document.js';
+import { createShuffleSession } from '../../shared/shuffle.js';
+
+const shuffleSession = createShuffleSession();
+
+export function resetShuffle() {
+  shuffleSession.reset();
+}
+
+export function syncShuffleCurrent(index = state.currentIndex) {
+  if (state.playMode === 2 && state.songs.length > 0 && index >= 0) {
+    shuffleSession.syncCurrent(state.songs, index);
+  }
+}
+
+export function isShuffleNext(targetIndex) {
+  return state.playMode === 2 && shuffleSession.isNext(targetIndex);
+}
+
+export function pinShuffleNext(targetIndex) {
+  if (state.playMode === 2) {
+    shuffleSession.pinNext(state.songs, state.currentIndex, targetIndex);
+  }
+}
+
+export function syncShuffleOnReorder(from, to) {
+  shuffleSession.onQueueReorder(from, to);
+}
+
+export function syncShuffleOnMoveToNext(from, to) {
+  if (state.playMode === 2) {
+    shuffleSession.onQueueMoveToNext(state.songs, state.currentIndex, from, to);
+  } else {
+    shuffleSession.onQueueReorder(from, to);
+  }
+}
+
+export function syncShuffleOnInsert(insertAt, { playNext = false } = {}) {
+  if (state.playMode === 2) {
+    shuffleSession.onQueueInsert(state.songs, state.currentIndex, insertAt, { playNext });
+  } else {
+    shuffleSession.reset();
+  }
+}
+
+export function syncShuffleOnRemove(removedIndex) {
+  shuffleSession.onQueueRemove(removedIndex);
+}
 
 // 默认音量 100%；启动恢复播放状态时如果存过音量，会用保存值覆盖
 audio.volume = 1;
@@ -106,6 +153,7 @@ window.addEventListener('dreamisle:language-changed', () => {
 export function initSongInfo(index) {
   if (index < 0 || index >= state.songs.length) return;
   state.currentIndex = index;
+  if (state.playMode === 2) shuffleSession.syncCurrent(state.songs, index);
   const song = state.songs[index];
   audio.src = song.url;
 
@@ -120,13 +168,16 @@ export function initSongInfo(index) {
   pushTaskbarPlayback(true);
 }
 
-export function playSong(index) {
+export function playSong(index, { fromShuffle = false } = {}) {
   if (index < 0 || index >= state.songs.length) return;
   state.currentIndex = index;
+  if (state.playMode === 2 && !fromShuffle) {
+    shuffleSession.syncCurrent(state.songs, index);
+  }
   const song = state.songs[index];
 
   audio.src = song.url;
-  audio.play();
+  audio.play().catch(() => {});
 
   setTrackInfo(song);
   setMediaMetadata(song); // 封面等 updateCoverAndColor 拿到后再补
@@ -149,46 +200,255 @@ export function playNext(auto = false) {
   if (state.songs.length === 0) return;
   if (auto && state.playMode === 1) {
     audio.currentTime = 0;
-    audio.play();
+    audio.play().catch(() => {});
     return;
   }
-  let next =
-    state.playMode === 2
-      ? Math.floor(Math.random() * state.songs.length)
-      : (state.currentIndex + 1) % state.songs.length;
+  if (state.playMode === 2) {
+    const next = shuffleSession.next(state.songs, state.currentIndex);
+    if (next >= 0) playSong(next, { fromShuffle: true });
+    return;
+  }
+  const next = (state.currentIndex + 1) % state.songs.length;
   playSong(next);
 }
 
 let coverRequestToken = 0;
+let coverCoalesceTimer = null;
+let coverPrefetchTimer = null;
+let lastCoverSwitchAt = 0;
 
-export async function updateCoverAndColor(song) {
-  const token = ++coverRequestToken;
-  coverImg.style.display = 'none';
-  defaultCover.style.display = 'flex';
-  if (barThumb) barThumb.removeAttribute('src');
-  updateThemeColor(null);
+// 渲染进程封面 URL 缓存（存 58B 稳定 dream-thumb:// 字符串或 null）+ 热解码位图池（最多 10 张，淘汰即清空 src 释放）
+const MAX_COVER_URL_CACHE = 300;
+const MAX_WARM_COVER_IMAGES = 10;
+const RAPID_SWITCH_WINDOW_MS = 130;
+const BURST_COALESCE_MS = 55;
+const PREFETCH_DELAY_MS = 110;
 
-  if (state.currentCoverBlobUrl) {
-    URL.revokeObjectURL(state.currentCoverBlobUrl);
-    state.currentCoverBlobUrl = null;
+const coverUrlCache = new Map();
+const warmCoverImages = new Map();
+
+function revokeIfBlobUrl(url) {
+  if (typeof url === 'string' && url.startsWith('blob:')) {
+    URL.revokeObjectURL(url);
+  }
+}
+
+function getCachedCoverUrl(songPath) {
+  if (!coverUrlCache.has(songPath)) return undefined;
+  const hit = coverUrlCache.get(songPath);
+  coverUrlCache.delete(songPath);
+  coverUrlCache.set(songPath, hit);
+  return hit;
+}
+
+function setCachedCoverUrl(songPath, url) {
+  // 仅缓存稳定 dream-thumb:// URL 与 null；兜底 blob: 不放长期缓存避免生命周期混乱
+  if (typeof url === 'string' && url.startsWith('blob:')) return;
+  coverUrlCache.delete(songPath);
+  coverUrlCache.set(songPath, url || null);
+  if (coverUrlCache.size > MAX_COVER_URL_CACHE) {
+    const oldestKey = coverUrlCache.keys().next().value;
+    coverUrlCache.delete(oldestKey);
+  }
+}
+
+function getWarmDecodedCover(url) {
+  if (!url || !warmCoverImages.has(url)) return null;
+  const img = warmCoverImages.get(url);
+  warmCoverImages.delete(url);
+  warmCoverImages.set(url, img);
+  return img.complete && img.naturalWidth > 0 ? img : null;
+}
+
+function warmDecodeCover(url) {
+  if (!url) return Promise.resolve(null);
+  const existing = warmCoverImages.get(url);
+  if (existing) {
+    warmCoverImages.delete(url);
+    warmCoverImages.set(url, existing);
+    if (existing.complete && existing.naturalWidth > 0) return Promise.resolve(existing);
+    return existing.decode().then(
+      () => existing,
+      () => existing
+    );
   }
 
-  const coverUrl = await window.dreamApi.getCover(song.path);
-  if (token !== coverRequestToken) {
-    if (coverUrl) URL.revokeObjectURL(coverUrl);
-    return;
+  const img = new Image();
+  img.crossOrigin = 'anonymous';
+  img.decoding = 'async';
+  img.src = url;
+  warmCoverImages.delete(url);
+  warmCoverImages.set(url, img);
+
+  if (warmCoverImages.size > MAX_WARM_COVER_IMAGES) {
+    const oldestUrl = warmCoverImages.keys().next().value;
+    if (oldestUrl !== url) {
+      const oldImg = warmCoverImages.get(oldestUrl);
+      if (oldImg) oldImg.src = '';
+      warmCoverImages.delete(oldestUrl);
+    }
   }
+
+  return img.decode().then(
+    () => img,
+    () => img
+  );
+}
+
+function applyResolvedCover(song, coverUrl, decodedImg = null) {
+  const prevUrl = state.currentCoverBlobUrl;
+  if (prevUrl && prevUrl !== coverUrl) {
+    revokeIfBlobUrl(prevUrl);
+  }
+  state.currentCoverBlobUrl = coverUrl || null;
+
   if (coverUrl) {
-    state.currentCoverBlobUrl = coverUrl;
-    coverImg.src = coverUrl;
+    const isWarm = Boolean(decodedImg && decodedImg.complete && decodedImg.naturalWidth > 0);
+    coverImg.decoding = isWarm ? 'sync' : 'async';
+    if (coverImg.src !== coverUrl) coverImg.src = coverUrl;
     coverImg.style.display = 'block';
     defaultCover.style.display = 'none';
-    if (barThumb) barThumb.src = coverUrl;
-    updateThemeColor(coverUrl);
+    if (barThumb) {
+      barThumb.decoding = isWarm ? 'sync' : 'async';
+      if (barThumb.src !== coverUrl) barThumb.src = coverUrl;
+    }
+    updateThemeColor(coverUrl, decodedImg);
     setMediaMetadata(song, coverUrl); // 系统浮层的封面
     onCoverReady(coverUrl);
   } else {
+    coverImg.style.display = 'none';
+    coverImg.removeAttribute('src');
+    defaultCover.style.display = 'flex';
+    if (barThumb) barThumb.removeAttribute('src');
+    updateThemeColor(null);
+    setMediaMetadata(song, null);
     onCoverReady(null);
+  }
+}
+
+function getPrefetchNeighbors() {
+  const len = state.songs.length;
+  const cur = state.currentIndex;
+  if (len <= 1 || cur < 0 || cur >= len) return [];
+
+  if (state.playMode === 2) {
+    return shuffleSession
+      .peekNeighbors(state.songs, cur, { nextCount: 2, prevCount: 1 })
+      .map((i) => state.songs[i])
+      .filter(Boolean);
+  }
+
+  const indices = [];
+  const seen = new Set([cur]);
+  for (const offset of [1, 2, -1]) {
+    const idx = (cur + offset + len) % len;
+    if (!seen.has(idx)) {
+      seen.add(idx);
+      indices.push(idx);
+    }
+  }
+  return indices.map((i) => state.songs[i]).filter(Boolean);
+}
+
+// 后台低优先级串行预取相邻曲目（顺序/随机均精准预测下一首、下下首与上一首），切歌瞬间 0ms 命中
+function scheduleCoverPrefetch(token) {
+  clearTimeout(coverPrefetchTimer);
+  coverPrefetchTimer = setTimeout(async () => {
+    coverPrefetchTimer = null;
+    if (token !== coverRequestToken) return;
+    const neighbors = getPrefetchNeighbors();
+    for (const neighbor of neighbors) {
+      if (token !== coverRequestToken) return;
+      let url = getCachedCoverUrl(neighbor.path);
+      if (url === undefined) {
+        try {
+          url = await window.dreamApi.getCover(neighbor.path);
+        } catch (e) {
+          continue;
+        }
+        if (typeof url === 'string' && url.startsWith('blob:')) {
+          revokeIfBlobUrl(url);
+          continue;
+        }
+        setCachedCoverUrl(neighbor.path, url);
+      }
+      if (token !== coverRequestToken) return;
+      if (url && !getWarmDecodedCover(url)) {
+        await warmDecodeCover(url);
+      }
+    }
+  }, PREFETCH_DELAY_MS);
+}
+
+export async function updateCoverAndColor(song) {
+  const token = ++coverRequestToken;
+  clearTimeout(coverCoalesceTimer);
+  coverCoalesceTimer = null;
+  clearTimeout(coverPrefetchTimer);
+  coverPrefetchTimer = null;
+
+  const now = performance.now();
+  const isRapidBurst = now - lastCoverSwitchAt < RAPID_SWITCH_WINDOW_MS;
+  lastCoverSwitchAt = now;
+
+  // 1. 缓存命中：已预取或已访问过的曲目直接同帧切换，零空白闪烁、零 IPC 往返
+  const cached = getCachedCoverUrl(song.path);
+  if (cached !== undefined) {
+    if (!cached) {
+      applyResolvedCover(song, null, null);
+      scheduleCoverPrefetch(token);
+      return;
+    }
+    const warmImg = getWarmDecodedCover(cached);
+    if (warmImg) {
+      applyResolvedCover(song, cached, warmImg);
+      scheduleCoverPrefetch(token);
+      return;
+    }
+    const decodedImg = await warmDecodeCover(cached);
+    if (token !== coverRequestToken) return;
+    applyResolvedCover(song, cached, decodedImg);
+    scheduleCoverPrefetch(token);
+    return;
+  }
+
+  // 2. 冷缓存 + 高频连切：短暂合并 55ms，防止连按 10 次下一首在主进程并发积压 10 个大文件 parseFile；
+  // 常规单次切歌（间隔 >= 130ms）零延迟立即发起。等待期间不提前清空当前封面，避免空白闪烁。
+  const runFetch = async () => {
+    if (token !== coverRequestToken) return;
+    let coverUrl = null;
+    try {
+      coverUrl = await window.dreamApi.getCover(song.path);
+    } catch (e) {
+      coverUrl = null;
+    }
+    setCachedCoverUrl(song.path, coverUrl);
+
+    if (token !== coverRequestToken) {
+      revokeIfBlobUrl(coverUrl);
+      return;
+    }
+
+    if (coverUrl) {
+      const decodedImg = await warmDecodeCover(coverUrl);
+      if (token !== coverRequestToken) {
+        revokeIfBlobUrl(coverUrl);
+        return;
+      }
+      applyResolvedCover(song, coverUrl, decodedImg);
+    } else {
+      applyResolvedCover(song, null, null);
+    }
+    scheduleCoverPrefetch(token);
+  };
+
+  if (isRapidBurst) {
+    coverCoalesceTimer = setTimeout(() => {
+      coverCoalesceTimer = null;
+      runFetch();
+    }, BURST_COALESCE_MS);
+  } else {
+    runFetch();
   }
 }
 
@@ -223,9 +483,13 @@ export function updatePlayButton(isPlaying) {
 // 上一首。按钮和系统媒体键共用一份逻辑，避免两处各写一遍走岔。
 export function playPrev() {
   if (state.songs.length === 0) return;
+  if (state.playMode === 2) {
+    const prev = shuffleSession.prev(state.songs, state.currentIndex);
+    if (prev >= 0) playSong(prev, { fromShuffle: true });
+    return;
+  }
   let prev = state.currentIndex - 1;
-  if (state.playMode === 2) prev = Math.floor(Math.random() * state.songs.length);
-  else if (prev < 0) prev = state.songs.length - 1;
+  if (prev < 0) prev = state.songs.length - 1;
   playSong(prev);
 }
 
@@ -271,16 +535,22 @@ function registerMediaSessionHandlers() {
 // 空库复位（如移除最后一个文件夹）：停止播放并复位界面与封面状态
 export function resetToEmptyLibrary() {
   coverRequestToken++;
+  clearTimeout(coverCoalesceTimer);
+  coverCoalesceTimer = null;
+  clearTimeout(coverPrefetchTimer);
+  coverPrefetchTimer = null;
+  shuffleSession.reset();
   audio.pause();
   updatePlayButton(false);
   titleEl.innerText = 'Dreamisle';
   artistEl.innerText = t('app.waitingForMusic');
   albumEl.innerText = '';
   if (state.currentCoverBlobUrl) {
-    URL.revokeObjectURL(state.currentCoverBlobUrl);
+    revokeIfBlobUrl(state.currentCoverBlobUrl);
     state.currentCoverBlobUrl = null;
   }
   coverImg.style.display = 'none';
+  coverImg.removeAttribute('src');
   defaultCover.style.display = 'flex';
   if (barThumb) barThumb.removeAttribute('src');
   updateThemeColor(null);
@@ -317,6 +587,14 @@ export function bindPlaybackEvents() {
     iconLoop.style.display = state.playMode === 0 ? 'block' : 'none';
     iconOne.style.display = state.playMode === 1 ? 'block' : 'none';
     iconShuffle.style.display = state.playMode === 2 ? 'block' : 'none';
+    // 切入随机模式时以当前曲目为起点构建全新洗牌袋；切出时清空，并刷新相邻曲目封面预取
+    shuffleSession.reset();
+    if (state.playMode === 2 && state.songs.length > 0 && state.currentIndex >= 0) {
+      shuffleSession.syncCurrent(state.songs, state.currentIndex);
+    }
+    if (state.songs.length > 1 && state.currentIndex >= 0) {
+      scheduleCoverPrefetch(coverRequestToken);
+    }
     saveStateOnChange();
   });
 

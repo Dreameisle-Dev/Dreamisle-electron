@@ -90,6 +90,10 @@ function setMiniLyrics(activeIndex = null) {
 }
 
 let lyricsRequestToken = 0;
+let lyricsCoalesceTimer = null;
+let lastLyricsSwitchAt = 0;
+const LYRICS_RAPID_WINDOW_MS = 130;
+const LYRICS_COALESCE_MS = 55;
 let activeWordSpans = [];
 let activeWords = null;
 let karaokeRafId = 0;
@@ -156,6 +160,8 @@ function startKaraokeLoop() {
 // 传了 song 就同时推一份空行占位文档，任务栏在歌词异步加载期间先显示新歌的歌名/歌手。
 export function resetLyrics(song = null) {
   lyricsRequestToken++;
+  clearTimeout(lyricsCoalesceTimer);
+  lyricsCoalesceTimer = null;
   stopKaraokeLoop();
   activeWords = null;
   activeWordSpans = [];
@@ -182,6 +188,22 @@ export async function loadAndRenderLyrics(song) {
     lyricsScroll.scrollTop = 0;
   }
 
+  // 快速连切歌曲时合并 55ms，避免中间废弃曲目并发 parseFile 抢占主进程磁盘 I/O 与封面加载
+  const now = performance.now();
+  const isRapid = now - lastLyricsSwitchAt < LYRICS_RAPID_WINDOW_MS;
+  lastLyricsSwitchAt = now;
+  if (isRapid) {
+    lyricsCoalesceTimer = setTimeout(() => {
+      lyricsCoalesceTimer = null;
+      if (token === lyricsRequestToken) fetchAndRenderLyrics(song, token);
+    }, LYRICS_COALESCE_MS);
+    return;
+  }
+
+  await fetchAndRenderLyrics(song, token);
+}
+
+async function fetchAndRenderLyrics(song, token) {
   let lrcData = await window.dreamApi.getLyrics(song.path);
   if (token !== lyricsRequestToken) return;
 

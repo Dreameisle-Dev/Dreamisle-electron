@@ -1227,12 +1227,17 @@ function ensureCoverLoaded() {
   }
 }
 
-// 读取并缩放封面。72px 高足够 36 CSS px 的条在 200% DPI 下清晰；
-// 用 data URL 传给渲染进程，避免 blob/临时文件的生命周期问题。
+// 复用主封面磁盘/内存缓存：优先直接下发稳定 dream-thumb:// URL（与主窗口共享同一缓存项，
+// 零重复解歌与 base64 IPC 拷贝）；仅在缩略图目录不可写退回原始 buffer 时再用 data URL 兜底。
 async function loadCover(songPath, token) {
   try {
     const cover = await readCover(songPath, getMusicFolders());
     if (token !== coverToken || !enabled) return;
+    if (typeof cover === 'string' && cover.length > 0) {
+      lastCover = cover;
+      sendToWindow('taskbar:cover', lastCover);
+      return;
+    }
     if (!cover?.buffer) {
       lastCover = null;
       sendToWindow('taskbar:cover', null);

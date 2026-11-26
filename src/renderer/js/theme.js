@@ -10,9 +10,49 @@ function isLightTheme() {
   return matchMedia('(prefers-color-scheme: light)').matches;
 }
 
-// 最近一次用过的封面地址与请求代次：切换主题重算色斑、连切歌曲时丢弃过期图片回调
+// 最近一次用过的封面地址、请求代次与色板 LRU 缓存：
+// 切换主题重算色斑、连切歌曲丢弃过期回调、命中缓存时跳过 canvas.getImageData 回读
 let lastCoverSrc = null;
 let themeColorToken = 0;
+const MAX_PALETTE_CACHE = 200;
+const paletteCache = new Map();
+
+function getCachedPalette(src) {
+  if (!paletteCache.has(src)) return null;
+  const hit = paletteCache.get(src);
+  paletteCache.delete(src);
+  paletteCache.set(src, hit);
+  return hit;
+}
+
+function setCachedPalette(src, palette) {
+  if (!src || src.startsWith('blob:')) return;
+  paletteCache.delete(src);
+  paletteCache.set(src, palette);
+  if (paletteCache.size > MAX_PALETTE_CACHE) {
+    const oldestKey = paletteCache.keys().next().value;
+    paletteCache.delete(oldestKey);
+  }
+}
+
+function applyPaletteToRoot(palette) {
+  const root = document.documentElement;
+  // 浅色模式的色斑本身就要更透：白遮罩盖深色斑等于去饱和，会洗成惨白
+  const alphas = isLightTheme() ? [0.72, 0.68, 0.6, 0.56] : [0.9, 0.85, 0.72, 0.66];
+  palette.forEach((c, i) => {
+    root.style.setProperty(`--c${i + 1}`, `rgba(${c.r}, ${c.g}, ${c.b}, ${alphas[i]})`);
+  });
+}
+
+function extractPaletteFromImage(img) {
+  const ctx = canvas.getContext('2d', { willReadFrequently: true });
+  ctx.clearRect(0, 0, 50, 50);
+  ctx.drawImage(img, 0, 0, 50, 50);
+  const data = ctx.getImageData(0, 0, 50, 50).data;
+  const palette = extractPalette(data, 4);
+  ctx.clearRect(0, 0, 50, 50);
+  return palette;
+}
 
 // 切换主题模式。'system' 时不挂类，交给 prefers-color-scheme；
 // 'light'/'dark' 挂类覆盖（tokens.css 里的 :root.theme-* 选择器）。
@@ -129,7 +169,7 @@ function extractPalette(data, count) {
 // 根据封面主色调更新光场色斑（写在根节点，ambient 背景与浮层都能继承）。
 // 写的是「颜色值」而非 rgb 三元组 —— 淡出到同色零透明由 CSS 的
 // 相对颜色语法 rgb(from var(--c1) r g b / 0) 处理。
-export function updateThemeColor(src) {
+export function updateThemeColor(src, decodedImg = null) {
   const token = ++themeColorToken;
   lastCoverSrc = src || null;
   const root = document.documentElement;
@@ -138,7 +178,25 @@ export function updateThemeColor(src) {
     for (const v of ['--c1', '--c2', '--c3', '--c4']) root.style.removeProperty(v);
     return;
   }
+
+  const cached = getCachedPalette(src);
+  if (cached) {
+    applyPaletteToRoot(cached);
+    return;
+  }
+
+  // 若调用方已经预解码好该 Image（且同源/带 CORS），直接同步抽色，免去二次建图与异步等待
+  if (decodedImg && decodedImg.complete && decodedImg.naturalWidth > 0) {
+    try {
+      const palette = extractPaletteFromImage(decodedImg);
+      setCachedPalette(src, palette);
+      applyPaletteToRoot(palette);
+      return;
+    } catch (e) {}
+  }
+
   const img = new Image();
+  img.crossOrigin = 'anonymous';
   const cleanup = () => {
     img.onload = null;
     img.onerror = null;
@@ -149,18 +207,11 @@ export function updateThemeColor(src) {
       cleanup();
       return;
     }
-    const ctx = canvas.getContext('2d', { willReadFrequently: true });
-    ctx.clearRect(0, 0, 50, 50);
-    ctx.drawImage(img, 0, 0, 50, 50);
-    const data = ctx.getImageData(0, 0, 50, 50).data;
-
-    // 浅色模式的色斑本身就要更透：白遮罩盖深色斑等于去饱和，会洗成惨白
-    const alphas = isLightTheme() ? [0.72, 0.68, 0.6, 0.56] : [0.9, 0.85, 0.72, 0.66];
-    extractPalette(data, 4).forEach((c, i) => {
-      root.style.setProperty(`--c${i + 1}`, `rgba(${c.r}, ${c.g}, ${c.b}, ${alphas[i]})`);
-    });
-
-    ctx.clearRect(0, 0, 50, 50);
+    try {
+      const palette = extractPaletteFromImage(img);
+      setCachedPalette(src, palette);
+      applyPaletteToRoot(palette);
+    } catch (e) {}
     cleanup();
   };
   img.onerror = cleanup;

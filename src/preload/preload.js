@@ -10,6 +10,7 @@ contextBridge.exposeInMainWorld('dreamApi', {
 
   getCover: async (path) => {
     const res = await ipcRenderer.invoke('app:getCover', path);
+    if (typeof res === 'string') return res;
     if (res && res.buffer) {
       const blob = new Blob([res.buffer], { type: res.format });
       return URL.createObjectURL(blob);

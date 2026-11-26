@@ -66,11 +66,18 @@ app.isQuitting = false;
 if (process.platform === 'darwin') app.setName('Dreamisle');
 app.setAppUserModelId('org.dreamisle-dev.dreamisle');
 
-// 必须在 app ready 前声明自定义缩略图协议为安全标准协议，供 Cover Flow 直接复用 Chromium 图像缓存
+// 必须在 app ready 前声明自定义缩略图协议为安全标准协议，供主封面与 Cover Flow 直接复用 Chromium 图像缓存
+// 开启 supportFetchAPI / corsEnabled 以便 theme.js 从 canvas 取色（getImageData）不触发跨域污染
 protocol.registerSchemesAsPrivileged([
   {
     scheme: 'dream-thumb',
-    privileges: { standard: true, secure: true, bypassCSP: false },
+    privileges: {
+      standard: true,
+      secure: true,
+      bypassCSP: false,
+      supportFetchAPI: true,
+      corsEnabled: true,
+    },
   },
 ]);
 
