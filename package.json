@@ -21,7 +21,16 @@
       "!README.md",
       "!.editorconfig",
       "!.prettierrc",
-      "!.prettierignore"
+      "!.prettierignore",
+      "!.gitmodules",
+      "!packages/lyrics-without-credits/.github{,/**/*}",
+      "!packages/lyrics-without-credits/test{,/**/*}",
+      "!packages/lyrics-without-credits/types{,/**/*}",
+      "!packages/lyrics-without-credits/README*.md",
+      "!packages/lyrics-without-credits/CONTRIBUTING.md",
+      "!packages/lyrics-without-credits/.editorconfig",
+      "!packages/lyrics-without-credits/.prettierrc",
+      "!packages/lyrics-without-credits/.gitignore"
     ],
     "win": {
       "icon": "src/assets/app_icon.ico",

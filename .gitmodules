@@ -1,0 +1,4 @@
+[submodule "packages/lyrics-without-credits"]
+	path = packages/lyrics-without-credits
+	url = https://github.com/Dreameisle-Dev/lyrics-without-credits.git
+	branch = main
