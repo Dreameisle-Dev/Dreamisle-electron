@@ -13,6 +13,7 @@ import {
   btnSortArtist,
   btnSortRandom,
   lyricsScroll,
+  btnLocateCurrent,
   btnClearQueue,
   sortContainer,
 } from './dom.js';
@@ -122,6 +123,8 @@ function jumpToLetter(letter) {
   updateActiveLetter();
 }
 
+let renderedCurrentIndex = -1;
+
 export function updateVirtualList() {
   const scrollTop = playlistEl.scrollTop;
   const viewportHeight = playlistEl.clientHeight || 800;
@@ -135,12 +138,14 @@ export function updateVirtualList() {
   if (
     newStart === state.vsStartIndex &&
     newEnd === state.vsEndIndex &&
+    renderedCurrentIndex === state.currentIndex &&
     playlistEl.children.length > 0
   )
     return;
 
   state.vsStartIndex = newStart;
   state.vsEndIndex = newEnd;
+  renderedCurrentIndex = state.currentIndex;
 
   let spacer = document.getElementById('playlistSpacer');
   if (!spacer) {
@@ -183,8 +188,83 @@ export function updateVirtualList() {
   playlistEl.appendChild(fragment);
 }
 
-// 队列相关控件：队列非空时显示“清空”，手动排序的队列隐藏排序栏
+let locateFlashTimer = null;
+let locatePendingTimer = null;
+
+function flashLocatedRow(targetOriginalIndex) {
+  clearTimeout(locateFlashTimer);
+  const row = playlistEl.querySelector(`.playlist-item[data-index="${targetOriginalIndex}"]`);
+  if (!row) return false;
+  row.classList.remove('locate-flash');
+  void row.offsetWidth;
+  row.classList.add('locate-flash');
+  locateFlashTimer = setTimeout(() => {
+    locateFlashTimer = null;
+    row.classList.remove('locate-flash');
+  }, 820);
+  return true;
+}
+
+// 定位并居中滚动到当前正在播放的歌曲；若被搜索关键词筛掉，自动清空搜索后定位。
+export function locateCurrentSong({ smooth = true, flash = true } = {}) {
+  if (
+    state.songs.length === 0 ||
+    state.currentIndex < 0 ||
+    state.currentIndex >= state.songs.length
+  ) {
+    return false;
+  }
+
+  let filteredIdx = state.filteredSongs.findIndex((s) => s.originalIndex === state.currentIndex);
+  if (filteredIdx === -1) {
+    if (searchInput && searchInput.value) {
+      searchInput.value = '';
+      initVirtualList('');
+      filteredIdx = state.filteredSongs.findIndex((s) => s.originalIndex === state.currentIndex);
+    }
+    if (filteredIdx === -1) return false;
+  }
+
+  const viewportHeight = playlistEl.clientHeight || 600;
+  const rowCenter = filteredIdx * ITEM_HEIGHT + 10 + ITEM_HEIGHT / 2;
+  const totalHeight = state.filteredSongs.length * ITEM_HEIGHT + 20;
+  const maxScroll = Math.max(0, totalHeight - viewportHeight);
+  const targetTop = Math.max(0, Math.min(maxScroll, Math.round(rowCenter - viewportHeight / 2)));
+  const targetOriginalIndex = state.currentIndex;
+
+  clearTimeout(locatePendingTimer);
+  locatePendingTimer = null;
+
+  const isPerf = document.body.classList.contains('performance-mode');
+  const distance = Math.abs(targetTop - playlistEl.scrollTop);
+  // 距离较远、性能模式或静默初始化时直接到位并同步重绘虚拟列表；近距离平滑滚动后高亮提示
+  if (!smooth || isPerf || distance > viewportHeight * 2 || distance < 4) {
+    playlistEl.scrollTop = targetTop;
+    updateVirtualList();
+    updateActiveLetter();
+    if (flash) flashLocatedRow(targetOriginalIndex);
+  } else {
+    playlistEl.scrollTo({ top: targetTop, behavior: 'smooth' });
+    locatePendingTimer = setTimeout(() => {
+      locatePendingTimer = null;
+      updateVirtualList();
+      updateActiveLetter();
+      if (flash) flashLocatedRow(targetOriginalIndex);
+    }, 260);
+  }
+
+  return true;
+}
+
+// 队列相关控件：有正在播放歌曲时显示“定位”，队列非空时显示“清空”，手动排序的队列隐藏排序栏
 function syncQueueControls() {
+  if (btnLocateCurrent) {
+    btnLocateCurrent.hidden = !(
+      state.songs.length > 0 &&
+      state.currentIndex >= 0 &&
+      state.currentIndex < state.songs.length
+    );
+  }
   if (btnClearQueue) btnClearQueue.hidden = state.songs.length === 0;
   if (sortContainer) sortContainer.hidden = state.activeQueue.type === 'custom';
 }
@@ -574,6 +654,12 @@ export function bindPlaylistEvents() {
     queueDragFromIndex = null;
     state.dragSong = null;
   });
+
+  // 定位当前播放歌曲
+  if (btnLocateCurrent) btnLocateCurrent.onclick = () => locateCurrentSong();
+
+  // 切歌/空库复位时同步定位按钮显隐
+  window.addEventListener('dreamisle:song-changed', syncQueueControls);
 
   // 清空播放队列：停止播放并复位；空队列快照会写入配置
   btnClearQueue.onclick = () => setQueue([], { type: 'custom' });

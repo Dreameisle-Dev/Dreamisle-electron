@@ -13,6 +13,7 @@ import {
   playlistsDetailCount,
   playlistsRenameInput,
   btnPlaylistsBack,
+  btnLocatePlaylistCurrent,
   btnRenamePlaylist,
   btnDeletePlaylist,
   playlistsSongListEl,
@@ -270,10 +271,60 @@ function getDetailPlaylist() {
   return state.playlists.find((p) => p.id === state.detailPlaylistId) || null;
 }
 
+let detailLocateFlashTimer = null;
+
+function syncDetailLocateButton(pl = getDetailPlaylist()) {
+  if (!btnLocatePlaylistCurrent) return;
+  const currentPath = state.songs[state.currentIndex]?.path || null;
+  const exists = Boolean(
+    pl && currentPath && pl.songs.some((song) => song && song.path === currentPath)
+  );
+  btnLocatePlaylistCurrent.hidden = !exists;
+}
+
+function locateCurrentInPlaylistDetail() {
+  const pl = getDetailPlaylist();
+  const currentPath = state.songs[state.currentIndex]?.path || null;
+  if (!pl || !currentPath) return false;
+
+  let targetRow = null;
+  for (const li of playlistsSongListEl.children) {
+    if (li.dataset && li.dataset.path === currentPath) {
+      targetRow = li;
+      break;
+    }
+  }
+  if (!targetRow) return false;
+
+  const viewportHeight = playlistsSongListEl.clientHeight || 600;
+  const rowCenter = targetRow.offsetTop + targetRow.offsetHeight / 2;
+  const maxScroll = Math.max(0, playlistsSongListEl.scrollHeight - viewportHeight);
+  const targetTop = Math.max(0, Math.min(maxScroll, Math.round(rowCenter - viewportHeight / 2)));
+
+  const isPerf = document.body.classList.contains('performance-mode');
+  const distance = Math.abs(targetTop - playlistsSongListEl.scrollTop);
+  if (isPerf || distance > viewportHeight * 2 || distance < 4) {
+    playlistsSongListEl.scrollTop = targetTop;
+  } else {
+    playlistsSongListEl.scrollTo({ top: targetTop, behavior: 'smooth' });
+  }
+
+  clearTimeout(detailLocateFlashTimer);
+  targetRow.classList.remove('locate-flash');
+  void targetRow.offsetWidth;
+  targetRow.classList.add('locate-flash');
+  detailLocateFlashTimer = setTimeout(() => {
+    detailLocateFlashTimer = null;
+    targetRow.classList.remove('locate-flash');
+  }, 820);
+  return true;
+}
+
 // 详情视图歌曲列表渲染
 function renderDetailSongs() {
   const pl = getDetailPlaylist();
   if (!pl) return;
+  syncDetailLocateButton(pl);
   if (playlistsDetailCount) {
     playlistsDetailCount.textContent = t('playlist.count', { n: pl.songs.length });
   }
@@ -636,6 +687,9 @@ export function bindPlaylistsEvents() {
 
   // 返回列表视图
   btnPlaylistsBack.onclick = closePlaylistDetail;
+  if (btnLocatePlaylistCurrent) {
+    btnLocatePlaylistCurrent.onclick = locateCurrentInPlaylistDetail;
+  }
 
   // 重命名
   btnRenamePlaylist.onclick = () => {
@@ -802,6 +856,9 @@ export function bindPlaylistsEvents() {
   // 队列在外部变更（如从专辑墙点播）且抽屉正开着时，实时同步高亮状态
   window.addEventListener('dreamisle:queue-changed', () => {
     if (playlistsDrawer.classList.contains('open')) renderPlaylistsList();
+  });
+  window.addEventListener('dreamisle:song-changed', () => {
+    if (state.playlistsView === 'detail') renderDetailSongs();
   });
 
   // 从右侧列表拖拽歌曲时,靠近左缘自动展开歌单抽屉作为投放目标;拖拽结束恢复原状

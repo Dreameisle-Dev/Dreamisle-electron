@@ -159,6 +159,7 @@ export function initSongInfo(index) {
 
   setTrackInfo(song);
   setMediaMetadata(song); // 封面等 updateCoverAndColor 拿到后再补
+  state.vsStartIndex = -1;
   updateVirtualList();
 
   updateCoverAndColor(song);

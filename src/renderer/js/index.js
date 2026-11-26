@@ -22,6 +22,7 @@ import {
   applyActiveSort,
   applyPlaylistFromMain,
   bindPlaylistEvents,
+  locateCurrentSong,
   restoreSavedQueue,
 } from './playlist.js';
 import {
@@ -417,6 +418,8 @@ window.addEventListener('DOMContentLoaded', async () => {
       iconShuffle.style.display = state.playMode === 2 ? 'block' : 'none';
 
       initSongInfo(state.currentIndex);
+      // 启动恢复到上次曲目后静默把播放队列滚动到该曲，首次打开抽屉即可直达当前歌
+      locateCurrentSong({ smooth: false, flash: false });
 
       if (savedState.currentTime > 0) audio.currentTime = savedState.currentTime;
       if (savedState.isPlaying) {

@@ -6,7 +6,8 @@ export const playlistEl = document.getElementById('playlist');
 export const playlistCountEl = document.getElementById('playlistCount');
 export const searchInput = document.getElementById('searchInput');
 export const letterIndexEl = document.getElementById('letterIndex');
-// 播放队列（右侧列表头部清空按钮；手动排序的队列隐藏排序栏）
+// 播放队列（右侧列表头部定位/清空按钮；手动排序的队列隐藏排序栏）
+export const btnLocateCurrent = document.getElementById('btnLocateCurrent');
 export const btnClearQueue = document.getElementById('btnClearQueue');
 export const sortContainer = document.getElementById('sortContainer');
 
@@ -149,6 +150,7 @@ export const playlistsDetailName = document.getElementById('playlistsDetailName'
 export const playlistsDetailCount = document.getElementById('playlistsDetailCount');
 export const playlistsRenameInput = document.getElementById('playlistsRenameInput');
 export const btnPlaylistsBack = document.getElementById('btnPlaylistsBack');
+export const btnLocatePlaylistCurrent = document.getElementById('btnLocatePlaylistCurrent');
 export const btnRenamePlaylist = document.getElementById('btnRenamePlaylist');
 export const btnDeletePlaylist = document.getElementById('btnDeletePlaylist');
 export const playlistsSongListEl = document.getElementById('playlistsSongList');
