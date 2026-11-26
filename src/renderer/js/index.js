@@ -16,6 +16,7 @@ import {
   iconShuffle,
   btnPlay,
   btnMode,
+  btnAlbums,
   contextMenu,
 } from './dom.js';
 import {
@@ -24,11 +25,11 @@ import {
   bindPlaylistEvents,
   locateCurrentSong,
   restoreSavedQueue,
+  togglePlaylistDrawer,
 } from './playlist.js';
 import {
   togglePlaylistsDrawer,
   bindPlaylistsEvents,
-  loadPlaylists,
   closeContextMenu,
   prunePlaylistsFromLibrary,
   renderPlaylistsList,
@@ -43,15 +44,17 @@ import {
   bindPlaybackEvents,
 } from './playback.js';
 import { bindLyricsEvents, setLyricsTranslationVisible } from './lyrics.js';
-import { toggleSettings, closeSettings, bindSettingsEvents } from './settings.js';
-import { toggleStats, closeStats, isStatsOpen, bindStatsEvents } from './stats.js';
 import {
-  bindAlbumsEvents,
+  toggleSettings,
+  closeSettings,
+  toggleStats,
+  closeStats,
+  isStatsOpen,
   toggleAlbums,
   closeAlbums,
   isAlbumsOpen,
   handleAlbumsKeydown,
-} from './albums.js';
+} from './lazy-overlays.js';
 import { initMouseFollow, updateProgressStyle, applyThemeMode } from './theme.js';
 import { applyPerformanceMode } from './performance.js';
 import { initAutoHide, setAutoHideEnabled } from './autohide.js';
@@ -59,7 +62,7 @@ import { initVisualizer, relayoutVisualizer } from './visualizer.js';
 import { initEqualizer, bindEqEvents } from './equalizer.js';
 import { syncLibrary } from './library-sync.js';
 import { resolveRestoredIndex } from './playback-restore.js';
-import { loadQueueSnapshot } from './play-queue.js';
+import { resolveQueueSnapshot } from './play-queue.js';
 
 function openHelp() {
   helpOverlayEl.classList.add('open');
@@ -102,43 +105,29 @@ function setupIpcListeners() {
 }
 
 window.addEventListener('DOMContentLoaded', async () => {
+  // 尽早发起单次聚合启动 IPC，与下方同步 DOM 事件绑定并行重叠，消除 5 轮串行等待
+  const bootstrapPromise = window.dreamApi.bootstrap();
+
   // 阻止向窗口拖放外部文件/链接时触发页面导航（导航后 preload 仍会挂载）
   document.addEventListener('dragover', (e) => e.preventDefault());
   document.addEventListener('drop', (e) => e.preventDefault());
 
-  // 注册各 feature 模块的事件绑定（等价于原先脚本求值期的顶层绑定）
+  // 注册核心 feature 模块的事件绑定（settings / albums / stats 改为首次打开时按需加载绑定）
   bindPlaybackEvents();
   bindLyricsEvents();
-  bindSettingsEvents();
   bindPlaylistEvents();
   bindPlaylistsEvents();
-  bindAlbumsEvents();
-  bindStatsEvents();
   bindEqEvents();
 
-  // 启动时应用已存语言并刷新界面文案
-  const settings = await window.dreamApi.getSettings();
-  // 文件夹树按设置的曲库根目录组织
-  state.musicFolders = (settings.musicFolders || []).map((folder) => folder.path);
-  applyThemeMode(settings.themeMode || 'system');
-  // 性能模式尽早挂上：body 类在 initVisualizer 之前就位，首次播放不会先跑几帧频谱
-  applyPerformanceMode(settings.performanceMode === true);
-  setLang(settings.language);
-  applyLang();
-  // barArtist 由播放状态驱动，不能再挂 data-i18n；空库文案在这里补
-  if (state.currentIndex === -1) artistEl.innerText = t('app.waitingForMusic');
-  volumeHud.innerText = t('hud.volume', { n: Math.round(audio.volume * 100) });
-  setLyricsTranslationVisible(settings.lyricsTranslation !== false);
-
-  // 均衡器：若配置里是开启状态，这里就把 Web Audio 图建起来 —— 必须早于
-  // 下面恢复播放的那次 audio.play()，避免播放中途接管输出链路产生爆音。
-  initEqualizer(settings.equalizer);
+  if (btnAlbums) {
+    btnAlbums.addEventListener('click', (e) => {
+      e.stopPropagation();
+      toggleAlbums();
+    });
+  }
 
   initMouseFollow();
   initAutoHide();
-
-  // 实时频谱：与上方均衡器共用 audio-graph.js 的同一条 Web Audio 链路
-  initVisualizer(audio, document.getElementById('vizBars'));
 
   // 检测当前系统并添加类标识
   const platform = window.dreamApi.getPlatform();
@@ -292,8 +281,7 @@ window.addEventListener('DOMContentLoaded', async () => {
       if (e.repeat) return; // 屏蔽自动重复
 
       altTimer = setTimeout(() => {
-        playlistDrawer.classList.toggle('open');
-        playlistsDrawer.classList.remove('open'); // 互斥：打开右侧关左侧
+        togglePlaylistDrawer();
         closeStats(); // 互斥：打开抽屉关统计浮层
         altTimer = null;
       }, 500);
@@ -383,15 +371,39 @@ window.addEventListener('DOMContentLoaded', async () => {
     relayoutVisualizer();
   });
 
-  const savedSongs = await window.dreamApi.loadSavedMusic();
+  setupIpcListeners();
 
-  if (savedSongs && savedSongs.length > 0) {
+  const bootstrap = await bootstrapPromise;
+  const settings = bootstrap.settings || {};
+
+  // 文件夹树按设置的曲库根目录组织
+  state.musicFolders = (settings.musicFolders || []).map((folder) => folder.path);
+  applyThemeMode(settings.themeMode || 'system');
+  // 性能模式尽早挂上：body 类在 initVisualizer 之前就位，首次播放不会先跑几帧频谱
+  applyPerformanceMode(settings.performanceMode === true);
+  setLang(settings.language);
+  applyLang();
+  // barArtist 由播放状态驱动，不能再挂 data-i18n；空库文案在这里补
+  if (state.currentIndex === -1) artistEl.innerText = t('app.waitingForMusic');
+  volumeHud.innerText = t('hud.volume', { n: Math.round(audio.volume * 100) });
+  setLyricsTranslationVisible(settings.lyricsTranslation !== false);
+
+  // 均衡器：若配置里是开启状态，这里就把 Web Audio 图建起来 —— 必须早于
+  // 下面恢复播放的那次 audio.play()，避免播放中途接管输出链路产生爆音。
+  initEqualizer(settings.equalizer);
+
+  // 实时频谱：与上方均衡器共用 audio-graph.js 的同一条 Web Audio 链路
+  initVisualizer(audio, document.getElementById('vizBars'));
+
+  const savedSongs = Array.isArray(bootstrap.savedSongs) ? bootstrap.savedSongs : [];
+  state.playlists = Array.isArray(bootstrap.playlists) ? bootstrap.playlists : [];
+
+  if (savedSongs.length > 0) {
     state.librarySongs = [...savedSongs]; // 曲库缓存
     searchInput.value = '';
 
-    // 先拉歌单与队列快照，再还原上次所在的队列类型（全库/文件夹/歌单/自定义队列）及排序/字母索引
-    await loadPlaylists().catch(() => {});
-    const snapshot = await loadQueueSnapshot();
+    // 还原上次所在的队列类型（全库/文件夹/歌单/自定义队列）及排序/字母索引
+    const snapshot = resolveQueueSnapshot(bootstrap.playQueue);
     if (snapshot.songs.length > 0) {
       restoreSavedQueue(snapshot);
     } else {
@@ -401,9 +413,8 @@ window.addEventListener('DOMContentLoaded', async () => {
       // 会和「歌名」按钮的高亮对不上，字母索引也会从错误的字母开始
       applyActiveSort({ persist: true });
     }
-    renderPlaylistsList();
 
-    const savedState = await window.dreamApi.loadPlaybackState();
+    const savedState = bootstrap.playbackState || null;
     const restoredIndex = resolveRestoredIndex(state.songs, savedState);
     if (restoredIndex >= 0) {
       state.currentIndex = restoredIndex;
@@ -412,13 +423,24 @@ window.addEventListener('DOMContentLoaded', async () => {
       audio.volume = Number.isFinite(savedState.volume)
         ? Math.min(1, Math.max(0, savedState.volume))
         : 1;
+      volumeHud.innerText = t('hud.volume', { n: Math.round(audio.volume * 100) });
 
       iconLoop.style.display = state.playMode === 0 ? 'block' : 'none';
       iconOne.style.display = state.playMode === 1 ? 'block' : 'none';
       iconShuffle.style.display = state.playMode === 2 ? 'block' : 'none';
 
-      initSongInfo(state.currentIndex);
-      // 启动恢复到上次曲目后静默把播放队列滚动到该曲，首次打开抽屉即可直达当前歌
+      const targetSong = state.songs[state.currentIndex];
+      const preloadedCoverUrl =
+        bootstrap.initialCover && bootstrap.initialCover.songPath === targetSong.path
+          ? bootstrap.initialCover.url
+          : undefined;
+      const preloadedLyrics =
+        bootstrap.initialLyrics && bootstrap.initialLyrics.songPath === targetSong.path
+          ? bootstrap.initialLyrics.value
+          : undefined;
+
+      initSongInfo(state.currentIndex, { preloadedCoverUrl, preloadedLyrics });
+      // 标记首次打开播放队列抽屉时自动定位到该曲，抽屉未展开前不触发布局计算
       locateCurrentSong({ smooth: false, flash: false });
 
       if (savedState.currentTime > 0) audio.currentTime = savedState.currentTime;
@@ -426,13 +448,12 @@ window.addEventListener('DOMContentLoaded', async () => {
         audio.play();
         updatePlayButton(true);
       }
-    } else {
-      if (state.songs.length > 0) initSongInfo(0);
+    } else if (state.songs.length > 0) {
+      initSongInfo(0);
     }
   } else {
     // 首次启动（未配置任何音乐文件夹）：弹一次添加文件夹对话框
-    const firstRunSettings = await window.dreamApi.getSettings();
-    if (!firstRunSettings.musicFolders || firstRunSettings.musicFolders.length === 0) {
+    if (!settings.musicFolders || settings.musicFolders.length === 0) {
       const res = await window.dreamApi.addFolder();
       if (res && res.playlist && res.playlist.length > 0) {
         applyPlaylistFromMain(res.playlist);
@@ -442,14 +463,12 @@ window.addEventListener('DOMContentLoaded', async () => {
     }
   }
 
-  setupIpcListeners();
   updateProgressStyle(0);
-  if (!savedSongs || savedSongs.length === 0) {
-    loadPlaylists().catch(() => {});
-  }
 
-  // 播放恢复完成后，后台同步文件夹新增/删除的歌曲；同步结束后清理歌单失效歌曲
-  syncLibrary()
-    .then(() => prunePlaylistsFromLibrary())
-    .catch(() => {});
+  // 延迟 1.5s 再做磁盘目录增量同步，避免刚开屏时递归扫目录与封面解码、音频缓冲、任务栏歌词抢占磁盘 I/O
+  setTimeout(() => {
+    syncLibrary()
+      .then(() => prunePlaylistsFromLibrary())
+      .catch(() => {});
+  }, 1500);
 });

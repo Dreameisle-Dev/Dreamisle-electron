@@ -72,7 +72,7 @@ import { showSyncToast } from './helpers.js';
 import { applyPlaylistFromMain } from './playlist.js';
 import { syncLibrary } from './library-sync.js';
 import { renderPlaylistsList } from './playlists.js';
-import { closeAlbums } from './albums.js';
+import { closeAlbums } from './lazy-overlays.js';
 import { applyThemeMode } from './theme.js';
 import { applyPerformanceMode } from './performance.js';
 import { renderEqPresets, syncEqUi } from './equalizer.js';
@@ -704,7 +704,12 @@ function ensureDropdownVisible(wrapEl) {
   });
 }
 
+let settingsEventsBound = false;
+
 export function bindSettingsEvents() {
+  if (settingsEventsBound) return;
+  settingsEventsBound = true;
+
   themeSeg.querySelectorAll('button').forEach((btn) => {
     btn.addEventListener('click', () => {
       const mode = btn.dataset.mode;

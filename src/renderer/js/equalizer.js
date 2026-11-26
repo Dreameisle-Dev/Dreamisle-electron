@@ -29,9 +29,16 @@ import { showSyncToast } from './helpers.js';
 import { ensureAudioGraph, applyEqualizerToGraph, resumeAudioGraph } from './audio-graph.js';
 
 let eqWarnedFailure = false; // 建图失败只提示一次，避免反复弹 toast
+let eqUiBuilt = false;
 
 let faderInputs = [];
 let faderValues = [];
+
+function ensureEqUiBuilt() {
+  if (eqUiBuilt) return;
+  eqUiBuilt = true;
+  buildFaders();
+}
 
 function ensureGraphForEq() {
   const g = ensureAudioGraph();
@@ -121,6 +128,7 @@ function buildFaders() {
 
 // 预设胶囊的文案来自 i18n，切换语言后要重建
 export function renderEqPresets() {
+  ensureEqUiBuilt();
   eqPresetsEl.innerHTML = '';
   for (const preset of EQ_PRESETS) {
     const btn = document.createElement('button');
@@ -186,6 +194,7 @@ function syncEqCurves(gains, enabled, presetLabel, preampText) {
 }
 
 export function syncEqUi() {
+  ensureEqUiBuilt();
   const { enabled, gains } = state.equalizer;
   const currentId = matchPresetId(gains);
 
@@ -226,11 +235,8 @@ export function syncEqUi() {
 
 export function initEqualizer(rawEq) {
   state.equalizer = normalizeEq(rawEq);
-  buildFaders();
-  renderEqPresets();
-  syncEqUi();
-  // 启动时均衡器就是开着的：趁还没开始播放先把图建好，
-  // 避免播放中途接管输出链路产生爆音
+  // 设置页关闭时推子/预设胶囊/SVG 曲线不可见，延后到首次打开设置页（renderEqPresets / syncEqUi）时构建。
+  // 启动时均衡器就是开着的：趁还没开始播放先把图建好，避免播放中途接管输出链路产生爆音。
   if (state.equalizer.enabled) {
     ensureGraphForEq();
     applyEqualizerToGraph(state.equalizer);

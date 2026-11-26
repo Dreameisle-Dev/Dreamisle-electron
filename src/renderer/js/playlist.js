@@ -124,8 +124,17 @@ function jumpToLetter(letter) {
 }
 
 let renderedCurrentIndex = -1;
+let virtualListDirty = false;
+let pendingLocateCurrent = false;
 
 export function updateVirtualList() {
+  // 右侧抽屉未展开时跳过 DOM 构建，待抽屉打开时按当前状态一次补齐，消除启动首屏无效回流
+  if (playlistDrawer && !playlistDrawer.classList.contains('open')) {
+    virtualListDirty = true;
+    return;
+  }
+  virtualListDirty = false;
+
   const scrollTop = playlistEl.scrollTop;
   const viewportHeight = playlistEl.clientHeight || 800;
 
@@ -214,6 +223,12 @@ export function locateCurrentSong({ smooth = true, flash = true } = {}) {
   ) {
     return false;
   }
+
+  if (playlistDrawer && !playlistDrawer.classList.contains('open')) {
+    pendingLocateCurrent = true;
+    return true;
+  }
+  pendingLocateCurrent = false;
 
   let filteredIdx = state.filteredSongs.findIndex((s) => s.originalIndex === state.currentIndex);
   if (filteredIdx === -1) {
@@ -325,8 +340,28 @@ export function applyActiveSort({ persist = false } = {}) {
   else applySort('title', btnSortTitle, { persist }); // 兜底：按钮全没高亮时按歌名排
 }
 
+export function openPlaylistDrawer() {
+  playlistDrawer.classList.add('open');
+  playlistsDrawer.classList.remove('open'); // 互斥：打开右侧关左侧
+  if (pendingLocateCurrent) {
+    pendingLocateCurrent = false;
+    locateCurrentSong({ smooth: false, flash: false });
+  } else if (virtualListDirty) {
+    updateVirtualList();
+    updateActiveLetter();
+  }
+}
+
+export function togglePlaylistDrawer() {
+  if (playlistDrawer.classList.contains('open')) {
+    playlistDrawer.classList.remove('open');
+  } else {
+    openPlaylistDrawer();
+  }
+}
+
 // 应用一套新队列:重定位当前歌曲、套用激活排序、刷新列表(空队列复位)
-function applyQueueSongs(songs) {
+function applyQueueSongs(songs, { persist = true } = {}) {
   const playingPath = state.songs[state.currentIndex] ? state.songs[state.currentIndex].path : null;
 
   state.originalSongs = [...songs];
@@ -360,7 +395,7 @@ function applyQueueSongs(songs) {
     applyActiveSort({ persist: false });
   }
   syncQueueControls();
-  saveQueueSnapshot(state.songs, state.activeQueue, state.sortMode); // 队列切换后同步重启恢复用的快照
+  if (persist) saveQueueSnapshot(state.songs, state.activeQueue, state.sortMode); // 队列切换后同步重启恢复用的快照
   window.dispatchEvent(new Event('dreamisle:queue-changed'));
 }
 
@@ -369,6 +404,26 @@ const SORT_BUTTONS = {
   artist: btnSortArtist,
   random: btnSortRandom,
 };
+
+function hasSameSongPaths(savedSongs, baseSongs) {
+  if (savedSongs.length !== baseSongs.length || savedSongs.length === 0) return false;
+  const baseSet = new Set();
+  for (const s of baseSongs) baseSet.add(s.path);
+  if (baseSet.size !== baseSongs.length) return false;
+  const seen = new Set();
+  for (const s of savedSongs) {
+    if (!baseSet.has(s.path) || seen.has(s.path)) return false;
+    seen.add(s.path);
+  }
+  return true;
+}
+
+function isAlreadySortedBy(songs, field) {
+  for (let i = 1; i < songs.length; i++) {
+    if (compareByInitial(songs[i - 1][field], songs[i][field]) > 0) return false;
+  }
+  return true;
+}
 
 function restoreTypedQueue(baseSongs, activeQueue, savedSongs, mode) {
   state.activeQueue = activeQueue;
@@ -386,7 +441,26 @@ function restoreTypedQueue(baseSongs, activeQueue, savedSongs, mode) {
   const nextMode = SORT_BUTTONS[mode] ? mode : 'title';
   state.sortMode = nextMode;
   updateSortButtons(SORT_BUTTONS[nextMode]);
-  applyQueueSongs(baseSongs);
+
+  // 启动恢复快速路径：快照与目标集合完全一致且已按目标字段排好序时，
+  // 直接复用顺序，跳过 O(N log N) 全量重排和冗余的 config.json 写盘。
+  if (
+    (nextMode === 'title' || nextMode === 'artist') &&
+    hasSameSongPaths(savedSongs, baseSongs) &&
+    isAlreadySortedBy(savedSongs, nextMode)
+  ) {
+    state.originalSongs = [...baseSongs];
+    state.songs = savedSongs;
+    state.currentIndex = state.songs.length > 0 ? 0 : -1;
+    resetShuffle();
+    syncShuffleCurrent(state.currentIndex);
+    initVirtualList(searchInput.value.trim());
+    syncQueueControls();
+    window.dispatchEvent(new Event('dreamisle:queue-changed'));
+    return;
+  }
+
+  applyQueueSongs(baseSongs, { persist: false });
 }
 
 // 启动恢复播放队列与排序状态：保留歌名/歌手排序与 A-Z# 索引，仅在用户主动编排队列时恢复为 custom
@@ -418,7 +492,7 @@ export function restoreSavedQueue({ songs, activeQueue, sortMode }) {
     const albumSongs = albumSongsOf(state.librarySongs, activeQueue.key);
     if (albumSongs.length > 0) {
       if (mode === 'album') {
-        setQueue(albumSongs, { type: 'album', key: activeQueue.key });
+        setQueue(albumSongs, { type: 'album', key: activeQueue.key }, { persist: false });
       } else {
         restoreTypedQueue(albumSongs, { type: 'album', key: activeQueue.key }, songs, mode);
       }
@@ -427,7 +501,7 @@ export function restoreSavedQueue({ songs, activeQueue, sortMode }) {
   }
 
   if (activeQueue && activeQueue.type === 'custom') {
-    setQueue(songs, { type: 'custom' });
+    setQueue(songs, { type: 'custom' }, { persist: false });
     return;
   }
 
@@ -435,9 +509,9 @@ export function restoreSavedQueue({ songs, activeQueue, sortMode }) {
 }
 
 // 切换播放队列:曲库、歌单或自定义队列
-export function setQueue(songs, activeQueue) {
+export function setQueue(songs, activeQueue, { persist = true } = {}) {
   state.activeQueue = activeQueue;
-  applyQueueSongs(songs);
+  applyQueueSongs(songs, { persist });
 }
 
 // 用主进程返回的新播放列表替换本地列表:曲库上下文,同时更新曲库缓存
@@ -609,8 +683,7 @@ export function bindPlaylistEvents() {
 
   btnPlaylist.addEventListener('click', (e) => {
     e.stopPropagation();
-    playlistDrawer.classList.toggle('open');
-    playlistsDrawer.classList.remove('open'); // 互斥：打开右侧关左侧
+    togglePlaylistDrawer();
   });
   document.querySelector('.app-container').addEventListener('click', () => {
     playlistDrawer.classList.remove('open');

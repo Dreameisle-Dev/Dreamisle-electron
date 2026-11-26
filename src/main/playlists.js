@@ -1,6 +1,5 @@
 import { store, getMusicFolders } from './store.js';
 import { t } from '../shared/i18n.js';
-import { mergeSongsByPath } from '../shared/song-metadata.js';
 import { handleMainIpc, isAllowedAudioPathSync, sanitizeAudioUrl } from './security.js';
 
 const KEY = 'playlists';
@@ -8,7 +7,7 @@ const MAX_PLAYLISTS = 500;
 const MAX_SONGS_PER_PLAYLIST = 10000;
 
 // 读取全部歌单(存储损坏时按空列表处理)
-function loadPlaylists() {
+export function loadPlaylists() {
   const raw = store.get(KEY);
   return Array.isArray(raw) ? raw : [];
 }
@@ -145,15 +144,47 @@ function prunePlaylists(validPaths) {
   return { pruned };
 }
 
+function sameSongSnapshot(a, b) {
+  if (a === b) return true;
+  if (!a || !b) return false;
+  return (
+    a.path === b.path &&
+    a.title === b.title &&
+    a.artist === b.artist &&
+    a.url === b.url &&
+    a.album === b.album &&
+    a.trackNo === b.trackNo &&
+    a.discNo === b.discNo &&
+    a.year === b.year &&
+    a.duration === b.duration &&
+    a.bitrate === b.bitrate &&
+    a.sampleRate === b.sampleRate &&
+    a.bitsPerSample === b.bitsPerSample &&
+    a.codec === b.codec
+  );
+}
+
 // 曲库元数据迁移后回填歌单快照:按 path 用曲库新数据替换旧歌曲对象
 export function refreshPlaylistsMetadata() {
-  const freshSongs = store.get('cachedPlaylist') || [];
   const playlists = loadPlaylists();
+  if (playlists.length === 0) return { updated: 0 };
+  const freshSongs = store.get('cachedPlaylist') || [];
+  if (freshSongs.length === 0) return { updated: 0 };
+  const byPath = new Map(freshSongs.map((s) => [s.path, s]));
   let updated = 0;
   for (const pl of playlists) {
-    const before = JSON.stringify(pl.songs);
-    pl.songs = mergeSongsByPath(pl.songs, freshSongs);
-    if (JSON.stringify(pl.songs) !== before) updated++;
+    const prevSongs = Array.isArray(pl.songs) ? pl.songs : [];
+    let changed = false;
+    const nextSongs = prevSongs.map((s) => {
+      const fresh = s ? byPath.get(s.path) : null;
+      if (!fresh) return s;
+      if (!sameSongSnapshot(s, fresh)) changed = true;
+      return fresh;
+    });
+    if (changed) {
+      pl.songs = nextSongs;
+      updated++;
+    }
   }
   if (updated > 0) savePlaylists(playlists);
   return { updated };

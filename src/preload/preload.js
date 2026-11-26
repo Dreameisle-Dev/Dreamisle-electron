@@ -1,6 +1,25 @@
 const { contextBridge, ipcRenderer } = require('electron');
 
+function resolveCoverResponse(res) {
+  if (typeof res === 'string') return res;
+  if (res && res.buffer) {
+    const blob = new Blob([res.buffer], { type: res.format });
+    return URL.createObjectURL(blob);
+  }
+  return null;
+}
+
 contextBridge.exposeInMainWorld('dreamApi', {
+  bootstrap: async () => {
+    const data = await ipcRenderer.invoke('app:bootstrap');
+    if (data && data.initialCover) {
+      data.initialCover = {
+        songPath: data.initialCover.songPath,
+        url: resolveCoverResponse(data.initialCover.value),
+      };
+    }
+    return data;
+  },
   loadSavedMusic: () => ipcRenderer.invoke('app:loadSavedMusic'),
   savePlaybackState: (state) => ipcRenderer.invoke('app:savePlaybackState', state),
   loadPlaybackState: () => ipcRenderer.invoke('app:loadPlaybackState'),
@@ -9,23 +28,11 @@ contextBridge.exposeInMainWorld('dreamApi', {
   syncFolder: () => ipcRenderer.invoke('app:syncFolder'),
 
   getCover: async (path) => {
-    const res = await ipcRenderer.invoke('app:getCover', path);
-    if (typeof res === 'string') return res;
-    if (res && res.buffer) {
-      const blob = new Blob([res.buffer], { type: res.format });
-      return URL.createObjectURL(blob);
-    }
-    return null;
+    return resolveCoverResponse(await ipcRenderer.invoke('app:getCover', path));
   },
 
   getCoverThumb: async (path, maxSize = 320) => {
-    const res = await ipcRenderer.invoke('app:getCoverThumb', path, maxSize);
-    if (typeof res === 'string') return res;
-    if (res && res.buffer) {
-      const blob = new Blob([res.buffer], { type: res.format });
-      return URL.createObjectURL(blob);
-    }
-    return null;
+    return resolveCoverResponse(await ipcRenderer.invoke('app:getCoverThumb', path, maxSize));
   },
 
   getLyrics: (path) => ipcRenderer.invoke('app:getLyrics', path),

@@ -1,4 +1,4 @@
-import { app, BrowserWindow, screen } from 'electron';
+import { app, BrowserWindow, nativeTheme, screen } from 'electron';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { store } from './store.js';
@@ -96,7 +96,7 @@ export function flushWindowBounds() {
   saveBoundsNow();
 }
 
-export function createWindow() {
+export function createWindow({ onFirstShow } = {}) {
   // 窗口重置时清空状态
   isMiniMode = false;
   normalBounds = null;
@@ -106,6 +106,8 @@ export function createWindow() {
   // 默认窗口比旧版更高；小屏（如 768p）按工作区高度收敛，避免超出屏幕
   const { workArea } = screen.getPrimaryDisplay();
   const defaultHeight = Math.min(DEFAULT_HEIGHT, Math.max(700, workArea.height - 40));
+  // 底色与 tokens.css 的 --base 对齐，避免浅色主题下首帧闪纯黑
+  const backgroundColor = nativeTheme.shouldUseDarkColors ? '#301c34' : '#f3eef6';
 
   mainWindow = new BrowserWindow({
     width: savedBounds ? savedBounds.width : DEFAULT_WIDTH,
@@ -113,8 +115,9 @@ export function createWindow() {
     ...(savedBounds ? { x: savedBounds.x, y: savedBounds.y } : {}),
     minWidth: 800,
     minHeight: 600,
+    show: false,
     titleBarStyle: 'hidden', // 隐藏默认系统标题栏；macOS 上保留红黄绿按钮
-    backgroundColor: '#000000',
+    backgroundColor,
     icon: path.join(
       __dirname,
       process.platform === 'win32' ? '../assets/app_icon.ico' : '../assets/icon_256x256.png'
@@ -130,13 +133,30 @@ export function createWindow() {
   const mainHtmlPath = path.join(__dirname, '../renderer/index.html');
   hardenWebContents(mainWindow.webContents, mainHtmlPath);
 
-  if (savedBounds?.maximized) mainWindow.maximize();
+  let revealed = false;
+  let revealFallbackTimer = null;
+  const revealWindow = () => {
+    if (revealed || !mainWindow || mainWindow.isDestroyed()) return;
+    revealed = true;
+    clearTimeout(revealFallbackTimer);
+    revealFallbackTimer = null;
 
-  // 拖动/缩放时防抖落盘；最大化状态单独记录，恢复时先还原普通尺寸再最大化
-  mainWindow.on('resize', scheduleBoundsSave);
-  mainWindow.on('move', scheduleBoundsSave);
-  mainWindow.on('maximize', scheduleBoundsSave);
-  mainWindow.on('unmaximize', scheduleBoundsSave);
+    // 首次显示前再还原最大化，避免 Windows 上 maximize() 提前把未渲染的黑窗口弹出来；
+    // 窗口几何变更监听也在还原之后再挂，防止启动还原触发一次多余的 bounds 写盘。
+    if (savedBounds?.maximized) mainWindow.maximize();
+    mainWindow.show();
+
+    mainWindow.on('resize', scheduleBoundsSave);
+    mainWindow.on('move', scheduleBoundsSave);
+    mainWindow.on('maximize', scheduleBoundsSave);
+    mainWindow.on('unmaximize', scheduleBoundsSave);
+
+    if (typeof onFirstShow === 'function') onFirstShow();
+  };
+
+  mainWindow.once('ready-to-show', revealWindow);
+  // 极端 GPU 驱动下若 ready-to-show 迟迟未到，1.5s 后兜底显示窗口
+  revealFallbackTimer = setTimeout(revealWindow, 1500);
 
   mainWindow.loadFile(mainHtmlPath);
 
@@ -158,6 +178,8 @@ export function createWindow() {
     mainWindow.webContents.send('window-visibility-changed', false);
   });
   mainWindow.on('closed', () => {
+    clearTimeout(revealFallbackTimer);
+    revealFallbackTimer = null;
     clearTimeout(boundsSaveTimer);
     boundsSaveTimer = null;
     mainWindow = null;

@@ -4902,17 +4902,24 @@ body.albums-open .lyric-translation.overflowing {
   contain: layout style;
   background: transparent;
   opacity: 0;
+  visibility: hidden;
   pointer-events: none;
   transform: scale(0.985);
   transition:
     opacity 0.24s cubic-bezier(0.22, 1, 0.36, 1),
-    transform 0.26s cubic-bezier(0.22, 1, 0.36, 1);
+    transform 0.26s cubic-bezier(0.22, 1, 0.36, 1),
+    visibility 0s linear 0.26s;
 }
 
 .albums-overlay.open {
   opacity: 1;
+  visibility: visible;
   pointer-events: auto;
   transform: scale(1);
+  transition:
+    opacity 0.24s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.26s cubic-bezier(0.22, 1, 0.36, 1),
+    visibility 0s linear 0s;
 }
 
 /* 顶栏（给 36px 自绘标题栏留白） */

@@ -22,7 +22,6 @@ import { formatTime } from './helpers.js';
 import { updateVirtualList } from './playlist.js';
 import { loadAndRenderLyrics, syncLyrics } from './lyrics.js';
 import { updateThemeColor, updateProgressStyle } from './theme.js';
-import { onSongChanged, onCoverReady } from './stats.js';
 import { buildPlaybackState } from '../../shared/taskbar-lyrics-document.js';
 import { createShuffleSession } from '../../shared/shuffle.js';
 
@@ -150,7 +149,7 @@ window.addEventListener('dreamisle:language-changed', () => {
   else artistEl.innerText = t('app.waitingForMusic');
 });
 
-export function initSongInfo(index) {
+export function initSongInfo(index, { preloadedCoverUrl, preloadedLyrics } = {}) {
   if (index < 0 || index >= state.songs.length) return;
   state.currentIndex = index;
   if (state.playMode === 2) shuffleSession.syncCurrent(state.songs, index);
@@ -162,9 +161,8 @@ export function initSongInfo(index) {
   state.vsStartIndex = -1;
   updateVirtualList();
 
-  updateCoverAndColor(song);
-  loadAndRenderLyrics(song);
-  onSongChanged();
+  updateCoverAndColor(song, preloadedCoverUrl);
+  loadAndRenderLyrics(song, preloadedLyrics);
   window.dispatchEvent(new Event('dreamisle:song-changed'));
   pushTaskbarPlayback(true);
 }
@@ -190,7 +188,6 @@ export function playSong(index, { fromShuffle = false } = {}) {
 
   updateCoverAndColor(song);
   loadAndRenderLyrics(song);
-  onSongChanged();
   window.dispatchEvent(new Event('dreamisle:song-changed'));
 
   saveStateOnChange();
@@ -315,7 +312,7 @@ function applyResolvedCover(song, coverUrl, decodedImg = null) {
     }
     updateThemeColor(coverUrl, decodedImg);
     setMediaMetadata(song, coverUrl); // 系统浮层的封面
-    onCoverReady(coverUrl);
+    window.dispatchEvent(new CustomEvent('dreamisle:cover-ready', { detail: coverUrl }));
   } else {
     coverImg.style.display = 'none';
     coverImg.removeAttribute('src');
@@ -323,7 +320,7 @@ function applyResolvedCover(song, coverUrl, decodedImg = null) {
     if (barThumb) barThumb.removeAttribute('src');
     updateThemeColor(null);
     setMediaMetadata(song, null);
-    onCoverReady(null);
+    window.dispatchEvent(new CustomEvent('dreamisle:cover-ready', { detail: null }));
   }
 }
 
@@ -381,7 +378,7 @@ function scheduleCoverPrefetch(token) {
   }, PREFETCH_DELAY_MS);
 }
 
-export async function updateCoverAndColor(song) {
+export async function updateCoverAndColor(song, preloadedUrl = undefined) {
   const token = ++coverRequestToken;
   clearTimeout(coverCoalesceTimer);
   coverCoalesceTimer = null;
@@ -391,6 +388,24 @@ export async function updateCoverAndColor(song) {
   const now = performance.now();
   const isRapidBurst = now - lastCoverSwitchAt < RAPID_SWITCH_WINDOW_MS;
   lastCoverSwitchAt = now;
+
+  // 启动预热命中：主进程在 bootstrap 中已随带封面 URL，跳过二次 IPC 往返直接解码上屏
+  if (preloadedUrl !== undefined) {
+    setCachedCoverUrl(song.path, preloadedUrl);
+    if (!preloadedUrl) {
+      applyResolvedCover(song, null, null);
+      scheduleCoverPrefetch(token);
+      return;
+    }
+    const decodedImg = await warmDecodeCover(preloadedUrl);
+    if (token !== coverRequestToken) {
+      revokeIfBlobUrl(preloadedUrl);
+      return;
+    }
+    applyResolvedCover(song, preloadedUrl, decodedImg);
+    scheduleCoverPrefetch(token);
+    return;
+  }
 
   // 1. 缓存命中：已预取或已访问过的曲目直接同帧切换，零空白闪烁、零 IPC 往返
   const cached = getCachedCoverUrl(song.path);
@@ -555,7 +570,7 @@ export function resetToEmptyLibrary() {
   defaultCover.style.display = 'flex';
   if (barThumb) barThumb.removeAttribute('src');
   updateThemeColor(null);
-  onCoverReady(null);
+  window.dispatchEvent(new CustomEvent('dreamisle:cover-ready', { detail: null }));
   window.dispatchEvent(new Event('dreamisle:song-changed'));
   if (mediaSession) {
     mediaSession.metadata = null;

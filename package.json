@@ -7,13 +7,22 @@
   "type": "module",
   "main": "src/main/main.js",
   "scripts": {
-    "start": "electron .",
+    "start": "electron . --profile-startup",
     "format": "prettier --write src/",
     "build:win": "electron-builder --win",
     "build:mac": "electron-builder --mac --config.mac.identity=-"
   },
   "build": {
     "appId": "org.dreamisle-dev.dreamisle",
+    "files": [
+      "**/*",
+      "!img{,/**/*}",
+      "!.github{,/**/*}",
+      "!README.md",
+      "!.editorconfig",
+      "!.prettierrc",
+      "!.prettierignore"
+    ],
     "win": {
       "icon": "src/assets/app_icon.ico",
       "appId": "org.dreamisle-dev.dreamisle",
@@ -52,7 +61,6 @@
     }
   },
   "dependencies": {
-    "electron-store": "^11.0.2",
     "music-metadata": "^11.16.1"
   },
   "optionalDependencies": {

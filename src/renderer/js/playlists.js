@@ -30,7 +30,7 @@ import { buildFolderTree } from '../../shared/folder.js';
 import { groupSongsByAlbum } from '../../shared/albums.js';
 import { addSongToQueueEnd, moveSongToNext, removeSongFromQueue, setQueue } from './playlist.js';
 import { playSong } from './playback.js';
-import { openAlbums, closeAlbums } from './albums.js';
+import { openAlbums, closeAlbums } from './lazy-overlays.js';
 
 // 文件夹树里被折叠的节点与分组折叠态（会话级，不持久化）
 const collapsedFolders = new Set();
@@ -78,7 +78,9 @@ const ICON_EMPTY_PLAYLIST = `<svg width="24" height="24" viewBox="0 0 24 24" fil
 const ICON_REMOVE = `<svg width="11" height="11" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" aria-hidden="true"><line x1="1.5" y1="1.5" x2="8.5" y2="8.5"></line><line x1="8.5" y1="1.5" x2="1.5" y2="8.5"></line></svg>`;
 
 // 渲染歌单卡片列表(含顶部固定的"全部歌曲"项)
-export function renderPlaylistsList() {
+export function renderPlaylistsList({ force = false } = {}) {
+  // 歌单抽屉关闭时跳过全库专辑分组、文件夹树构建与 DOM 重排；打开抽屉时会显式刷新
+  if (!force && playlistsDrawer && !playlistsDrawer.classList.contains('open')) return;
   const prevScrollTop = playlistsListEl.scrollTop;
   const fragment = document.createDocumentFragment();
   playlistsCountEl.innerText = t('playlists.count', { n: state.playlists.length });

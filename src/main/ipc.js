@@ -66,10 +66,87 @@ import {
   setMenubarLyricsEnabled,
 } from '../menubar/menubar-lyrics.js';
 import { emptyStats, recordPlay, pruneStats } from '../shared/stats.js';
-import { refreshPlaylistsMetadata } from './playlists.js';
+import { loadPlaylists, refreshPlaylistsMetadata } from './playlists.js';
 
 // 手动导入时递增，使进行中的自动同步结果作废
 let syncGeneration = 0;
+
+// 启动预热句柄：在渲染进程解析 HTML/CSS/ESM 期间异步预读上次曲目的封面与歌词，
+// 让 app:bootstrap 可以直接带回结果；若冷缓存耗时较长则不阻塞首屏，后续常规 IPC 无缝复用在途任务。
+let startupPrefetch = null;
+
+export function startStartupPrefetch() {
+  const playbackState = store.get('playbackState');
+  const songPath = playbackState?.currentSongPath;
+  const folders = getMusicFolders();
+  if (typeof songPath !== 'string' || !songPath || folders.length === 0) return;
+  if (!isAllowedAudioPathSync(songPath, folders)) return;
+
+  const coverPromise = readCover(songPath, folders).catch(() => null);
+  const lyricsPromise = readLyrics(songPath, folders).catch(() => null);
+  startupPrefetch = { songPath, coverPromise, lyricsPromise };
+}
+
+function raceWithinMs(promise, ms) {
+  const sentinel = Symbol('timeout');
+  return Promise.race([
+    promise.then((value) => ({ done: true, value })),
+    new Promise((resolve) => setTimeout(() => resolve({ done: false, value: sentinel }), ms)),
+  ]);
+}
+
+async function buildSettingsSnapshot({ checkFolders = true } = {}) {
+  const rawFolders = getMusicFolders();
+  const folders = checkFolders
+    ? await Promise.all(
+        rawFolders.map(async (p) => {
+          let available = false;
+          try {
+            await fs.access(p);
+            available = true;
+          } catch (e) {}
+          return { path: p, available };
+        })
+      )
+    : rawFolders.map((p) => ({ path: p, available: true }));
+
+  return {
+    language: getLanguage(),
+    lyricsStyle: getLyricsStyle(),
+    lyricsTranslation: getLyricsTranslation(),
+    desktopLyricsClickThrough: getDesktopLyricsClickThrough(),
+    desktopLyricsLines: getDesktopLyricsLines(),
+    desktopLyricsVisible: isLyricsWindowVisible(),
+    taskbarLyricsEnabled: getTaskbarLyricsSetting(),
+    taskbarLyricsRunning: isTaskbarLyricsRunning(),
+    menubarLyricsEnabled: getMenubarLyricsSetting(),
+    themeMode: getThemeMode(),
+    performanceMode: getPerformanceMode(),
+    equalizer: getEqualizer(),
+    taskbarLyricsStyle: getTaskbarLyricsStyle(),
+    musicFolders: folders,
+  };
+}
+
+async function loadSavedMusicList() {
+  // 优先从本地 Store 获取已缓存的列表;旧版缓存(缺音质规格字段)需重扫迁移一次
+  const cached = store.get('cachedPlaylist');
+  if (cached && cached.length > 0 && !hasLegacyMetadata(cached)) {
+    refreshPlaylistsMetadata(); // 歌单快照可能仍是旧数据(曲库已迁移),启动时尝试回填
+    return cached;
+  }
+
+  const folders = getMusicFolders();
+  if (folders.length === 0) return cached || [];
+  try {
+    const playlist = await scanAllFolders(folders);
+    store.set('cachedPlaylist', playlist);
+    refreshPlaylistsMetadata(); // 曲库迁移后同步回填歌单快照
+    return playlist;
+  } catch (e) {
+    return cached || [];
+  }
+}
 
 // 统计中清理已不在音乐库中的歌曲记录
 function pruneStatsForLibrary(validPaths) {
@@ -137,24 +214,48 @@ export function registerIpcHandlers() {
     return { playlist };
   });
 
-  handleMainIpc('app:loadSavedMusic', async () => {
-    // 优先从本地 Store 获取已缓存的列表;旧版缓存(缺音质规格字段)需重扫迁移一次
-    const cached = store.get('cachedPlaylist');
-    if (cached && cached.length > 0 && !hasLegacyMetadata(cached)) {
-      refreshPlaylistsMetadata(); // 歌单快照可能仍是旧数据(曲库已迁移),启动时尝试回填
-      return cached;
+  // 启动一次性聚合拉取：把原先渲染进程 5 轮串行 IPC（settings/music/playlists/queue/playbackState）
+  // 合并成单次往返，并跳过非首屏所需的文件夹 fs.access 探测；同时顺带返回已预热好的封面与歌词。
+  handleMainIpc('app:bootstrap', async () => {
+    const [settings, savedSongs] = await Promise.all([
+      buildSettingsSnapshot({ checkFolders: false }),
+      loadSavedMusicList(),
+    ]);
+    const playlists = loadPlaylists();
+    const playQueue = getPlayQueue();
+    const playbackState = store.get('playbackState') || null;
+
+    let initialCover = null;
+    let initialLyrics = null;
+    const prefetch = startupPrefetch;
+    if (prefetch && playbackState?.currentSongPath === prefetch.songPath) {
+      const [coverRes, lyricsRes] = await Promise.all([
+        raceWithinMs(prefetch.coverPromise, 20),
+        raceWithinMs(prefetch.lyricsPromise, 20),
+      ]);
+      if (coverRes.done) initialCover = { songPath: prefetch.songPath, value: coverRes.value };
+      if (lyricsRes.done) {
+        initialLyrics = { songPath: prefetch.songPath, value: lyricsRes.value };
+        // 歌词已直接随 bootstrap 下发，释放启动预热引用
+        startupPrefetch = null;
+      }
+    } else {
+      startupPrefetch = null;
     }
 
-    const folders = getMusicFolders();
-    if (folders.length === 0) return cached || [];
-    try {
-      const playlist = await scanAllFolders(folders);
-      store.set('cachedPlaylist', playlist);
-      refreshPlaylistsMetadata(); // 曲库迁移后同步回填歌单快照
-      return playlist;
-    } catch (e) {
-      return cached || [];
-    }
+    return {
+      settings,
+      savedSongs,
+      playlists,
+      playQueue,
+      playbackState,
+      initialCover,
+      initialLyrics,
+    };
+  });
+
+  handleMainIpc('app:loadSavedMusic', async () => {
+    return loadSavedMusicList();
   });
 
   handleMainIpc('app:syncFolder', async () => {
@@ -210,36 +311,16 @@ export function registerIpcHandlers() {
   });
 
   handleMainIpc('app:getLyrics', async (event, audioPath) => {
+    if (startupPrefetch && startupPrefetch.songPath === audioPath) {
+      const pending = startupPrefetch.lyricsPromise;
+      startupPrefetch = null;
+      return pending;
+    }
     return readLyrics(audioPath, getMusicFolders());
   });
 
   handleMainIpc('settings:get', async () => {
-    const folders = await Promise.all(
-      getMusicFolders().map(async (p) => {
-        let available = false;
-        try {
-          await fs.access(p);
-          available = true;
-        } catch (e) {}
-        return { path: p, available };
-      })
-    );
-    return {
-      language: getLanguage(),
-      lyricsStyle: getLyricsStyle(),
-      lyricsTranslation: getLyricsTranslation(),
-      desktopLyricsClickThrough: getDesktopLyricsClickThrough(),
-      desktopLyricsLines: getDesktopLyricsLines(),
-      desktopLyricsVisible: isLyricsWindowVisible(),
-      taskbarLyricsEnabled: getTaskbarLyricsSetting(),
-      taskbarLyricsRunning: isTaskbarLyricsRunning(),
-      menubarLyricsEnabled: getMenubarLyricsSetting(),
-      themeMode: getThemeMode(),
-      performanceMode: getPerformanceMode(),
-      equalizer: getEqualizer(),
-      taskbarLyricsStyle: getTaskbarLyricsStyle(),
-      musicFolders: folders,
-    };
+    return buildSettingsSnapshot({ checkFolders: true });
   });
 
   handleMainIpc('settings:setTaskbarLyricsStyle', (event, style) => {

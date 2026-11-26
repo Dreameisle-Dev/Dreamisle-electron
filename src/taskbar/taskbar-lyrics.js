@@ -1149,12 +1149,17 @@ function bindIpcOnce() {
   });
 }
 
+export function bindTaskbarLyricsIpc() {
+  bindIpcOnce();
+}
+
 export function initTaskbarLyrics() {
   try {
     // IPC 仍要绑定：渲染进程会一直发送歌词文档/播放状态，没有任务栏窗口时这些调用是空操作。
     bindIpcOnce();
     if (process.platform !== 'win32') return;
     if (!getTaskbarLyricsSetting()) return;
+    if (enabled && isWindowAlive(win)) return;
     // 启动恢复：失败只记日志，保持持久化设置不变，也不弹窗
     enableRuntime({ notifyUser: false });
   } catch (error) {

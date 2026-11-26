@@ -4,7 +4,6 @@ import { albumKeyOf, groupSongsByAlbum } from '../../shared/albums.js';
 import { state } from './state.js';
 import {
   audio,
-  btnAlbums,
   playlistDrawer,
   playlistsDrawer,
   statsOverlay,
@@ -1195,15 +1194,11 @@ export function handleAlbumsKeydown(e) {
   return false;
 }
 
-export function bindAlbumsEvents() {
-  if (!albumsOverlay) return;
+let albumsEventsBound = false;
 
-  if (btnAlbums) {
-    btnAlbums.addEventListener('click', (e) => {
-      e.stopPropagation();
-      toggleAlbums();
-    });
-  }
+export function bindAlbumsEvents() {
+  if (!albumsOverlay || albumsEventsBound) return;
+  albumsEventsBound = true;
 
   if (btnAlbumsClose) btnAlbumsClose.addEventListener('click', closeAlbums);
   if (btnAlbumPlay) btnAlbumPlay.addEventListener('click', handlePrimaryAlbumAction);

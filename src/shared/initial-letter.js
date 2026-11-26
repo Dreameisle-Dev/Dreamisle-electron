@@ -41,8 +41,44 @@ const COMBINING = /[\u0300-\u036f]/g;
 
 export const HASH = '#';
 
+// 汉字首字母缓存：曲库按歌名/歌手排序会反复比较同一批首字，缓存后每个汉字只查一次
+const charInitialCache = new Map();
+
 function firstMeaningfulChar(text) {
-  return String(text ?? '').replace(LEADING, '')[0] || '';
+  const str = String(text ?? '');
+  if (!str) return '';
+  const firstCode = str.charCodeAt(0);
+  // 常见 ASCII 字母/数字快速路径：跳过正则替换
+  if (
+    (firstCode >= 65 && firstCode <= 90) ||
+    (firstCode >= 97 && firstCode <= 122) ||
+    (firstCode >= 48 && firstCode <= 57)
+  ) {
+    return str[0];
+  }
+  return str.replace(LEADING, '')[0] || '';
+}
+
+function hanInitialOf(ch) {
+  const cached = charInitialCache.get(ch);
+  if (cached !== undefined) return cached;
+
+  // ANCHORS 在 zh-CN collator 下严格递增，用二分查找替代 23 次线性比较
+  let lo = 0;
+  let hi = ANCHORS.length - 1;
+  let best = -1;
+  while (lo <= hi) {
+    const mid = (lo + hi) >> 1;
+    if (collator.compare(ANCHORS[mid][1], ch) <= 0) {
+      best = mid;
+      lo = mid + 1;
+    } else {
+      hi = mid - 1;
+    }
+  }
+  const letter = best >= 0 ? ANCHORS[best][0] : HASH;
+  charInitialCache.set(ch, letter);
+  return letter;
 }
 
 // 返回 'A'..'Z' 或 '#'
@@ -50,12 +86,12 @@ export function initialOf(text) {
   const ch = firstMeaningfulChar(text);
   if (!ch) return HASH;
 
+  const code = ch.charCodeAt(0);
+  if (code >= 65 && code <= 90) return ch;
+  if (code >= 97 && code <= 122) return String.fromCharCode(code - 32);
+
   if (HAN.test(ch)) {
-    let letter = HASH;
-    for (const [candidate, anchor] of ANCHORS) {
-      if (collator.compare(anchor, ch) <= 0) letter = candidate;
-    }
-    return letter;
+    return hanInitialOf(ch);
   }
 
   // 带变音符的拉丁字母（Édith）先去音符再取首字母

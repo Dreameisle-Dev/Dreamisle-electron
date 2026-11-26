@@ -179,9 +179,16 @@ function pushTaskbarLyricsDocument(song, lines) {
   window.dreamApi.setTaskbarLyricsDocument(buildLyricDocument(song, lines));
 }
 
-export async function loadAndRenderLyrics(song) {
+export async function loadAndRenderLyrics(song, preloadedLrcData = undefined) {
   resetLyrics(song);
   const token = lyricsRequestToken;
+
+  // 启动预热已带回歌词数据时直接解析渲染，免去一次 IPC 与“加载歌词中”占位闪烁
+  if (preloadedLrcData !== undefined) {
+    if (lyricsScroll) lyricsScroll.scrollTop = 0;
+    await fetchAndRenderLyrics(song, token, preloadedLrcData);
+    return;
+  }
 
   if (lyricsScroll) {
     lyricsScroll.innerHTML = `<p class="lyric-line placeholder">${t('lyrics.loading')}</p>`;
@@ -203,8 +210,9 @@ export async function loadAndRenderLyrics(song) {
   await fetchAndRenderLyrics(song, token);
 }
 
-async function fetchAndRenderLyrics(song, token) {
-  let lrcData = await window.dreamApi.getLyrics(song.path);
+async function fetchAndRenderLyrics(song, token, preloadedLrcData = undefined) {
+  let lrcData =
+    preloadedLrcData !== undefined ? preloadedLrcData : await window.dreamApi.getLyrics(song.path);
   if (token !== lyricsRequestToken) return;
 
   let parsed = { metadata: {}, lines: [] };

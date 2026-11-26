@@ -2,10 +2,18 @@ import path from 'path';
 import crypto from 'crypto';
 import { pathToFileURL } from 'url';
 import { app, nativeImage, protocol } from 'electron';
-import { parseFile } from 'music-metadata';
 import fs from 'fs/promises';
 import { AUDIO_EXTENSIONS, resolveAllowedLibraryFile } from './security.js';
 import { decodeLyricsBuffer, repairMojibakeText } from '../shared/lyrics-decode.js';
+
+// 按需懒加载 music-metadata（冷导入 ~43ms）：常规冷启动命中曲库缓存与封面缩略图缓存时无需解析音频标签
+let parseFilePromise = null;
+function getParseFile() {
+  if (!parseFilePromise) {
+    parseFilePromise = import('music-metadata').then((mod) => mod.parseFile);
+  }
+  return parseFilePromise;
+}
 
 const MAX_LRC_BYTES = 2 * 1024 * 1024;
 // 只存 58 字节的稳定协议 URL 字符串（dream-thumb://cover/<sha1>.jpg），800 条总计仅约 48KB 内存，零 Buffer 常驻
@@ -139,6 +147,7 @@ async function scanDirectory(dirPath) {
 
 export async function parseAudioFile(filePath) {
   try {
+    const parseFile = await getParseFile();
     const metadata = await parseFile(filePath, { skipCovers: true, skipPostHeaders: true });
     const format = metadata.format || {};
     const common = metadata.common || {};
@@ -272,6 +281,7 @@ export async function readCoverThumbnail(filePath, allowedFolders, maxSize = 320
         } catch (e) {}
       }
 
+      const parseFile = await getParseFile();
       const metadata = await parseFile(safePath, { skipCovers: false, skipPostHeaders: true });
       const pic = metadata.common.picture && metadata.common.picture[0];
       if (!pic || !pic.data) {
@@ -364,6 +374,7 @@ export async function readLyrics(audioPath, allowedFolders) {
   } catch (e) {}
 
   try {
+    const parseFile = await getParseFile();
     const metadata = await parseFile(safeAudioPath, { skipCovers: true });
     if (metadata.common && metadata.common.lyrics && metadata.common.lyrics.length > 0) {
       return normalizeEmbeddedLyrics(metadata.common.lyrics[0]);

@@ -1,6 +1,5 @@
 import { app, dialog } from 'electron';
 import path from 'path';
-import Store from 'electron-store';
 import { setLang as i18nSetLang, t } from '../shared/i18n.js';
 import { normalizeEq } from '../shared/equalizer.js';
 import { normalizeTaskbarLyricsStyle } from '../shared/taskbar-style.js';
@@ -10,18 +9,28 @@ import {
   normalizeLyricsStyle,
 } from '../shared/lyrics-style.js';
 import { openStoreWithRecovery } from './store-recovery.js';
+import { JsonStore } from './json-store.js';
 
-// electron-store 的默认落盘位置：userData 下的 config.json（name 默认 'config'）。
-// 兜底逻辑要拿这个路径去备份坏文件，所以这里显式算一遍。
-const CONFIG_PATH = path.join(app.getPath('userData'), 'config.json');
+// 配置文件默认落盘位置：userData 下的 config.json（与原 electron-store 保持一致）。
+// 惰性初始化：避免在 app.requestSingleInstanceLock() 之前就读盘，让二次唤起实例零磁盘开销退出。
+let storeRecoveryState = null;
+let exitHookBound = false;
 
-// 主进程持久化配置的唯一入口：electron-store 实例与设置读写集中于此
-function initStore() {
+function ensureStoreRecovery() {
+  if (storeRecoveryState) return storeRecoveryState;
+  const configPath = path.join(app.getPath('userData'), 'config.json');
   try {
-    return openStoreWithRecovery({
-      configPath: CONFIG_PATH,
-      createStore: (options) => new Store(options),
+    storeRecoveryState = openStoreWithRecovery({
+      configPath,
+      createStore: (options) => new JsonStore({ configPath, ...(options || {}) }),
     });
+    if (!exitHookBound) {
+      exitHookBound = true;
+      process.on('exit', () => {
+        storeRecoveryState?.store?.flushSync();
+      });
+    }
+    return storeRecoveryState;
   } catch (error) {
     // 连重建都失败（目录不可写之类）就没法继续了：音乐库、歌单、设置全依赖配置文件。
     // 但也不能像以前那样无声无息地死掉——至少在退出前说清楚为什么。
@@ -30,27 +39,47 @@ function initStore() {
     dialog.showErrorBox(
       zh ? '音梦屿无法启动' : 'Dreamisle cannot start',
       zh
-        ? `无法读写配置文件：\n${CONFIG_PATH}\n\n${error.message}`
-        : `Cannot read or write the settings file:\n${CONFIG_PATH}\n\n${error.message}`
+        ? `无法读写配置文件：\n${configPath}\n\n${error.message}`
+        : `Cannot read or write the settings file:\n${configPath}\n\n${error.message}`
     );
     app.exit(1);
     throw error; // app.exit 会立即结束进程，这行只是让「此后无 store」这件事显式化
   }
 }
 
-export const storeRecovery = initStore();
-export const store = storeRecovery.store;
+export const store = {
+  get(key, defaultValue) {
+    return ensureStoreRecovery().store.get(key, defaultValue);
+  },
+  has(key) {
+    return ensureStoreRecovery().store.has(key);
+  },
+  set(keyOrObject, value) {
+    return ensureStoreRecovery().store.set(keyOrObject, value);
+  },
+  delete(key) {
+    return ensureStoreRecovery().store.delete(key);
+  },
+  flushSync() {
+    storeRecoveryState?.store?.flushSync();
+  },
+};
+
+export function flushStoreSync() {
+  store.flushSync();
+}
 
 // 配置被重置过就得让用户知道备份在哪——静默重置等于把他的歌单和统计偷偷丢掉。
 // 在主窗口建好之后调用（弹窗挂在窗口上，且此时语言已经初始化）。
 export function notifyStoreRecovery(parentWindow) {
-  if (!storeRecovery.recovered) return;
+  const recovery = ensureStoreRecovery();
+  if (!recovery.recovered) return;
   dialog.showMessageBox(parentWindow, {
     type: 'warning',
     title: t('store.corruptTitle'),
     message: t('store.corruptTitle'),
-    detail: storeRecovery.backupPath
-      ? t('store.corruptDetail', { path: storeRecovery.backupPath })
+    detail: recovery.backupPath
+      ? t('store.corruptDetail', { path: recovery.backupPath })
       : t('store.corruptDetailNoBackup'),
     buttons: [t('common.close')],
     noLink: true,
@@ -218,15 +247,11 @@ export function setPlayQueue(queue) {
   const isObj = queue && !Array.isArray(queue) && typeof queue === 'object';
   const rawList = isObj ? queue.songs : queue;
   const list = Array.isArray(rawList) ? rawList : [];
-  store.set(
-    'playQueue',
-    list.map(normalizeQueueEntry).filter(Boolean).slice(0, MAX_PLAY_QUEUE_LENGTH)
-  );
-  if (isObj) {
-    store.set('playQueueMeta', normalizeQueueMeta(queue));
-  } else {
-    store.delete('playQueueMeta');
-  }
+  const entries = list.map(normalizeQueueEntry).filter(Boolean).slice(0, MAX_PLAY_QUEUE_LENGTH);
+  store.set({
+    playQueue: entries,
+    playQueueMeta: isObj ? normalizeQueueMeta(queue) : undefined,
+  });
 }
 
 // 菜单栏歌词：macOS 专属，默认关闭；开启后在托盘图标旁显示当前歌词行。

@@ -29,7 +29,7 @@ import { classifyTier, formatBitrate, formatSampleRate } from '../../shared/stat
 import { resolveSongMeta } from '../../shared/song-metadata.js';
 import { escapeHtml } from './helpers.js';
 import { playSong } from './playback.js';
-import { closeAlbums } from './albums.js';
+import { closeAlbums } from './lazy-overlays.js';
 
 const TIER_LABELS = { hires: 'Hi-Res', sq: 'SQ', hq: 'HQ', other: 'Other' };
 const CHART_LIMIT = 20;
@@ -82,7 +82,12 @@ export function onCoverReady(coverUrl) {
   else if (statsVinylCover.getAttribute('src')) applyVinylCover(null);
 }
 
+let statsEventsBound = false;
+
 export function bindStatsEvents() {
+  if (statsEventsBound) return;
+  statsEventsBound = true;
+
   if (btnStatsClose) btnStatsClose.onclick = closeStats;
 
   // 点击卡片外部遮罩关闭
@@ -106,6 +111,8 @@ export function bindStatsEvents() {
   // 唱片旋转跟随播放状态
   audio.addEventListener('play', syncVinylSpin);
   audio.addEventListener('pause', syncVinylSpin);
+  window.addEventListener('dreamisle:song-changed', onSongChanged);
+  window.addEventListener('dreamisle:cover-ready', (e) => onCoverReady(e.detail));
   window.addEventListener('dreamisle:albums-opened', closeStats);
 }
 

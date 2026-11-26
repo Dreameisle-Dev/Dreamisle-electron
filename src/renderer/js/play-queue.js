@@ -44,16 +44,9 @@ export function saveQueueSnapshot(
   }
 }
 
-// 启动恢复：以曲库元数据为准，曲库里已不存在的歌直接丢弃。
+// 将主进程返回的原始队列快照按当前曲库元数据校验归一，曲库里已不存在的歌直接丢弃。
 // 曲库为空（尚未配置文件夹）时无法校验，返回空快照走默认曲库队列。
-export async function loadQueueSnapshot() {
-  let saved = null;
-  try {
-    saved = await window.dreamApi.getPlayQueue();
-  } catch (error) {
-    saved = null;
-  }
-
+export function resolveQueueSnapshot(saved) {
   const rawSongs = Array.isArray(saved)
     ? saved
     : saved && Array.isArray(saved.songs)
@@ -88,4 +81,14 @@ export async function loadQueueSnapshot() {
   }
 
   return { songs, activeQueue, sortMode };
+}
+
+export async function loadQueueSnapshot() {
+  let saved = null;
+  try {
+    saved = await window.dreamApi.getPlayQueue();
+  } catch (error) {
+    saved = null;
+  }
+  return resolveQueueSnapshot(saved);
 }

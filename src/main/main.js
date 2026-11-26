@@ -1,5 +1,6 @@
 import { app, globalShortcut, Menu, session, nativeTheme, protocol } from 'electron';
 import path from 'node:path';
+import { performance } from 'node:perf_hooks';
 import { fileURLToPath } from 'node:url';
 import {
   migrateLegacyMusicFolder,
@@ -9,10 +10,11 @@ import {
   getTaskbarLyricsSetting,
   getThemeMode,
   notifyStoreRecovery,
+  flushStoreSync,
 } from './store.js';
 import { createWindow, getMainWindow, flushWindowBounds } from './window.js';
 import { createTray, rebuildTrayMenu } from './tray.js';
-import { registerIpcHandlers } from './ipc.js';
+import { registerIpcHandlers, startStartupPrefetch } from './ipc.js';
 import { registerPlaylistsIpc } from './playlists.js';
 import { registerCoverThumbProtocol } from './music-library.js';
 import {
@@ -23,6 +25,7 @@ import {
   setLyricsLines,
 } from '../lyrics/lyrics-window.js';
 import {
+  bindTaskbarLyricsIpc,
   initTaskbarLyrics,
   disposeTaskbarLyrics,
   setTaskbarLyricsEnabled,
@@ -32,6 +35,14 @@ import { isRightAltOrCtrlDown } from '../taskbar/taskbar-win32.js';
 import { logTaskbar } from '../taskbar/taskbar-log.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const STARTUP_T0 = performance.now();
+const PROFILE_STARTUP =
+  process.argv.includes('--profile-startup') || process.env.DREAMISLE_PROFILE === '1';
+
+function logStartupPhase(label) {
+  if (!PROFILE_STARTUP) return;
+  console.log(`[startup] ${label}: ${(performance.now() - STARTUP_T0).toFixed(1)} ms`);
+}
 
 // 全局开关任务栏歌词。注意 Electron 的 globalShortcut 不能区分左右 Ctrl/Alt：
 // 在把 AltGr 映射成 Ctrl+Alt 的键盘布局上，AltGr+T 也可能触发这个组合。
@@ -143,7 +154,44 @@ function setupApplicationMenu() {
 }
 
 if (gotSingleInstanceLock) {
+  let deferredTaskbarTimer = null;
+  let postShowInitialized = false;
+
+  // 非首屏工作延后到主窗口首次显示之后，避免托盘/热键/第二渲染进程与主窗口争抢冷启动 CPU 与 GPU
+  function runPostShowInit() {
+    if (postShowInitialized || app.isQuitting) return;
+    postShowInitialized = true;
+    logStartupPhase('main-window-ready-to-show');
+
+    setImmediate(() => {
+      if (app.isQuitting) return;
+      notifyStoreRecovery(getMainWindow()); // 配置被重置过就告知用户备份位置
+      if (skipTray) console.log('[Dreamisle] tray disabled by --no-tray');
+      else createTray();
+      // macOS 菜单栏歌词：托盘创建后再初始化，菜单项与已存开关才能立即生效。
+      initMenubarLyrics();
+      setLyricsStyle(getLyricsStyle()); // 同步已存歌词样式
+      setLyricsLang(getLanguage()); // 同步已存语言
+      setLyricsLines(getDesktopLyricsLines()); // 同步单/双行设置
+      registerLyricsHotkey();
+      if (process.platform === 'win32') registerTaskbarLyricsHotkey();
+      logStartupPhase('post-show-tray-and-hotkeys');
+    });
+
+    // 任务栏歌词会加载 koffi/Win32 DLL、起第二个 Chromium 渲染进程并派生 PowerShell UIA 探测；
+    // 等主窗口首帧与封面/歌词落定后再拉起，避免冷启动阶段卡顿。
+    if (process.platform === 'win32') {
+      deferredTaskbarTimer = setTimeout(() => {
+        deferredTaskbarTimer = null;
+        if (app.isQuitting) return;
+        initTaskbarLyrics();
+        logStartupPhase('deferred-taskbar-lyrics-init');
+      }, 220);
+    }
+  }
+
   app.whenReady().then(() => {
+    logStartupPhase('app-whenReady');
     migrateLegacyMusicFolder();
     getLanguage(); // 初始化语言（createTray 依赖 t()）
     // 建窗口前先定下主题来源，否则会先以系统色绘制一帧再翻转
@@ -157,18 +205,13 @@ if (gotSingleInstanceLock) {
     registerCoverThumbProtocol();
     registerIpcHandlers();
     registerPlaylistsIpc();
-    createWindow();
-    initTaskbarLyrics();
-    notifyStoreRecovery(getMainWindow()); // 配置被重置过就告知用户备份位置
-    if (skipTray) console.log('[Dreamisle] tray disabled by --no-tray');
-    else createTray();
-    // macOS 菜单栏歌词：托盘创建后再初始化，菜单项与已存开关才能立即生效。
-    initMenubarLyrics();
-    setLyricsStyle(getLyricsStyle()); // 同步已存歌词样式
-    setLyricsLang(getLanguage()); // 同步已存语言
-    setLyricsLines(getDesktopLyricsLines()); // 同步单/双行设置
-    registerLyricsHotkey();
-    if (process.platform === 'win32') registerTaskbarLyricsHotkey();
+    bindTaskbarLyricsIpc();
+    createWindow({ onFirstShow: runPostShowInit });
+    logStartupPhase('createWindow-dispatched');
+    // 渲染进程解析 HTML/CSS/ESM 的空闲间隙里，主进程提前预热上次曲目的封面缩略图与歌词
+    setImmediate(() => {
+      if (!app.isQuitting) startStartupPrefetch();
+    });
   });
 
   app.on('window-all-closed', () => {
@@ -181,10 +224,13 @@ if (gotSingleInstanceLock) {
   });
   app.on('before-quit', () => {
     app.isQuitting = true;
+    clearTimeout(deferredTaskbarTimer);
+    deferredTaskbarTimer = null;
     flushWindowBounds();
     globalShortcut.unregister(TASKBAR_LYRICS_HOTKEY);
     disposeLyrics();
     disposeTaskbarLyrics();
     disposeMenubarLyrics();
+    flushStoreSync();
   });
 }
