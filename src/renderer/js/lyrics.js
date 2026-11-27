@@ -13,9 +13,13 @@ import {
 } from './dom.js';
 import { updatePlayButton } from './playback.js';
 import universalLyricParser from '../../shared/universal-lyric-parser.js';
-import { parseLyricsText, parseSyncLyrics } from '../../shared/lyrics-parse.js';
+import {
+  parseBilingualLyrics,
+  parseLyricsText,
+  parseSyncLyrics,
+} from '../../shared/lyrics-parse.js';
 import { decodeLyricsBuffer, repairMojibakeText } from '../../shared/lyrics-decode.js';
-import { stripSongHeader } from '../../shared/lyrics-credits.js';
+import { stripCreditLines, stripSongHeader } from '../../shared/lyrics-credits.js';
 import { buildLyricDocument } from '../../shared/taskbar-lyrics-document.js';
 import { renderWordSpans, updateWordSpansProgress } from '../../shared/lyric-word-dom.js';
 
@@ -227,10 +231,14 @@ async function fetchAndRenderLyrics(song, token, preloadedLrcData = undefined) {
     if (typeof lrcData === 'object' && lrcData !== null) {
       if (lrcData.pluginLyrics) {
         if (Array.isArray(lrcData.lines) && lrcData.lines.length > 0) {
-          parsed = { metadata: {}, lines: lrcData.lines };
-        } else {
-          const combined = [lrcData.lrc, lrcData.tlyric].filter(Boolean).join('\n');
-          if (combined.trim()) parsed = parseLyricsText(repairMojibakeText(combined));
+          parsed = { metadata: {}, lines: stripCreditLines(lrcData.lines) };
+        } else if (lrcData.lrc) {
+          parsed = parseBilingualLyrics(
+            repairMojibakeText(lrcData.lrc),
+            lrcData.tlyric ? repairMojibakeText(lrcData.tlyric) : ''
+          );
+        } else if (lrcData.tlyric) {
+          parsed = parseLyricsText(repairMojibakeText(lrcData.tlyric));
         }
       } else if (lrcData instanceof Uint8Array || ArrayBuffer.isView(lrcData)) {
         try {

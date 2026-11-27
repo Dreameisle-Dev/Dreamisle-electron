@@ -36,3 +36,60 @@ export function parseSyncLyrics(syncText) {
   }
   return parseLyricsText(lrcText);
 }
+
+// 明确分离的「原文 LRC + 译文 tlyric」（常见于在线插件返回的独立轨道）：
+// 分别解析后再按时间戳精确优先、容差次之（±350ms）一对一挂载译文，
+// 避免合并成单文本时因原文以冒号结尾（如 `adventure：`）或译文时间戳微偏被误拆成独立主行。
+export function parseBilingualLyrics(lrcText, tlyricText) {
+  const primary = parseLyricsText(lrcText);
+  if (!tlyricText || typeof tlyricText !== 'string' || !tlyricText.trim()) {
+    return primary;
+  }
+  if (primary.lines.length === 0 || primary.lines[0]?.isStatic) {
+    return primary;
+  }
+
+  const transParsed = parseLyricsText(tlyricText);
+  const transEntries = transParsed.lines.filter(
+    (item) => !item.isStatic && item.text && item.text.trim() && item.text.trim() !== '//'
+  );
+  if (transEntries.length === 0) return primary;
+
+  const lines = primary.lines.map((line) => ({ ...line }));
+  const usedTrans = new Uint8Array(transEntries.length);
+
+  // 第一轮：精确时间戳匹配
+  for (let i = 0; i < lines.length; i++) {
+    if (lines[i].translation) continue;
+    const tIdx = transEntries.findIndex((tr, idx) => !usedTrans[idx] && tr.time === lines[i].time);
+    if (tIdx >= 0) {
+      usedTrans[tIdx] = 1;
+      if (transEntries[tIdx].text !== lines[i].text) {
+        lines[i].translation = transEntries[tIdx].text;
+      }
+    }
+  }
+
+  // 第二轮：±350ms 容差内最近未配对译文匹配
+  for (let i = 0; i < lines.length; i++) {
+    if (lines[i].translation) continue;
+    let bestIdx = -1;
+    let bestDiff = 351;
+    for (let j = 0; j < transEntries.length; j++) {
+      if (usedTrans[j]) continue;
+      const diff = Math.abs(transEntries[j].time - lines[i].time);
+      if (diff < bestDiff) {
+        bestDiff = diff;
+        bestIdx = j;
+      }
+    }
+    if (bestIdx >= 0) {
+      usedTrans[bestIdx] = 1;
+      if (transEntries[bestIdx].text !== lines[i].text) {
+        lines[i].translation = transEntries[bestIdx].text;
+      }
+    }
+  }
+
+  return { metadata: primary.metadata, lines };
+}
