@@ -935,8 +935,32 @@ export function bindPlaybackEvents() {
     emitPluginPlaybackState();
   });
 
-  // 插件启用/配置变更后清理无封面负缓存；若当前曲目尚未显示封面则立即尝试重拉
+  // 仅当有新的音源插件真正进入 running 状态时，才清理负缓存并为当前无封面曲目补拉封面；
+  // 杜绝在 stopped/starting 重启过渡态反向触发 app:getCover → requireRunningPlugin 的循环反馈！
+  let runningSourceIds = new Set();
   window.addEventListener('dreamisle:plugins-changed', () => {
+    const nextRunning = new Set(
+      (state.plugins || [])
+        .filter(
+          (p) =>
+            p.enabled &&
+            !p.invalid &&
+            p.status === 'running' &&
+            Array.isArray(p.manifest?.capabilities) &&
+            p.manifest.capabilities.includes('music-source')
+        )
+        .map((p) => p.id)
+    );
+    let hasNewlyRunning = false;
+    for (const id of nextRunning) {
+      if (!runningSourceIds.has(id)) {
+        hasNewlyRunning = true;
+        break;
+      }
+    }
+    runningSourceIds = nextRunning;
+    if (!hasNewlyRunning) return;
+
     for (const [k, v] of coverUrlCache) {
       if (!v) coverUrlCache.delete(k);
     }

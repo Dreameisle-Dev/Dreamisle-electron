@@ -12,6 +12,8 @@ const expandedPanelByPlugin = new Map();
 const uninstallConfirmTimers = new Map();
 // 扫码登录轮询会话（一次最多一个活跃轮询，关闭面板或设置页时立即清理）
 let activeQrSession = null;
+// 记录上一次渲染的插件摘要，避免状态从 starting->running 过程中对子面板产生循环 IPC 反馈
+let lastPluginStatusById = new Map();
 
 function getEl(id) {
   return document.getElementById(id);
@@ -83,6 +85,7 @@ function renderPluginList(plugins = state.plugins || []) {
   const emptyEl = getEl('pluginsEmpty');
   if (!listEl) return;
 
+  lastPluginStatusById = new Map(plugins.map((p) => [p.id, p.status]));
   renderPluginsSummary(plugins);
 
   if (plugins.length === 0) {
@@ -179,7 +182,9 @@ function buildPluginCard(plugin) {
       }
       ${
         plugin.enabled && !plugin.invalid
-          ? `<button type="button" class="plugin-action-btn" data-role="restart">${escapeHtml(t('plugins.restart'))}</button>`
+          ? `<button type="button" class="plugin-action-btn" data-role="restart"${
+              plugin.status === 'starting' ? ' disabled' : ''
+            }>${escapeHtml(t('plugins.restart'))}</button>`
           : ''
       }
       <button type="button" class="plugin-action-btn danger" data-role="uninstall">${escapeHtml(t('plugins.uninstall'))}</button>
@@ -432,6 +437,16 @@ async function renderAuthSubpanel(plugin, container) {
   stopQrPolling();
   const wrap = document.createElement('div');
   wrap.className = 'plugin-auth-panel';
+
+  // 插件尚未就绪时不发起 authGetAccount，避免重启过渡态触发多余启动请求
+  if (plugin.status !== 'running') {
+    const statusLine = document.createElement('div');
+    statusLine.className = 'plugin-auth-status';
+    statusLine.textContent = t(`plugins.status.${plugin.status || 'stopped'}`);
+    wrap.appendChild(statusLine);
+    container.replaceChildren(wrap);
+    return;
+  }
 
   const accRes = await window.dreamApi.plugins.authGetAccount(plugin.id);
   const account = accRes?.ok ? accRes.data : null;
@@ -741,6 +756,7 @@ export function bindPluginSettingsEvents() {
       }
 
       if (role === 'restart') {
+        if (activeQrSession?.pluginId === pluginId) stopQrPolling();
         btn.disabled = true;
         try {
           const res = await window.dreamApi.plugins.restart(pluginId);
@@ -808,7 +824,23 @@ export function bindPluginSettingsEvents() {
 
   window.addEventListener('dreamisle:plugins-changed', () => {
     const overlay = getEl('settingsOverlay');
-    if (overlay && overlay.classList.contains('open')) {
+    if (!overlay || !overlay.classList.contains('open')) {
+      lastPluginStatusById = new Map((state.plugins || []).map((p) => [p.id, p.status]));
+      return;
+    }
+    // 若仅处于中间 starting 状态且用户正展开配置表单，避免重建 DOM 打断输入或循环拉取子面板
+    const nextMap = new Map((state.plugins || []).map((p) => [p.id, p.status]));
+    let meaningfulChange = nextMap.size !== lastPluginStatusById.size;
+    if (!meaningfulChange) {
+      for (const [id, st] of nextMap) {
+        if (lastPluginStatusById.get(id) !== st) {
+          meaningfulChange = true;
+          break;
+        }
+      }
+    }
+    lastPluginStatusById = nextMap;
+    if (meaningfulChange) {
       renderPluginList(state.plugins);
     }
   });

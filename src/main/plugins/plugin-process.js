@@ -36,6 +36,8 @@ export class PluginProcess {
     this.reqSeq = 0;
     this.pending = new Map();
     this.startPromise = null;
+    this.stopPromise = null;
+    this.childExitPromise = null;
     this.stopping = false;
   }
 
@@ -88,6 +90,18 @@ export class PluginProcess {
       }
 
       this.child = child;
+      this.childExitPromise = new Promise((res) => {
+        child.once('exit', () => res());
+      });
+      // Electron utilityProcess 在触发 'spawn' 前调用 kill() 可能返回 false；
+      // 若在派生完成前已被停止或替换，必须在 spawn 瞬间补杀，杜绝孤儿进程残留。
+      child.once('spawn', () => {
+        if (this.stopping || this.child !== child) {
+          try {
+            child.kill();
+          } catch {}
+        }
+      });
       const initTimer = setTimeout(() => {
         const err = new PluginError('TIMEOUT', 'Plugin activation timed out');
         this.pushLog('error', err.message);
@@ -102,8 +116,14 @@ export class PluginProcess {
 
       child.on('message', (msg) => {
         if (!msg || typeof msg !== 'object') return;
+        if (this.child !== child) return;
 
         if (msg.type === 'ready') {
+          if (this.stopping) {
+            this.killNow('stopped', null);
+            finish(new PluginError('INTERNAL_ERROR', 'Plugin stopped during activation'));
+            return;
+          }
           this.authMeta = msg.authMeta || { supported: false };
           this.setStatus('running', null);
           this.pushLog('info', `Plugin v${this.manifest.version} activated (PID ${child.pid})`);
@@ -338,21 +358,49 @@ export class PluginProcess {
   }
 
   async stop() {
+    if (this.stopPromise) return this.stopPromise;
     this.stopping = true;
-    if (!this.child) {
-      this.setStatus('stopped', null);
-      return;
-    }
-    const child = this.child;
-    try {
-      await this.invoke('shutdown', {}, { timeoutMs: SHUTDOWN_TIMEOUT_MS });
-    } catch {}
-    if (this.child === child) {
+
+    this.stopPromise = (async () => {
+      const child = this.child;
+      const exitPromise = this.childExitPromise;
+      if (!child) {
+        this.setStatus('stopped', null);
+        return;
+      }
+
+      // 仅在已完成初始化并处于 running 状态时才尝试优雅 shutdown；
+      // 若仍在 starting 中途被停止，直接终止子进程避免挂起或遗留孤儿进程。
+      if (this.status === 'running') {
+        try {
+          await this.invoke('shutdown', {}, { timeoutMs: SHUTDOWN_TIMEOUT_MS });
+        } catch {}
+      }
+
+      if (this.child === child) {
+        this.child = null;
+      }
       try {
         child.kill();
       } catch {}
-      this.child = null;
-    }
-    this.setStatus('stopped', null);
+
+      // 等待子进程真正退出（最多 1s），若在 shutdown 期间已退出则会立即 resolve
+      if (exitPromise) {
+        let timer = null;
+        await Promise.race([
+          exitPromise,
+          new Promise((resolve) => {
+            timer = setTimeout(resolve, 1000);
+          }),
+        ]);
+        if (timer) clearTimeout(timer);
+      }
+
+      this.setStatus('stopped', null);
+    })().finally(() => {
+      this.stopPromise = null;
+    });
+
+    return this.stopPromise;
   }
 }

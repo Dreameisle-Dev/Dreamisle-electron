@@ -43,10 +43,30 @@ const MAX_COVER_DOWNLOAD_CONCURRENCY = 6;
 
 const installedPlugins = new Map(); // id -> scanned entry
 const pluginProcesses = new Map(); // id -> PluginProcess (1 utilityProcess per enabled plugin)
+const pluginLifecycleOps = new Map(); // id -> 串行化启停/重启/卸载的互斥链，杜绝并发 fork 风暴
+const startingWorkers = new Map(); // id -> 进行中的单飞启动 Promise，并发调用直接复用同一进程
+const restartingWorkers = new Map(); // id -> 进行中的单飞重启 Promise，连点或并发重启合并为一次
 const pluginStorages = new Map(); // id -> storage adapter
 const trackSnapshots = new Map(); // dream-track://... -> PluginTrack
 const streamCache = new Map(); // `${pluginId}:${trackId}:${quality}` -> { stream, expiresAt }
 const coverCacheInflight = new Map();
+
+let notifyTimer = null;
+let lastNotifiedSummaryJson = '';
+let disposing = false;
+
+// 按插件 ID 串行化所有生命周期变更（start / stop / restart / install / uninstall）
+function runPluginLifecycleOp(pluginId, fn) {
+  const prev = pluginLifecycleOps.get(pluginId) || Promise.resolve();
+  const next = prev.catch(() => {}).then(fn);
+  pluginLifecycleOps.set(pluginId, next);
+  next.finally(() => {
+    if (pluginLifecycleOps.get(pluginId) === next) {
+      pluginLifecycleOps.delete(pluginId);
+    }
+  });
+  return next;
+}
 
 let coverDownloadActive = 0;
 const coverDownloadWaiters = [];
@@ -93,11 +113,28 @@ function getStorageFor(pluginId) {
   return st;
 }
 
-function notifyRendererPluginsChanged() {
+function flushRendererPluginsChanged() {
+  notifyTimer = null;
   const win = getMainWindow();
-  if (win && !win.isDestroyed() && !win.webContents.isDestroyed()) {
-    win.webContents.send('plugins:changed', listPluginSummaries());
+  if (!win || win.isDestroyed() || win.webContents.isDestroyed()) return;
+  const summaries = listPluginSummaries();
+  const json = JSON.stringify(summaries);
+  if (json === lastNotifiedSummaryJson) return;
+  lastNotifiedSummaryJson = json;
+  win.webContents.send('plugins:changed', summaries);
+}
+
+function notifyRendererPluginsChanged({ immediate = false } = {}) {
+  if (immediate) {
+    if (notifyTimer) {
+      clearTimeout(notifyTimer);
+      notifyTimer = null;
+    }
+    flushRendererPluginsChanged();
+    return;
   }
+  if (notifyTimer) return;
+  notifyTimer = setTimeout(flushRendererPluginsChanged, 40);
 }
 
 export function notifyRendererStreamError(songUri, err) {
@@ -251,22 +288,37 @@ export async function savePluginConfigFromUi(pluginId, incoming) {
   return getPluginConfigForUi(pluginId);
 }
 
-async function startPluginWorker(pluginId) {
+async function startPluginWorkerUnlocked(pluginId) {
+  if (disposing) {
+    throw new PluginError('UNSUPPORTED', 'Application is shutting down');
+  }
   const entry = installedPlugins.get(pluginId);
   if (!entry || entry.invalid || !entry.manifest) {
     throw new PluginError('INVALID_CONFIG', `Plugin "${pluginId}" is invalid or not installed`);
   }
+  if (!getPluginEnabledIds().includes(pluginId)) {
+    throw new PluginError('UNSUPPORTED', `Plugin "${pluginId}" is disabled`);
+  }
 
-  let proc = pluginProcesses.get(pluginId);
-  if (proc && proc.status === 'running') return proc;
-  if (proc) {
-    await proc.stop().catch(() => {});
+  const existing = pluginProcesses.get(pluginId);
+  if (existing && existing.status === 'running' && existing.child) {
+    return existing;
+  }
+  if (existing) {
+    await existing.stop().catch(() => {});
+    if (pluginProcesses.get(pluginId) === existing) {
+      pluginProcesses.delete(pluginId);
+    }
   }
 
   const initialConfig = await resolveFullConfigForWorker(entry.manifest);
-  let latestConfig = initialConfig;
+  // 等待配置期间若应用退出或插件被禁用/卸载，直接放弃派生
+  if (disposing || !getPluginEnabledIds().includes(pluginId) || !installedPlugins.has(pluginId)) {
+    throw new PluginError('UNSUPPORTED', `Plugin "${pluginId}" was disabled`);
+  }
 
-  proc = new PluginProcess({
+  let latestConfig = initialConfig;
+  const proc = new PluginProcess({
     manifest: entry.manifest,
     entryPath: entry.entryPath,
     storage: getStorageFor(pluginId),
@@ -280,21 +332,62 @@ async function startPluginWorker(pluginId) {
     origPush(cfg);
   };
 
+  // 双重保险：确保不会覆盖掉任何仍存活的旧进程实例
+  const stale = pluginProcesses.get(pluginId);
+  if (stale && stale !== proc) {
+    stale.killNow('stopped', null);
+  }
   pluginProcesses.set(pluginId, proc);
   await proc.start();
   return proc;
 }
 
-async function stopPluginWorker(pluginId) {
+function startPluginWorker(pluginId) {
+  // 单飞去重：若队尾已有在途启动/重启任务，直接复用同一 Promise，绝不重复 fork
+  if (startingWorkers.has(pluginId)) {
+    return startingWorkers.get(pluginId);
+  }
+  const existing = pluginProcesses.get(pluginId);
+  if (
+    existing &&
+    existing.status === 'running' &&
+    existing.child &&
+    !pluginLifecycleOps.has(pluginId)
+  ) {
+    return Promise.resolve(existing);
+  }
+
+  const job = runPluginLifecycleOp(pluginId, () => startPluginWorkerUnlocked(pluginId)).finally(
+    () => {
+      if (startingWorkers.get(pluginId) === job) {
+        startingWorkers.delete(pluginId);
+      }
+    }
+  );
+  startingWorkers.set(pluginId, job);
+  return job;
+}
+
+async function stopPluginWorkerUnlocked(pluginId) {
   const proc = pluginProcesses.get(pluginId);
-  if (!proc) return;
-  await proc.stop().catch(() => {});
-  pluginProcesses.delete(pluginId);
+  if (proc) {
+    await proc.stop().catch(() => {});
+    if (pluginProcesses.get(pluginId) === proc) {
+      pluginProcesses.delete(pluginId);
+    }
+  }
   // 清理该插件的流缓存
   const prefix = `${pluginId}:`;
   for (const key of streamCache.keys()) {
     if (key.startsWith(prefix)) streamCache.delete(key);
   }
+}
+
+function stopPluginWorker(pluginId) {
+  // 新排队的停止操作会使此前在途的启动/重启引用失效，确保后续再启用/重启必须排在本次停止之后
+  startingWorkers.delete(pluginId);
+  restartingWorkers.delete(pluginId);
+  return runPluginLifecycleOp(pluginId, () => stopPluginWorkerUnlocked(pluginId));
 }
 
 export async function initPlugins() {
@@ -327,7 +420,7 @@ export async function refreshInstalledPlugins({ startEnabled = false } = {}) {
     );
   }
 
-  notifyRendererPluginsChanged();
+  notifyRendererPluginsChanged({ immediate: true });
   return listPluginSummaries();
 }
 
@@ -372,23 +465,55 @@ export async function setPluginEnabled(pluginId, enabled) {
   if (!entry || entry.invalid) {
     throw new Error(`插件不可用：${pluginId}`);
   }
-  setPluginEnabledId(pluginId, enabled);
   if (enabled) {
-    await startPluginWorker(pluginId);
+    const job = runPluginLifecycleOp(pluginId, async () => {
+      setPluginEnabledId(pluginId, true);
+      return startPluginWorkerUnlocked(pluginId);
+    }).finally(() => {
+      if (startingWorkers.get(pluginId) === job) {
+        startingWorkers.delete(pluginId);
+      }
+    });
+    startingWorkers.set(pluginId, job);
+    await job;
   } else {
-    await stopPluginWorker(pluginId);
+    startingWorkers.delete(pluginId);
+    restartingWorkers.delete(pluginId);
+    await runPluginLifecycleOp(pluginId, async () => {
+      setPluginEnabledId(pluginId, false);
+      await stopPluginWorkerUnlocked(pluginId);
+    });
   }
-  notifyRendererPluginsChanged();
+  notifyRendererPluginsChanged({ immediate: true });
   return listPluginSummaries();
 }
 
 export async function restartPlugin(pluginId) {
   const entry = installedPlugins.get(pluginId);
   if (!entry || entry.invalid) throw new Error(`插件不可用：${pluginId}`);
-  await stopPluginWorker(pluginId);
-  setPluginEnabledId(pluginId, true);
-  await startPluginWorker(pluginId);
-  notifyRendererPluginsChanged();
+
+  // 合并并发重启请求：同一插件正在重启时直接复用在途任务，不再排队重复启停
+  if (restartingWorkers.has(pluginId)) {
+    await restartingWorkers.get(pluginId);
+    return listPluginSummaries();
+  }
+
+  const job = runPluginLifecycleOp(pluginId, async () => {
+    await stopPluginWorkerUnlocked(pluginId);
+    setPluginEnabledId(pluginId, true);
+    return startPluginWorkerUnlocked(pluginId);
+  }).finally(() => {
+    if (startingWorkers.get(pluginId) === job) {
+      startingWorkers.delete(pluginId);
+    }
+    if (restartingWorkers.get(pluginId) === job) {
+      restartingWorkers.delete(pluginId);
+    }
+  });
+  startingWorkers.set(pluginId, job);
+  restartingWorkers.set(pluginId, job);
+  await job;
+  notifyRendererPluginsChanged({ immediate: true });
   return listPluginSummaries();
 }
 
@@ -402,7 +527,7 @@ export async function installPluginFolder(folderPath) {
     setPluginEnabledId(installed.id, true);
     await startPluginWorker(installed.id).catch(() => {});
   }
-  notifyRendererPluginsChanged();
+  notifyRendererPluginsChanged({ immediate: true });
   return { installed: installed.manifest, plugins: listPluginSummaries() };
 }
 
@@ -412,7 +537,7 @@ export async function installPluginZip(zipPath) {
   await refreshInstalledPlugins({ startEnabled: false });
   setPluginEnabledId(installed.id, true);
   await startPluginWorker(installed.id).catch(() => {});
-  notifyRendererPluginsChanged();
+  notifyRendererPluginsChanged({ immediate: true });
   return { installed: installed.manifest, plugins: listPluginSummaries() };
 }
 
@@ -452,10 +577,23 @@ async function requireRunningPlugin(pluginId, capability = null) {
   if (capability && !entry.manifest.capabilities.includes(capability)) {
     throw new PluginError('UNSUPPORTED', `插件 "${entry.manifest.name}" 不支持 ${capability}`);
   }
-  let proc = pluginProcesses.get(pluginId);
-  if (!proc || proc.status !== 'running') {
-    proc = await startPluginWorker(pluginId);
+  // 若该插件正处于启动/重启中，直接复用同一单飞 Promise，不向正在停机的旧进程发 RPC，也不二次派生
+  if (startingWorkers.has(pluginId)) {
+    const proc = await startingWorkers.get(pluginId);
+    return { entry, proc };
   }
+  let proc = pluginProcesses.get(pluginId);
+  if (proc && proc.status === 'running' && proc.child && !pluginLifecycleOps.has(pluginId)) {
+    return { entry, proc };
+  }
+  // 已崩溃的插件不因后台封面/账号探测自动循环重启，需用户显式点击「重启」
+  if (proc && proc.status === 'crashed') {
+    throw new PluginError(
+      'INTERNAL_ERROR',
+      proc.lastError || `插件 "${entry.manifest.name}" 已崩溃`
+    );
+  }
+  proc = await startPluginWorker(pluginId);
   return { entry, proc };
 }
 
@@ -826,8 +964,19 @@ export function emitLifecycleTrackComplete(payload) {
 }
 
 export async function disposePlugins() {
+  disposing = true;
+  if (notifyTimer) {
+    clearTimeout(notifyTimer);
+    notifyTimer = null;
+  }
+  const ids = new Set([
+    ...pluginProcesses.keys(),
+    ...startingWorkers.keys(),
+    ...restartingWorkers.keys(),
+    ...pluginLifecycleOps.keys(),
+  ]);
   const stops = [];
-  for (const pluginId of [...pluginProcesses.keys()]) {
+  for (const pluginId of ids) {
     stops.push(stopPluginWorker(pluginId));
   }
   await Promise.allSettled(stops);
