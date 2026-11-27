@@ -12,6 +12,8 @@ export function buildLyricDocument(song, lines) {
     songPath: song?.path ?? null,
     title: song?.title || '',
     artist: song?.artist || '',
+    album: song?.album || null,
+    duration: Number.isFinite(song?.duration) ? song.duration : null,
     isStatic: !!list[0]?.isStatic,
     lines: list.map((line) => ({
       time: Number(line.time) || 0,

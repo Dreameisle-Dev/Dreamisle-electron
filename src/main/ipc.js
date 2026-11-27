@@ -63,6 +63,7 @@ import {
   updateTaskbarLyricsStyle,
   updateTaskbarLyricsTranslation,
   refreshTaskbarLyricsConfig,
+  syncTaskbarLyricsCover,
   isTaskbarLyricsRunning,
   setTaskbarLyricsEnabled,
 } from '../taskbar/taskbar-lyrics.js';
@@ -292,7 +293,11 @@ export function registerIpcHandlers() {
   });
 
   handleMainIpc('app:getCover', async (event, filePath, songMeta) => {
-    return readCover(filePath, getMusicFolders(), songMeta);
+    const cover = await readCover(filePath, getMusicFolders(), songMeta);
+    if (typeof cover === 'string' && cover.length > 0) {
+      syncTaskbarLyricsCover(filePath, cover);
+    }
+    return cover;
   });
 
   handleMainIpc('app:getCoverThumb', async (event, filePath, maxSize, songMeta) => {

@@ -118,6 +118,16 @@ function clearCachedCover() {
   lastCover = null;
 }
 
+function buildDocSongMeta(doc) {
+  if (!doc?.title) return null;
+  return {
+    title: doc.title,
+    artist: doc.artist || '',
+    album: doc.album || null,
+    duration: Number.isFinite(doc.duration) ? doc.duration : null,
+  };
+}
+
 // 仅在任务栏歌词启用时按 songPath 去重读取封面，停用期间不做无谓解码与缓存滞留
 function ensureCoverLoaded() {
   const songPath = lastDoc?.songPath || null;
@@ -129,7 +139,7 @@ function ensureCoverLoaded() {
   coverSongPath = songPath;
   coverToken++;
   if (songPath) {
-    loadCover(songPath, coverToken);
+    loadCover(songPath, buildDocSongMeta(lastDoc), coverToken);
   } else {
     lastCover = null;
     widget.send('taskbar:cover', null);
@@ -138,9 +148,9 @@ function ensureCoverLoaded() {
 
 // 复用主封面磁盘/内存缓存：优先直接下发稳定 dream-thumb:// URL；
 // 仅在缩略图目录不可写退回原始 buffer 时再用 data URL 兜底。
-async function loadCover(songPath, token) {
+async function loadCover(songPath, songMeta, token) {
   try {
-    const cover = await readCover(songPath, getMusicFolders());
+    const cover = await readCover(songPath, getMusicFolders(), songMeta);
     if (token !== coverToken || !widget.isEnabled()) return;
     if (typeof cover === 'string' && cover.length > 0) {
       lastCover = cover;
@@ -154,12 +164,16 @@ async function loadCover(songPath, token) {
     }
     const rawBuf = Buffer.isBuffer(cover.buffer) ? cover.buffer : Buffer.from(cover.buffer);
     const image = nativeImage.createFromBuffer(rawBuf);
-    if (image.isEmpty()) {
-      lastCover = null;
-      widget.send('taskbar:cover', null);
+    if (!image.isEmpty()) {
+      lastCover = image.resize({ height: 72, quality: 'good' }).toDataURL();
+      widget.send('taskbar:cover', lastCover);
       return;
     }
-    lastCover = image.resize({ height: 72, quality: 'good' }).toDataURL();
+    const mime =
+      typeof cover.format === 'string' && cover.format.startsWith('image/')
+        ? cover.format
+        : 'image/jpeg';
+    lastCover = `data:${mime};base64,${rawBuf.toString('base64')}`;
     widget.send('taskbar:cover', lastCover);
   } catch (error) {
     if (token !== coverToken || !widget.isEnabled()) return;
@@ -167,6 +181,18 @@ async function loadCover(songPath, token) {
     lastCover = null;
     widget.send('taskbar:cover', null);
   }
+}
+
+// 主窗口异步匹配到在线封面（例如插件刚启动或刚为本地无封面歌曲拉到封面）时，同步刷新任务栏封面
+export function syncTaskbarLyricsCover(songPath, coverUrl) {
+  if (!widget.isEnabled()) return;
+  if (!songPath || typeof coverUrl !== 'string' || !coverUrl) return;
+  if (lastDoc?.songPath !== songPath) return;
+  if (lastCover === coverUrl) return;
+  coverSongPath = songPath;
+  coverToken++;
+  lastCover = coverUrl;
+  widget.send('taskbar:cover', lastCover);
 }
 
 function isWidgetSender(event) {
