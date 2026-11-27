@@ -4,7 +4,7 @@
 // 必须共用同一条图。均衡器关闭时 10 段增益均为 0dB、前级增益为 1，整段滤波链为透明直通，
 // 频谱分析放在均衡器之后，调节均衡器时频谱响应与实际听感一致。
 
-import { EQ_BANDS, EQ_BAND_Q, FLAT_GAINS, computePreampDb } from '../../shared/equalizer.js';
+import { EQ_BAND_SPECS, FLAT_GAINS, computePreampDb } from '../../shared/equalizer.js';
 import { audio } from './dom.js';
 import { state } from './state.js';
 
@@ -46,13 +46,20 @@ function bindResumeGuards() {
   window.addEventListener('keydown', resumeOnGesture, { capture: true, passive: true });
 }
 
+const EQ_RAMP_TIME_CONSTANT = 0.015; // 15ms 指数平滑过渡，切换预设或拖推子零爆音
+
 export function applyEqualizerToGraph(eqState = state.equalizer) {
   if (!graph) return;
   const effective = eqState && eqState.enabled ? eqState.gains : FLAT_GAINS;
+  const now = graph.ctx.currentTime;
   graph.filters.forEach((node, i) => {
-    node.gain.value = effective[i] || 0;
+    const targetGain = effective[i] || 0;
+    node.gain.cancelScheduledValues(now);
+    node.gain.setTargetAtTime(targetGain, now, EQ_RAMP_TIME_CONSTANT);
   });
-  graph.preampNode.gain.value = Math.pow(10, computePreampDb(effective) / 20);
+  const targetPreamp = Math.pow(10, computePreampDb(effective) / 20);
+  graph.preampNode.gain.cancelScheduledValues(now);
+  graph.preampNode.gain.setTargetAtTime(targetPreamp, now, EQ_RAMP_TIME_CONSTANT);
   resumeAudioGraph();
 }
 
@@ -65,11 +72,11 @@ export function ensureAudioGraph() {
   try {
     built = new AudioContext();
 
-    const filters = EQ_BANDS.map((freq) => {
+    const filters = EQ_BAND_SPECS.map((spec) => {
       const node = built.createBiquadFilter();
-      node.type = 'peaking';
-      node.frequency.value = freq;
-      node.Q.value = EQ_BAND_Q;
+      node.type = spec.type;
+      node.frequency.value = spec.filterFreq;
+      node.Q.value = spec.Q;
       node.gain.value = 0;
       return node;
     });

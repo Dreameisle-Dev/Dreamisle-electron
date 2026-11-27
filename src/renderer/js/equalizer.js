@@ -5,6 +5,7 @@ import { t } from '../../shared/i18n.js';
 import {
   EQ_BANDS,
   EQ_GAIN_LIMIT,
+  EQ_GAIN_STEP,
   EQ_PRESETS,
   FLAT_GAINS,
   computePreampDb,
@@ -82,11 +83,13 @@ function resetEq() {
   commit();
 }
 
-// +12 / 0 / −6：正数带符号，减号用 U+2212（和刻度、音量显示的排版一致）
+// +12 / +2.5 / 0 / −1.5：正数带符号，整数不带 .0，减号用 U+2212（和刻度、音量显示的排版一致）
 function formatDb(value) {
-  if (value > 0) return `+${value}`;
-  if (value < 0) return `−${Math.abs(value)}`;
-  return '0';
+  const num = Number(value) || 0;
+  if (num === 0) return '0';
+  const abs = Math.abs(num);
+  const str = Number.isInteger(abs) ? String(abs) : abs.toFixed(1);
+  return num > 0 ? `+${str}` : `−${str}`;
 }
 
 function buildFaders() {
@@ -107,7 +110,7 @@ function buildFaders() {
     input.className = 'eq-fader';
     input.min = String(-EQ_GAIN_LIMIT);
     input.max = String(EQ_GAIN_LIMIT);
-    input.step = '1';
+    input.step = String(EQ_GAIN_STEP);
     input.value = '0';
     input.dataset.index = String(i);
     const label = freq >= 1000 ? `${freq / 1000} kHz` : `${freq} Hz`;
@@ -247,11 +250,16 @@ export function bindEqEvents() {
   eqEnableSwitch.addEventListener('click', () => setEnabled(!state.equalizer.enabled));
   eqResetBtn.addEventListener('click', resetEq);
 
-  // 推子是动态生成的，事件委托到容器上
+  // 推子是动态生成的，事件委托到容器上；双击任意频段推子快速归零
   eqFadersEl.addEventListener('input', (e) => {
     const input = e.target;
     if (!input.classList || !input.classList.contains('eq-fader')) return;
     setGain(Number(input.dataset.index), Number(input.value));
+  });
+  eqFadersEl.addEventListener('dblclick', (e) => {
+    const input = e.target;
+    if (!input.classList || !input.classList.contains('eq-fader')) return;
+    setGain(Number(input.dataset.index), 0);
   });
 
   // 播放时兜底唤醒共享 AudioContext（audio-graph 内也已监听，这里保留兼容）
