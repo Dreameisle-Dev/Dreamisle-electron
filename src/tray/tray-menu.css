@@ -1,0 +1,329 @@
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  background: transparent;
+  overflow: hidden;
+  user-select: none;
+  -webkit-user-select: none;
+  font-family:
+    'Segoe UI Variable',
+    'Segoe UI',
+    'Microsoft YaHei UI',
+    system-ui,
+    -apple-system,
+    sans-serif;
+  color: var(--ink1);
+  -webkit-font-smoothing: antialiased;
+}
+
+.tm-canvas {
+  padding: 12px;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-start;
+}
+
+.tm-card {
+  width: 248px;
+  padding: 8px;
+  border-radius: 14px;
+  background: light-dark(rgba(253, 251, 255, 0.97), rgba(24, 18, 32, 0.97));
+  border: 1px solid light-dark(rgba(46, 39, 57, 0.13), rgba(255, 255, 255, 0.13));
+  box-shadow:
+    0 14px 32px -6px light-dark(rgba(46, 39, 57, 0.22), rgba(0, 0, 0, 0.65)),
+    0 2px 8px -2px light-dark(rgba(46, 39, 57, 0.1), rgba(0, 0, 0, 0.38)),
+    inset 0 1px 0 light-dark(rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0.09));
+  outline: none;
+  opacity: 0;
+  transform: translateY(6px) scale(0.97);
+  transition:
+    opacity 0.12s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.14s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.tm-card.is-open {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+
+/* 顶部正在播放区 */
+.tm-now {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 4px 8px;
+}
+
+.tm-cover-wrap {
+  position: relative;
+  width: 38px;
+  height: 38px;
+  border-radius: 8px;
+  overflow: hidden;
+  flex: none;
+  background: linear-gradient(145deg, light-dark(#e9def5, #472c58), light-dark(#f6d5e0, #6d3150));
+  border: 1px solid light-dark(rgba(46, 39, 57, 0.1), rgba(255, 255, 255, 0.12));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.tm-cover-fallback {
+  color: light-dark(rgba(46, 39, 57, 0.55), rgba(255, 255, 255, 0.72));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.tm-cover-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0;
+  transition: opacity 0.16s ease;
+}
+
+.tm-cover-wrap.has-cover .tm-cover-img {
+  opacity: 1;
+}
+
+.tm-cover-wrap.has-cover .tm-cover-fallback {
+  opacity: 0;
+}
+
+.tm-track-meta {
+  min-width: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.tm-track-title {
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.3;
+  color: var(--ink1);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tm-track-artist {
+  font-size: 11.5px;
+  line-height: 1.25;
+  color: var(--ink3);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tm-playing-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex: none;
+  background: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent);
+}
+
+.tm-playing-dot[hidden] {
+  display: none;
+}
+
+/* 播控横条 */
+.tm-transport {
+  display: grid;
+  grid-template-columns: 1fr 1.25fr 1fr;
+  gap: 6px;
+  padding: 4px;
+  border-radius: 10px;
+  background: var(--card-bg);
+  border: 1px solid var(--hair);
+}
+
+.tm-ctrl-btn {
+  height: 30px;
+  border: none;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--ink2);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0;
+  transition:
+    background-color 0.14s ease,
+    color 0.14s ease,
+    transform 0.1s ease;
+}
+
+.tm-ctrl-btn:hover {
+  background: var(--row-hover);
+  color: var(--ink1);
+}
+
+.tm-ctrl-btn:active {
+  transform: scale(0.95);
+}
+
+.tm-ctrl-play {
+  background: var(--play-bg);
+  color: var(--play-ink);
+  box-shadow: 0 2px 8px -2px var(--shade-2);
+}
+
+.tm-ctrl-play:hover {
+  background: var(--play-bg);
+  color: var(--play-ink);
+  filter: brightness(1.08);
+}
+
+.tm-ctrl-play svg.is-hidden {
+  display: none;
+}
+
+/* 分隔线 */
+.tm-sep {
+  height: 1px;
+  margin: 6px 4px;
+  background: var(--hair);
+}
+
+/* 菜单列表 */
+.tm-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.tm-item {
+  width: 100%;
+  border: none;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--ink1);
+  padding: 7px 9px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 500;
+  text-align: left;
+  cursor: pointer;
+  outline: none;
+  transition:
+    background-color 0.13s ease,
+    color 0.13s ease;
+}
+
+.tm-item:hover,
+.tm-item:focus-visible {
+  background: var(--row-hover);
+}
+
+.tm-item:active {
+  background: var(--row-on);
+}
+
+.tm-item-icon {
+  width: 16px;
+  height: 16px;
+  flex: none;
+  color: var(--ink2);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.13s ease;
+}
+
+.tm-item:hover .tm-item-icon {
+  color: var(--ink1);
+}
+
+.tm-item-copy {
+  min-width: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.tm-item-label {
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.3;
+}
+
+.tm-item-hint {
+  font-size: 10.5px;
+  color: var(--ink3);
+  font-weight: 400;
+  line-height: 1.2;
+}
+
+/* 紧凑开关胶囊 */
+.tm-switch {
+  position: relative;
+  width: 30px;
+  height: 17px;
+  flex: none;
+  border-radius: 999px;
+  background: var(--track);
+  transition: background-color 0.18s ease;
+}
+
+.tm-switch::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  background: #ffffff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.24);
+  transition: transform 0.18s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.tm-item[aria-checked='true'] .tm-switch {
+  background: var(--accent);
+}
+
+.tm-item[aria-checked='true'] .tm-switch::after {
+  transform: translateX(13px);
+}
+
+.tm-item[aria-checked='true'] .tm-item-icon {
+  color: var(--accent);
+}
+
+/* 危险项（退出） */
+.tm-item.is-danger:hover,
+.tm-item.is-danger:focus-visible {
+  background: light-dark(rgba(210, 52, 82, 0.1), rgba(255, 110, 134, 0.14));
+  color: light-dark(#c62d4b, #ff879b);
+}
+
+.tm-item.is-danger:hover .tm-item-icon,
+.tm-item.is-danger:focus-visible .tm-item-icon {
+  color: light-dark(#c62d4b, #ff879b);
+}

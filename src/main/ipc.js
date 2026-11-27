@@ -47,6 +47,11 @@ import {
 import { toggleMiniMode, minimizeWindow, maximizeWindow, closeWindow } from './window.js';
 import { rebuildTrayMenu } from './tray.js';
 import {
+  updateTrayPlayback,
+  updateTrayTrackCover,
+  updateTrayTrackDocument,
+} from './tray-menu-window.js';
+import {
   setLyricsContent,
   setDesktopLyricsPlayback,
   setLyricsStyle,
@@ -240,7 +245,12 @@ export function registerIpcHandlers() {
         raceWithinMs(prefetch.coverPromise, 20),
         raceWithinMs(prefetch.lyricsPromise, 20),
       ]);
-      if (coverRes.done) initialCover = { songPath: prefetch.songPath, value: coverRes.value };
+      if (coverRes.done) {
+        initialCover = { songPath: prefetch.songPath, value: coverRes.value };
+        if (typeof coverRes.value === 'string' && coverRes.value.length > 0) {
+          updateTrayTrackCover(prefetch.songPath, coverRes.value);
+        }
+      }
       if (lyricsRes.done) {
         initialLyrics = { songPath: prefetch.songPath, value: lyricsRes.value };
         // 歌词已直接随 bootstrap 下发，释放启动预热引用
@@ -296,6 +306,7 @@ export function registerIpcHandlers() {
     const cover = await readCover(filePath, getMusicFolders(), songMeta);
     if (typeof cover === 'string' && cover.length > 0) {
       syncTaskbarLyricsCover(filePath, cover);
+      updateTrayTrackCover(filePath, cover);
     }
     return cover;
   });
@@ -363,6 +374,7 @@ export function registerIpcHandlers() {
   // 桌面歌词是运行态，不落盘：设置页开关直接开/关当前悬浮窗
   handleMainIpc('settings:setDesktopLyricsEnabled', (event, enabled) => {
     if (!!enabled !== isLyricsWindowVisible()) toggleDesktopLyrics();
+    rebuildTrayMenu();
     return isLyricsWindowVisible();
   });
 
@@ -392,6 +404,7 @@ export function registerIpcHandlers() {
   handleMainIpc('settings:setThemeMode', (event, mode) => {
     const next = setThemeMode(mode);
     nativeTheme.themeSource = next;
+    rebuildTrayMenu();
     return next;
   });
 
@@ -440,13 +453,15 @@ export function registerIpcHandlers() {
   // 用 send/on 而不是 invoke：timeupdate 4Hz 的频率不值得为每次推送建 Promise。
   onMainIpc('app:setTaskbarLyricsDocument', (event, doc) => {
     updateTaskbarLyricsDocument(doc);
-    // 同一份文档也用于菜单栏的“无歌词时显示歌名/歌手”兜底
+    // 同一份文档也用于菜单栏与 Windows 托盘浮层的曲目信息展示
     updateMenubarLyricsDocument(doc);
+    updateTrayTrackDocument(doc);
   });
 
   onMainIpc('app:updateTaskbarLyricsPlayback', (event, playback) => {
     updateTaskbarLyricsPlayback(playback);
     setDesktopLyricsPlayback(playback);
+    updateTrayPlayback(playback);
   });
 
   // 处理小窗模式切换

@@ -13,7 +13,7 @@ import {
   flushStoreSync,
 } from './store.js';
 import { createWindow, getMainWindow, flushWindowBounds } from './window.js';
-import { createTray, rebuildTrayMenu } from './tray.js';
+import { createTray, disposeTray, rebuildTrayMenu } from './tray.js';
 import { registerIpcHandlers, startStartupPrefetch } from './ipc.js';
 import { registerPlaylistsIpc } from './playlists.js';
 import { registerCoverThumbProtocol } from './music-library.js';
@@ -250,6 +250,7 @@ if (gotSingleInstanceLock) {
     disposeLyrics();
     disposeTaskbarLyrics();
     disposeMenubarLyrics();
+    disposeTray();
     disposePlugins().catch(() => {});
     flushStoreSync();
   });

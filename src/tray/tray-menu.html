@@ -1,0 +1,228 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'none'; style-src 'self'; script-src 'self'; img-src 'self' dream-thumb: data:;"
+    />
+    <title>Dreamisle Tray Menu</title>
+    <link rel="stylesheet" href="../renderer/style/tokens.css" />
+    <link rel="stylesheet" href="./tray-menu.css" />
+  </head>
+  <body>
+    <div class="tm-canvas">
+      <div class="tm-card" id="tmCard" role="menu" tabindex="-1">
+        <!-- 顶部迷你正在播放区 -->
+        <div class="tm-now">
+          <div class="tm-cover-wrap" id="tmCoverWrap">
+            <img class="tm-cover-img" id="tmCoverImg" alt="" draggable="false" />
+            <div class="tm-cover-fallback" aria-hidden="true">
+              <svg
+                width="17"
+                height="17"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.8"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path d="M9 18V5l12-2v13"></path>
+                <circle cx="6" cy="18" r="3"></circle>
+                <circle cx="18" cy="16" r="3"></circle>
+              </svg>
+            </div>
+          </div>
+          <div class="tm-track-meta">
+            <div class="tm-track-title" id="tmTrackTitle">Dreamisle</div>
+            <div class="tm-track-artist" id="tmTrackArtist">暂无播放</div>
+          </div>
+          <span class="tm-playing-dot" id="tmPlayingDot" hidden aria-hidden="true"></span>
+        </div>
+
+        <!-- 播放控制条 -->
+        <div class="tm-transport" role="group">
+          <button
+            type="button"
+            class="tm-ctrl-btn"
+            id="btnPrev"
+            data-action="prev"
+            title="上一首"
+            aria-label="上一首"
+          >
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <path d="M6 6h2v12H6zm3.5 6l8.5 6V6z" />
+            </svg>
+          </button>
+          <button
+            type="button"
+            class="tm-ctrl-btn tm-ctrl-play"
+            id="btnPlayPause"
+            data-action="play-pause"
+            title="播放/暂停"
+            aria-label="播放/暂停"
+          >
+            <svg
+              id="iconPlay"
+              width="15"
+              height="15"
+              viewBox="0 0 24 24"
+              fill="currentColor"
+              aria-hidden="true"
+            >
+              <path d="M8 5v14l11-7z" />
+            </svg>
+            <svg
+              id="iconPause"
+              class="is-hidden"
+              width="15"
+              height="15"
+              viewBox="0 0 24 24"
+              fill="currentColor"
+              aria-hidden="true"
+            >
+              <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" />
+            </svg>
+          </button>
+          <button
+            type="button"
+            class="tm-ctrl-btn"
+            id="btnNext"
+            data-action="next"
+            title="下一首"
+            aria-label="下一首"
+          >
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z" />
+            </svg>
+          </button>
+        </div>
+
+        <div class="tm-sep" role="separator"></div>
+
+        <!-- 歌词开关 -->
+        <div class="tm-list">
+          <button
+            type="button"
+            class="tm-item"
+            id="btnDesktopLyrics"
+            role="menuitemcheckbox"
+            aria-checked="false"
+            data-action="toggle-desktop-lyrics"
+          >
+            <span class="tm-item-icon" aria-hidden="true">
+              <svg
+                width="15"
+                height="15"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.8"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <rect x="3" y="5" width="18" height="14" rx="3"></rect>
+                <line x1="7" y1="10" x2="17" y2="10"></line>
+                <line x1="7" y1="14" x2="13" y2="14"></line>
+              </svg>
+            </span>
+            <span class="tm-item-copy">
+              <span class="tm-item-label" id="labelDesktopLyrics">桌面歌词</span>
+              <span class="tm-item-hint">Ctrl+Alt+L</span>
+            </span>
+            <span class="tm-switch" id="switchDesktopLyrics" aria-hidden="true"></span>
+          </button>
+
+          <button
+            type="button"
+            class="tm-item"
+            id="btnTaskbarLyrics"
+            role="menuitemcheckbox"
+            aria-checked="false"
+            data-action="toggle-taskbar-lyrics"
+          >
+            <span class="tm-item-icon" aria-hidden="true">
+              <svg
+                width="15"
+                height="15"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.8"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <rect x="3" y="4" width="18" height="16" rx="2.5"></rect>
+                <line x1="3" y1="15.5" x2="21" y2="15.5"></line>
+                <line x1="7" y1="18" x2="14" y2="18"></line>
+              </svg>
+            </span>
+            <span class="tm-item-copy">
+              <span class="tm-item-label" id="labelTaskbarLyrics">任务栏歌词</span>
+              <span class="tm-item-hint">Ctrl+Alt+T</span>
+            </span>
+            <span class="tm-switch" id="switchTaskbarLyrics" aria-hidden="true"></span>
+          </button>
+        </div>
+
+        <div class="tm-sep" role="separator"></div>
+
+        <!-- 窗口与退出 -->
+        <div class="tm-list">
+          <button
+            type="button"
+            class="tm-item"
+            id="btnToggleWindow"
+            role="menuitem"
+            data-action="toggle-window"
+          >
+            <span class="tm-item-icon" aria-hidden="true">
+              <svg
+                width="15"
+                height="15"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.8"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <rect x="3" y="4" width="18" height="16" rx="2.5"></rect>
+                <line x1="3" y1="9" x2="21" y2="9"></line>
+              </svg>
+            </span>
+            <span class="tm-item-label" id="labelToggleWindow">显示窗口</span>
+          </button>
+
+          <button
+            type="button"
+            class="tm-item is-danger"
+            id="btnQuit"
+            role="menuitem"
+            data-action="quit"
+          >
+            <span class="tm-item-icon" aria-hidden="true">
+              <svg
+                width="15"
+                height="15"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.8"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                <polyline points="16 17 21 12 16 7"></polyline>
+                <line x1="21" y1="12" x2="9" y2="12"></line>
+              </svg>
+            </span>
+            <span class="tm-item-label" id="labelQuit">退出 Dreamisle</span>
+          </button>
+        </div>
+      </div>
+    </div>
+    <script src="./tray-menu.js"></script>
+  </body>
+</html>

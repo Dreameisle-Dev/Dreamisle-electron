@@ -4,6 +4,12 @@ import { fileURLToPath } from 'url';
 import { t } from '../shared/i18n.js';
 import { getMainWindow } from './window.js';
 import { isTaskbarLyricsEnabled, setTaskbarLyricsEnabled } from '../taskbar/taskbar-lyrics.js';
+import {
+  disposeWindowsTrayMenu,
+  hideWindowsTrayMenu,
+  refreshWindowsTrayMenu,
+  toggleWindowsTrayMenu,
+} from './tray-menu-window.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -114,8 +120,12 @@ function buildTrayMenuTemplate() {
 
 export function rebuildTrayMenu() {
   if (!tray) return;
-  tray.setContextMenu(Menu.buildFromTemplate(buildTrayMenuTemplate()));
   tray.setToolTip(t('tray.tooltip'));
+  if (process.platform === 'win32') {
+    refreshWindowsTrayMenu();
+    return;
+  }
+  tray.setContextMenu(Menu.buildFromTemplate(buildTrayMenuTemplate()));
 }
 
 export function createTray() {
@@ -133,19 +143,41 @@ export function createTray() {
   if (process.platform === 'darwin') trayIcon.setTemplateImage(true);
 
   tray = new Tray(trayIcon);
-
-  const contextMenu = Menu.buildFromTemplate(buildTrayMenuTemplate());
-
   tray.setToolTip(t('tray.tooltip'));
-  tray.setContextMenu(contextMenu);
+
+  if (process.platform === 'win32') {
+    // Windows 使用自绘圆角主题菜单替代旧式 Win32 右键菜单；macOS/Linux 保持原生菜单体验
+    tray.on('right-click', (_event, bounds) => {
+      toggleWindowsTrayMenu(bounds);
+    });
+    tray.on('click', () => {
+      hideWindowsTrayMenu();
+    });
+  } else {
+    const contextMenu = Menu.buildFromTemplate(buildTrayMenuTemplate());
+    tray.setContextMenu(contextMenu);
+  }
 
   tray.on('double-click', () => {
-    if (getMainWindow()) {
-      if (getMainWindow().isVisible()) getMainWindow().hide();
+    hideWindowsTrayMenu();
+    const win = getMainWindow();
+    if (win && !win.isDestroyed()) {
+      if (win.isVisible() && !win.isMinimized()) win.hide();
       else {
-        getMainWindow().show();
-        getMainWindow().focus();
+        if (win.isMinimized()) win.restore();
+        win.show();
+        win.focus();
       }
     }
   });
+}
+
+export function disposeTray() {
+  disposeWindowsTrayMenu();
+  if (tray) {
+    try {
+      tray.destroy();
+    } catch {}
+    tray = null;
+  }
 }
