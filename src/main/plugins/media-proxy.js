@@ -1,9 +1,9 @@
 // 主进程流媒体代理协议 dream-media://audio/<pluginId>/<encodedTrackId>：
 // 透传 Range 请求支持进度条拖动、注入插件自定义防盗链请求头、403/410 过期链接自动刷新一次，
 // 并统一附加 CORS 响应头使 Web Audio 实时 FFT 频谱与 10 段均衡器零污染工作。
-import { net, protocol } from 'electron';
+import { protocol } from 'electron';
 import { formatTrackUri, parseMediaUrl } from '../../../packages/dreamisle-plugin-sdk/src/index.js';
-import { assertUrlAllowed } from './permissions.js';
+import { scopedFetch } from './scoped-fetch.js';
 import {
   invalidatePluginStream,
   notifyRendererStreamError,
@@ -32,15 +32,12 @@ function errorStatusForCode(code) {
 async function fetchUpstreamStream(stream, permissions, method, rangeHeader, signal) {
   const headers = { ...(stream.headers || {}) };
   if (rangeHeader) headers.Range = rangeHeader;
-  const res = await net.fetch(stream.url, {
+  return scopedFetch(stream.url, permissions, {
     method: method === 'HEAD' ? 'HEAD' : 'GET',
     headers,
     signal,
+    timeoutMs: 25000,
   });
-  if (res.url && res.url !== stream.url) {
-    assertUrlAllowed(res.url, permissions);
-  }
-  return res;
 }
 
 export function registerPluginMediaProtocol() {

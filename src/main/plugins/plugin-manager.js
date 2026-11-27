@@ -1,6 +1,6 @@
 // 插件管理器（主进程单例）：扫描已安装插件、为每个已启用插件维护独立 utilityProcess、
 // 统一管理曲目快照、流解析缓存、封面下载、在线歌词及本地无歌词兜底缓存、以及播放生命周期派发。
-import { app, net } from 'electron';
+import { app } from 'electron';
 import crypto from 'node:crypto';
 import fs from 'node:fs/promises';
 import path from 'node:path';
@@ -22,6 +22,7 @@ import {
   setPluginStoredConfig,
 } from '../store.js';
 import { assertUrlAllowed } from './permissions.js';
+import { scopedFetch } from './scoped-fetch.js';
 import { createPluginStorage } from './storage.js';
 import {
   getPluginsRootDir,
@@ -494,28 +495,17 @@ export async function fetchPluginCoverBuffer(songUri) {
       }
       if (!coverSource?.url) return null;
 
-      assertUrlAllowed(coverSource.url, entry.manifest.permissions);
-
-      const ac = new AbortController();
-      const timer = setTimeout(() => ac.abort(), COVER_DOWNLOAD_TIMEOUT_MS);
-      try {
-        const res = await net.fetch(coverSource.url, {
-          headers: coverSource.headers,
-          signal: ac.signal,
-        });
-        if (!res.ok) return null;
-        if (res.url && res.url !== coverSource.url) {
-          assertUrlAllowed(res.url, entry.manifest.permissions);
-        }
-        const ab = await res.arrayBuffer();
-        if (!ab.byteLength || ab.byteLength > MAX_COVER_DOWNLOAD_BYTES) return null;
-        return {
-          buffer: Buffer.from(ab),
-          format: res.headers.get('content-type') || 'image/jpeg',
-        };
-      } finally {
-        clearTimeout(timer);
-      }
+      const res = await scopedFetch(coverSource.url, entry.manifest.permissions, {
+        headers: coverSource.headers,
+        timeoutMs: COVER_DOWNLOAD_TIMEOUT_MS,
+      });
+      if (!res.ok) return null;
+      const ab = await res.arrayBuffer();
+      if (!ab.byteLength || ab.byteLength > MAX_COVER_DOWNLOAD_BYTES) return null;
+      return {
+        buffer: Buffer.from(ab),
+        format: res.headers.get('content-type') || 'image/jpeg',
+      };
     } catch {
       return null;
     } finally {
@@ -536,25 +526,16 @@ export async function fetchPluginArtworkBuffer(pluginId, artworkUrl) {
     try {
       const entry = installedPlugins.get(pluginId);
       if (!entry || entry.invalid || !getPluginEnabledIds().includes(pluginId)) return null;
-      assertUrlAllowed(artworkUrl, entry.manifest.permissions);
-
-      const ac = new AbortController();
-      const timer = setTimeout(() => ac.abort(), COVER_DOWNLOAD_TIMEOUT_MS);
-      try {
-        const res = await net.fetch(artworkUrl, { signal: ac.signal });
-        if (!res.ok) return null;
-        if (res.url && res.url !== artworkUrl) {
-          assertUrlAllowed(res.url, entry.manifest.permissions);
-        }
-        const ab = await res.arrayBuffer();
-        if (!ab.byteLength || ab.byteLength > MAX_COVER_DOWNLOAD_BYTES) return null;
-        return {
-          buffer: Buffer.from(ab),
-          format: res.headers.get('content-type') || 'image/jpeg',
-        };
-      } finally {
-        clearTimeout(timer);
-      }
+      const res = await scopedFetch(artworkUrl, entry.manifest.permissions, {
+        timeoutMs: COVER_DOWNLOAD_TIMEOUT_MS,
+      });
+      if (!res.ok) return null;
+      const ab = await res.arrayBuffer();
+      if (!ab.byteLength || ab.byteLength > MAX_COVER_DOWNLOAD_BYTES) return null;
+      return {
+        buffer: Buffer.from(ab),
+        format: res.headers.get('content-type') || 'image/jpeg',
+      };
     } catch {
       return null;
     } finally {

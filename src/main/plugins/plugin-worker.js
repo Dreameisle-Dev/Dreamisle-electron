@@ -119,6 +119,7 @@ function buildContext() {
           status: res.status,
           ok: res.ok,
           headers: res.headers || {},
+          setCookies: Array.isArray(res.setCookies) ? res.setCookies : [],
           async text() {
             return rawBytes.toString('utf8');
           },

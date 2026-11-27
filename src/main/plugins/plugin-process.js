@@ -1,6 +1,6 @@
 // 单插件独立进程控制器：为每个已启用插件独占派生一个 Electron utilityProcess，
 // 管理握手、双向 JSON-RPC、超时、AbortSignal 取消、受限 HTTP/存储/密文代理、崩溃隔离与日志缓冲。
-import { net, utilityProcess } from 'electron';
+import { utilityProcess } from 'electron';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
@@ -8,7 +8,7 @@ import {
   deserializePluginError,
   serializePluginError,
 } from '../../../packages/dreamisle-plugin-sdk/src/index.js';
-import { assertUrlAllowed } from './permissions.js';
+import { scopedFetch } from './scoped-fetch.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const WORKER_SCRIPT_PATH = path.join(__dirname, 'plugin-worker.js');
@@ -229,53 +229,40 @@ export class PluginProcess {
   }
 
   async executeScopedHttpFetch(params) {
-    const parsedUrl = assertUrlAllowed(params?.url, this.manifest.permissions);
     const timeoutMs = Math.min(30000, Math.max(1000, Number(params?.timeoutMs) || 12000));
-    const ac = new AbortController();
-    const timer = setTimeout(() => ac.abort(), timeoutMs);
-
-    try {
-      const init = {
-        method: typeof params?.method === 'string' ? params.method.toUpperCase() : 'GET',
-        headers: params?.headers && typeof params.headers === 'object' ? params.headers : undefined,
-        signal: ac.signal,
-      };
-      if (params?.body?.kind === 'text') {
-        init.body = params.body.data;
-      } else if (params?.body?.kind === 'bytes') {
-        init.body = Buffer.from(params.body.data, 'base64');
-      }
-
-      const res = await net.fetch(parsedUrl.href, init);
-      // 校验重定向落点是否仍在权限允许范围内（防开放重定向绕过白名单 / SSRF）
-      if (res.url && res.url !== parsedUrl.href) {
-        assertUrlAllowed(res.url, this.manifest.permissions);
-      }
-
-      const arrayBuf = await res.arrayBuffer();
-      if (arrayBuf.byteLength > MAX_HTTP_RESPONSE_BYTES) {
-        throw new PluginError('NETWORK_ERROR', 'HTTP response exceeded 10MB limit');
-      }
-
-      const headers = {};
-      res.headers.forEach((value, key) => {
-        headers[key] = value;
-      });
-      return {
-        status: res.status,
-        ok: res.ok,
-        headers,
-        bodyBase64: Buffer.from(arrayBuf).toString('base64'),
-      };
-    } catch (err) {
-      if (err instanceof PluginError) throw err;
-      if (ac.signal.aborted) {
-        throw new PluginError('TIMEOUT', `HTTP request timed out (${timeoutMs}ms)`);
-      }
-      throw new PluginError('NETWORK_ERROR', err?.message || 'HTTP request failed');
-    } finally {
-      clearTimeout(timer);
+    let body;
+    if (params?.body?.kind === 'text') {
+      body = params.body.data;
+    } else if (params?.body?.kind === 'bytes') {
+      body = Buffer.from(params.body.data, 'base64');
     }
+
+    const res = await scopedFetch(params?.url, this.manifest.permissions, {
+      method: typeof params?.method === 'string' ? params.method.toUpperCase() : 'GET',
+      headers: params?.headers && typeof params.headers === 'object' ? params.headers : undefined,
+      body,
+      timeoutMs,
+    });
+
+    const arrayBuf = await res.arrayBuffer();
+    if (arrayBuf.byteLength > MAX_HTTP_RESPONSE_BYTES) {
+      throw new PluginError('NETWORK_ERROR', 'HTTP response exceeded 10MB limit');
+    }
+
+    const headers = {};
+    res.headers.forEach((value, key) => {
+      headers[key] = value;
+    });
+    const setCookies =
+      typeof res.headers.getSetCookie === 'function' ? res.headers.getSetCookie() : [];
+
+    return {
+      status: res.status,
+      ok: res.ok,
+      headers,
+      setCookies,
+      bodyBase64: Buffer.from(arrayBuf).toString('base64'),
+    };
   }
 
   async invoke(method, params = {}, { timeoutMs = 10000, signal = null } = {}) {
