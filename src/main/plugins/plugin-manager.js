@@ -39,6 +39,7 @@ const DEFAULT_STREAM_TTL_MS = 15 * 60 * 1000;
 const STREAM_REFRESH_MARGIN_MS = 60 * 1000;
 const MAX_COVER_DOWNLOAD_BYTES = 15 * 1024 * 1024;
 const COVER_DOWNLOAD_TIMEOUT_MS = 10000;
+const MAX_COVER_DOWNLOAD_CONCURRENCY = 6;
 
 const installedPlugins = new Map(); // id -> scanned entry
 const pluginProcesses = new Map(); // id -> PluginProcess (1 utilityProcess per enabled plugin)
@@ -47,7 +48,29 @@ const trackSnapshots = new Map(); // dream-track://... -> PluginTrack
 const streamCache = new Map(); // `${pluginId}:${trackId}:${quality}` -> { stream, expiresAt }
 const coverCacheInflight = new Map();
 
+let coverDownloadActive = 0;
+const coverDownloadWaiters = [];
+
+function runWithCoverSlot(fn) {
+  return new Promise((resolve, reject) => {
+    const start = () => {
+      coverDownloadActive++;
+      Promise.resolve()
+        .then(fn)
+        .then(resolve, reject)
+        .finally(() => {
+          coverDownloadActive--;
+          const next = coverDownloadWaiters.shift();
+          if (next) next();
+        });
+    };
+    if (coverDownloadActive < MAX_COVER_DOWNLOAD_CONCURRENCY) start();
+    else coverDownloadWaiters.push(start);
+  });
+}
+
 let initialized = false;
+let initPluginsPromise = null;
 let lyricsCacheDirPromise = null;
 
 function getLyricsCacheDir() {
@@ -276,8 +299,16 @@ async function stopPluginWorker(pluginId) {
 
 export async function initPlugins() {
   if (initialized) return;
-  initialized = true;
-  await refreshInstalledPlugins({ startEnabled: true });
+  if (!initPluginsPromise) {
+    initPluginsPromise = refreshInstalledPlugins({ startEnabled: true })
+      .then(() => {
+        initialized = true;
+      })
+      .finally(() => {
+        initPluginsPromise = null;
+      });
+  }
+  await initPluginsPromise;
 }
 
 export async function refreshInstalledPlugins({ startEnabled = false } = {}) {
@@ -408,6 +439,9 @@ export function pushLocaleToPlugins(locale) {
 // ── 音源与元数据调度 ──
 
 async function requireRunningPlugin(pluginId, capability = null) {
+  if (!initialized) {
+    await initPlugins().catch(() => {});
+  }
   const entry = installedPlugins.get(pluginId);
   if (!entry || entry.invalid) {
     throw new PluginError('NOT_FOUND', `插件 "${pluginId}" 未安装`);
@@ -471,6 +505,33 @@ export function invalidatePluginStream(pluginId, trackId, quality) {
   streamCache.delete(`${pluginId}:${trackId}:${quality || 'default'}`);
 }
 
+async function downloadCoverWithRetry(url, permissions, headers = undefined) {
+  return runWithCoverSlot(async () => {
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        const res = await scopedFetch(url, permissions, {
+          headers,
+          timeoutMs: COVER_DOWNLOAD_TIMEOUT_MS,
+        });
+        if (!res.ok) {
+          if (attempt === 0 && res.status >= 500) continue;
+          return null;
+        }
+        const ab = await res.arrayBuffer();
+        if (!ab.byteLength || ab.byteLength > MAX_COVER_DOWNLOAD_BYTES) return null;
+        return {
+          buffer: Buffer.from(ab),
+          format: res.headers.get('content-type') || 'image/jpeg',
+        };
+      } catch {
+        if (attempt === 0) continue;
+        return null;
+      }
+    }
+    return null;
+  });
+}
+
 export async function fetchPluginCoverBuffer(songUri) {
   const parsed = parseTrackUri(songUri);
   if (!parsed) return null;
@@ -488,24 +549,18 @@ export async function fetchPluginCoverBuffer(songUri) {
 
       let coverSource = null;
       try {
-        coverSource = await proc.invoke('source.getCover', { track }, { timeoutMs: 6000 });
+        coverSource = await proc.invoke('source.getCover', { track }, { timeoutMs: 8000 });
       } catch {}
       if (!coverSource && track.artworkUrl) {
         coverSource = { url: track.artworkUrl };
       }
       if (!coverSource?.url) return null;
 
-      const res = await scopedFetch(coverSource.url, entry.manifest.permissions, {
-        headers: coverSource.headers,
-        timeoutMs: COVER_DOWNLOAD_TIMEOUT_MS,
-      });
-      if (!res.ok) return null;
-      const ab = await res.arrayBuffer();
-      if (!ab.byteLength || ab.byteLength > MAX_COVER_DOWNLOAD_BYTES) return null;
-      return {
-        buffer: Buffer.from(ab),
-        format: res.headers.get('content-type') || 'image/jpeg',
-      };
+      return await downloadCoverWithRetry(
+        coverSource.url,
+        entry.manifest.permissions,
+        coverSource.headers
+      );
     } catch {
       return null;
     } finally {
@@ -524,18 +579,10 @@ export async function fetchPluginArtworkBuffer(pluginId, artworkUrl) {
 
   const job = (async () => {
     try {
+      if (!initialized) await initPlugins().catch(() => {});
       const entry = installedPlugins.get(pluginId);
       if (!entry || entry.invalid || !getPluginEnabledIds().includes(pluginId)) return null;
-      const res = await scopedFetch(artworkUrl, entry.manifest.permissions, {
-        timeoutMs: COVER_DOWNLOAD_TIMEOUT_MS,
-      });
-      if (!res.ok) return null;
-      const ab = await res.arrayBuffer();
-      if (!ab.byteLength || ab.byteLength > MAX_COVER_DOWNLOAD_BYTES) return null;
-      return {
-        buffer: Buffer.from(ab),
-        format: res.headers.get('content-type') || 'image/jpeg',
-      };
+      return await downloadCoverWithRetry(artworkUrl, entry.manifest.permissions);
     } catch {
       return null;
     } finally {
@@ -545,6 +592,47 @@ export async function fetchPluginArtworkBuffer(pluginId, artworkUrl) {
 
   coverCacheInflight.set(inflightKey, job);
   return job;
+}
+
+export function hasEnabledMusicSourcePlugin() {
+  for (const pluginId of getPluginEnabledIds()) {
+    const entry = installedPlugins.get(pluginId);
+    if (!entry || entry.invalid || !entry.manifest.capabilities.includes('music-source')) continue;
+    if (getRunningProcess(pluginId)) return true;
+  }
+  return false;
+}
+
+// 本地无内嵌封面曲目兜底：向已启用的 music-source 插件询问 source.matchCover（是否启用由插件自身配置控制）
+export async function matchOnlineCoverForLocalTrack(songMeta) {
+  if (!songMeta?.title) return null;
+  if (!initialized) await initPlugins().catch(() => {});
+
+  const query = {
+    title: songMeta.title,
+    artist: songMeta.artist || '',
+    album: songMeta.album || null,
+    duration: songMeta.duration ?? null,
+  };
+
+  for (const pluginId of getPluginEnabledIds()) {
+    const entry = installedPlugins.get(pluginId);
+    if (!entry || entry.invalid || !entry.manifest.capabilities.includes('music-source')) continue;
+    const proc = getRunningProcess(pluginId);
+    if (!proc) continue;
+    try {
+      const coverSource = await proc.invoke('source.matchCover', { query }, { timeoutMs: 6000 });
+      if (!coverSource?.url) continue;
+      const downloaded = await downloadCoverWithRetry(
+        coverSource.url,
+        entry.manifest.permissions,
+        coverSource.headers
+      );
+      if (downloaded?.buffer) return downloaded;
+    } catch {}
+  }
+
+  return null;
 }
 
 export async function fetchPluginLyrics(songUri) {

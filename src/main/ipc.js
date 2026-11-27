@@ -291,12 +291,12 @@ export function registerIpcHandlers() {
     return { added: added.length, removed: removed.length, playlist };
   });
 
-  handleMainIpc('app:getCover', async (event, filePath) => {
-    return readCover(filePath, getMusicFolders());
+  handleMainIpc('app:getCover', async (event, filePath, songMeta) => {
+    return readCover(filePath, getMusicFolders(), songMeta);
   });
 
-  handleMainIpc('app:getCoverThumb', async (event, filePath, maxSize) => {
-    return readCoverThumbnail(filePath, getMusicFolders(), maxSize);
+  handleMainIpc('app:getCoverThumb', async (event, filePath, maxSize, songMeta) => {
+    return readCoverThumbnail(filePath, getMusicFolders(), maxSize, songMeta);
   });
 
   handleMainIpc('app:savePlaybackState', async (event, state) => {

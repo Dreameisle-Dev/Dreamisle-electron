@@ -258,6 +258,11 @@ async function dispatchRpc(method, params, signal) {
       const raw = await plugin.source.getCover(params?.track, { signal });
       return validateCoverSource(raw);
     }
+    case 'source.matchCover': {
+      if (!plugin.source?.matchCover) return null;
+      const raw = await plugin.source.matchCover(params?.query, { signal });
+      return validateCoverSource(raw);
+    }
     case 'lyrics.getLyrics': {
       if (!plugin.lyrics?.getLyrics) return null;
       const raw = await plugin.lyrics.getLyrics(params?.track, { signal });

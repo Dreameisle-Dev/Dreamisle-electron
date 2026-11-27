@@ -81,6 +81,7 @@ export function closeOnlineExplore() {
   const overlay = getEl('onlineOverlay');
   if (!overlay || !overlay.classList.contains('open')) return;
   loadSeq++;
+  resetCoverLoader();
   clearTimeout(searchTimer);
   searchTimer = null;
   document.body.classList.remove('online-open');
@@ -208,28 +209,79 @@ function renderStatusBox(message, { showSettingsBtn = false } = {}) {
   contentEl.replaceChildren(box);
 }
 
+// 可见区封面懒加载 + 有界并发池（避免大歌单瞬间并发 50+ 封面拉取触发上游限流或超时）
+const MAX_ONLINE_COVER_CONCURRENCY = 6;
+let activeCoverJobs = 0;
+const pendingCoverJobs = [];
+const observedCoverMeta = new WeakMap();
+let coverObserver = null;
+
+function resetCoverLoader() {
+  pendingCoverJobs.length = 0;
+  if (coverObserver) {
+    coverObserver.disconnect();
+    coverObserver = null;
+  }
+}
+
+function pumpCoverJobs() {
+  while (activeCoverJobs < MAX_ONLINE_COVER_CONCURRENCY && pendingCoverJobs.length > 0) {
+    const job = pendingCoverJobs.shift();
+    if (!job || job.seq !== loadSeq || !job.imgEl.isConnected) continue;
+    activeCoverJobs++;
+    Promise.resolve()
+      .then(job.run)
+      .then((url) => {
+        if (job.seq !== loadSeq || !url || !job.imgEl.isConnected) return;
+        job.imgEl.src = url;
+        job.imgEl.classList.add('loaded');
+      })
+      .catch(() => {})
+      .finally(() => {
+        activeCoverJobs--;
+        pumpCoverJobs();
+      });
+  }
+}
+
+function ensureCoverObserver() {
+  if (coverObserver) return coverObserver;
+  const scrollRoot = document.querySelector('#onlineOverlay .online-scroll');
+  coverObserver = new IntersectionObserver(
+    (entries) => {
+      for (const entry of entries) {
+        if (!entry.isIntersecting) continue;
+        const imgEl = entry.target;
+        coverObserver.unobserve(imgEl);
+        const job = observedCoverMeta.get(imgEl);
+        if (!job || job.seq !== loadSeq) continue;
+        observedCoverMeta.delete(imgEl);
+        pendingCoverJobs.push(job);
+      }
+      pumpCoverJobs();
+    },
+    { root: scrollRoot || null, rootMargin: '220px 0px' }
+  );
+  return coverObserver;
+}
+
+function scheduleCoverHydration(imgEl, seq, run) {
+  if (!imgEl) return;
+  const job = { imgEl, seq, run };
+  observedCoverMeta.set(imgEl, job);
+  ensureCoverObserver().observe(imgEl);
+}
+
 function hydrateTrackCover(imgEl, songPath, seq) {
   if (!imgEl || !songPath) return;
-  window.dreamApi
-    .getCoverThumb(songPath, 128)
-    .then((url) => {
-      if (seq !== loadSeq || !url || !imgEl.isConnected) return;
-      imgEl.src = url;
-      imgEl.classList.add('loaded');
-    })
-    .catch(() => {});
+  scheduleCoverHydration(imgEl, seq, () => window.dreamApi.getCoverThumb(songPath, 160));
 }
 
 function hydrateArtworkCover(imgEl, pluginId, artworkUrl, seq) {
   if (!imgEl || !pluginId || !artworkUrl || !window.dreamApi.plugins?.getArtworkThumb) return;
-  window.dreamApi.plugins
-    .getArtworkThumb(pluginId, artworkUrl, 320)
-    .then((url) => {
-      if (seq !== loadSeq || !url || !imgEl.isConnected) return;
-      imgEl.src = url;
-      imgEl.classList.add('loaded');
-    })
-    .catch(() => {});
+  scheduleCoverHydration(imgEl, seq, () =>
+    window.dreamApi.plugins.getArtworkThumb(pluginId, artworkUrl, 320)
+  );
 }
 
 function createTrackListEl(tracks, seq) {
@@ -335,6 +387,7 @@ function syncPlayingRowHighlight() {
 async function openMediaDetail(kind, item) {
   if (!activePluginId || !item?.id) return;
   const seq = ++loadSeq;
+  resetCoverLoader();
   detailView = {
     kind,
     id: item.id,
@@ -390,6 +443,7 @@ async function loadActiveView({ append = false } = {}) {
   }
 
   const seq = ++loadSeq;
+  resetCoverLoader();
   const contentEl = getEl('onlineContent');
   const loadMoreBtn = getEl('btnOnlineLoadMore');
   if (!contentEl) return;

@@ -9,6 +9,8 @@ import {
   fetchPluginArtworkBuffer,
   fetchPluginCoverBuffer,
   fetchPluginLyrics,
+  hasEnabledMusicSourcePlugin,
+  matchOnlineCoverForLocalTrack,
   matchOnlineLyricsForLocalTrack,
 } from './plugins/plugin-manager.js';
 
@@ -30,8 +32,67 @@ const MAIN_COVER_MAX_SIZE = 768;
 const MAX_DISK_THUMB_FILES = 1500;
 const DISK_THUMB_KEEP_FILES = 1000;
 const DISK_THUMB_TOUCH_AGE_MS = 7 * 24 * 60 * 60 * 1000;
-const VALID_THUMB_FILE_RE = /^[0-9a-f]{40}\.jpg$/;
-const VALID_THUMB_DISK_RE = /^[0-9a-f]{40}\.(jpg|none)$/;
+const VALID_THUMB_FILE_RE = /^[0-9a-f]{40}\.(jpg|png|webp)$/;
+const VALID_THUMB_DISK_RE = /^[0-9a-f]{40}\.(jpg|png|webp|none)$/;
+
+function detectRawImageFormat(buf) {
+  if (!Buffer.isBuffer(buf) || buf.length < 12) return null;
+  if (buf[0] === 0xff && buf[1] === 0xd8 && buf[2] === 0xff) {
+    return { ext: 'jpg', mime: 'image/jpeg' };
+  }
+  if (buf[0] === 0x89 && buf[1] === 0x50 && buf[2] === 0x4e && buf[3] === 0x47) {
+    return { ext: 'png', mime: 'image/png' };
+  }
+  if (
+    buf[0] === 0x52 &&
+    buf[1] === 0x49 &&
+    buf[2] === 0x46 &&
+    buf[3] === 0x46 &&
+    buf[8] === 0x57 &&
+    buf[9] === 0x45 &&
+    buf[10] === 0x42 &&
+    buf[11] === 0x50
+  ) {
+    return { ext: 'webp', mime: 'image/webp' };
+  }
+  return null;
+}
+
+function encodeThumbBuffer(rawBuf, targetSize, jpegQuality) {
+  const img = nativeImage.createFromBuffer(rawBuf);
+  if (!img.isEmpty()) {
+    const { width, height } = img.getSize();
+    let resized = img;
+    if (width > targetSize || height > targetSize) {
+      resized =
+        width >= height
+          ? img.resize({ width: targetSize, quality: 'good' })
+          : img.resize({ height: targetSize, quality: 'good' });
+    }
+    const jpegBuf = resized.toJPEG(jpegQuality);
+    if (jpegBuf && jpegBuf.length > 0) {
+      return { buffer: jpegBuf, ext: 'jpg', mime: 'image/jpeg' };
+    }
+  }
+  // 兼容 WebP 等 Electron nativeImage 不直接解码但 Chromium 原生支持的图片格式
+  const raw = detectRawImageFormat(rawBuf);
+  if (raw) {
+    return { buffer: rawBuf, ext: raw.ext, mime: raw.mime };
+  }
+  return null;
+}
+
+async function findExistingDiskThumb(thumbDir, hash) {
+  for (const ext of ['jpg', 'webp', 'png']) {
+    const full = path.join(thumbDir, `${hash}.${ext}`);
+    try {
+      await fs.access(full);
+      touchDiskThumbIfOld(full);
+      return `dream-thumb://cover/${hash}.${ext}`;
+    } catch {}
+  }
+  return null;
+}
 
 // 主进程封面缩略图 URL 映射缓存（含无封面的负缓存 null）
 const coverThumbCache = new Map();
@@ -112,10 +173,15 @@ export function registerCoverThumbProtocol() {
       const thumbDir = await getThumbDir();
       if (!thumbDir) return new Response(null, { status: 404 });
       const data = await fs.readFile(path.join(thumbDir, fileName));
+      const contentType = fileName.endsWith('.webp')
+        ? 'image/webp'
+        : fileName.endsWith('.png')
+          ? 'image/png'
+          : 'image/jpeg';
       return new Response(data, {
         status: 200,
         headers: {
-          'Content-Type': 'image/jpeg',
+          'Content-Type': contentType,
           'Cache-Control': 'public, max-age=31536000, immutable',
           'Access-Control-Allow-Origin': '*',
           'Cross-Origin-Resource-Policy': 'cross-origin',
@@ -222,8 +288,8 @@ export async function collectDiskPaths(folderPaths) {
 
 // 主播放界面封面读取：复用磁盘 + 内存缓存与 dream-thumb:// 稳定协议 URL（768px 高清 JPEG），
 // 避免每次切歌重扫大音频文件、跨 IPC 拷贝数 MB 原始图以及重复创建/销毁 Blob URL。
-export async function readCover(filePath, allowedFolders) {
-  return readCoverThumbnail(filePath, allowedFolders, MAIN_COVER_MAX_SIZE);
+export async function readCover(filePath, allowedFolders, songMeta = null) {
+  return readCoverThumbnail(filePath, allowedFolders, MAIN_COVER_MAX_SIZE, songMeta);
 }
 
 function setCoverThumbCache(cacheKey, value) {
@@ -235,9 +301,60 @@ function setCoverThumbCache(cacheKey, value) {
   }
 }
 
+async function resolveLocalOnlineFallbackCover(songMeta, targetSize, jpegQuality) {
+  if (!songMeta?.title || !hasEnabledMusicSourcePlugin()) return null;
+  const fallbackKey = `local-online-cover|${songMeta.title}|${songMeta.artist || ''}|${songMeta.album || ''}|${targetSize}`;
+  if (coverThumbCache.has(fallbackKey)) {
+    const hit = coverThumbCache.get(fallbackKey);
+    if (hit) {
+      setCoverThumbCache(fallbackKey, hit);
+      return hit;
+    }
+  }
+  if (coverThumbInflight.has(fallbackKey)) {
+    return coverThumbInflight.get(fallbackKey);
+  }
+
+  const job = (async () => {
+    try {
+      const thumbDir = await getThumbDir();
+      const hash = crypto.createHash('sha1').update(fallbackKey).digest('hex');
+      if (thumbDir) {
+        const existing = await findExistingDiskThumb(thumbDir, hash);
+        if (existing) {
+          setCoverThumbCache(fallbackKey, existing);
+          return existing;
+        }
+      }
+
+      const fetched = await matchOnlineCoverForLocalTrack(songMeta);
+      if (!fetched?.buffer) return null;
+      const encoded = encodeThumbBuffer(fetched.buffer, targetSize, jpegQuality);
+      if (!encoded) return null;
+
+      if (thumbDir) {
+        const diskPath = path.join(thumbDir, `${hash}.${encoded.ext}`);
+        const thumbUrl = `dream-thumb://cover/${hash}.${encoded.ext}`;
+        await fs.writeFile(diskPath, encoded.buffer);
+        scheduleDiskThumbPrune();
+        setCoverThumbCache(fallbackKey, thumbUrl);
+        return thumbUrl;
+      }
+      return { buffer: encoded.buffer, format: encoded.mime };
+    } catch {
+      return null;
+    } finally {
+      coverThumbInflight.delete(fallbackKey);
+    }
+  })();
+
+  coverThumbInflight.set(fallbackKey, job);
+  return job;
+}
+
 // 统一封面缩略图/主封面读取：支持本地音频与 dream-track:// 在线插件曲目，
-// 返回稳定协议 URL（dream-thumb://cover/<sha1>.jpg），零 Buffer 驻留、零 Blob 泄漏
-export async function readCoverThumbnail(filePath, allowedFolders, maxSize = 320) {
+// 返回稳定协议 URL（dream-thumb://cover/<sha1>.(jpg|webp|png)），零 Buffer 驻留、零 Blob 泄漏
+export async function readCoverThumbnail(filePath, allowedFolders, maxSize = 320, songMeta = null) {
   const targetSize = Math.max(128, Math.min(1024, Math.round(Number(maxSize) || 320)));
   const jpegQuality = targetSize >= 512 ? 88 : 82;
 
@@ -245,8 +362,10 @@ export async function readCoverThumbnail(filePath, allowedFolders, maxSize = 320
     const cacheKey = `${filePath}@${targetSize}`;
     if (coverThumbCache.has(cacheKey)) {
       const hit = coverThumbCache.get(cacheKey);
-      setCoverThumbCache(cacheKey, hit);
-      return hit;
+      if (hit) {
+        setCoverThumbCache(cacheKey, hit);
+        return hit;
+      }
     }
     if (coverThumbInflight.has(cacheKey)) {
       return coverThumbInflight.get(cacheKey);
@@ -254,48 +373,34 @@ export async function readCoverThumbnail(filePath, allowedFolders, maxSize = 320
 
     const job = (async () => {
       try {
-        let diskJpgPath = null;
-        let thumbUrl = null;
         const thumbDir = await getThumbDir();
+        const hash = crypto
+          .createHash('sha1')
+          .update(`plugin-cover|${filePath}|${targetSize}`)
+          .digest('hex');
         if (thumbDir) {
-          const hash = crypto
-            .createHash('sha1')
-            .update(`plugin-cover|${filePath}|${targetSize}`)
-            .digest('hex');
-          diskJpgPath = path.join(thumbDir, `${hash}.jpg`);
-          thumbUrl = `dream-thumb://cover/${hash}.jpg`;
-          try {
-            await fs.access(diskJpgPath);
-            touchDiskThumbIfOld(diskJpgPath);
-            setCoverThumbCache(cacheKey, thumbUrl);
-            return thumbUrl;
-          } catch {}
+          const existing = await findExistingDiskThumb(thumbDir, hash);
+          if (existing) {
+            setCoverThumbCache(cacheKey, existing);
+            return existing;
+          }
         }
 
         const fetched = await fetchPluginCoverBuffer(filePath);
         if (!fetched?.buffer) return null;
 
-        const img = nativeImage.createFromBuffer(fetched.buffer);
-        if (img.isEmpty()) return null;
+        const encoded = encodeThumbBuffer(fetched.buffer, targetSize, jpegQuality);
+        if (!encoded) return null;
 
-        const { width, height } = img.getSize();
-        let resized = img;
-        if (width > targetSize || height > targetSize) {
-          resized =
-            width >= height
-              ? img.resize({ width: targetSize, quality: 'good' })
-              : img.resize({ height: targetSize, quality: 'good' });
-        }
-        const jpegBuf = resized.toJPEG(jpegQuality);
-        if (!jpegBuf || jpegBuf.length === 0) return null;
-
-        if (diskJpgPath && thumbUrl) {
-          await fs.writeFile(diskJpgPath, jpegBuf);
+        if (thumbDir) {
+          const diskPath = path.join(thumbDir, `${hash}.${encoded.ext}`);
+          const thumbUrl = `dream-thumb://cover/${hash}.${encoded.ext}`;
+          await fs.writeFile(diskPath, encoded.buffer);
           scheduleDiskThumbPrune();
           setCoverThumbCache(cacheKey, thumbUrl);
           return thumbUrl;
         }
-        return { buffer: jpegBuf, format: 'image/jpeg' };
+        return { buffer: encoded.buffer, format: encoded.mime };
       } catch {
         return null;
       } finally {
@@ -314,8 +419,15 @@ export async function readCoverThumbnail(filePath, allowedFolders, maxSize = 320
 
   if (coverThumbCache.has(cacheKey)) {
     const hit = coverThumbCache.get(cacheKey);
-    setCoverThumbCache(cacheKey, hit);
-    return hit;
+    if (hit) {
+      setCoverThumbCache(cacheKey, hit);
+      return hit;
+    }
+    // 本地文件确认无内嵌封面时，若启用了音源插件则尝试在线封面兜底
+    if (songMeta?.title && hasEnabledMusicSourcePlugin()) {
+      return resolveLocalOnlineFallbackCover(songMeta, targetSize, jpegQuality);
+    }
+    return null;
   }
 
   if (coverThumbInflight.has(cacheKey)) {
@@ -350,6 +462,9 @@ export async function readCoverThumbnail(filePath, allowedFolders, maxSize = 320
             await fs.access(diskNonePath);
             touchDiskThumbIfOld(diskNonePath);
             setCoverThumbCache(cacheKey, null);
+            if (songMeta?.title && hasEnabledMusicSourcePlugin()) {
+              return resolveLocalOnlineFallbackCover(songMeta, targetSize, jpegQuality);
+            }
             return null;
           } catch (e) {}
         } catch (e) {}
@@ -364,6 +479,9 @@ export async function readCoverThumbnail(filePath, allowedFolders, maxSize = 320
           fs.writeFile(diskNonePath, '')
             .then(() => scheduleDiskThumbPrune())
             .catch(() => {});
+        }
+        if (songMeta?.title && hasEnabledMusicSourcePlugin()) {
+          return resolveLocalOnlineFallbackCover(songMeta, targetSize, jpegQuality);
         }
         return null;
       }
@@ -411,8 +529,10 @@ export async function readPluginArtworkThumbnail(pluginId, artworkUrl, maxSize =
 
   if (coverThumbCache.has(cacheKey)) {
     const hit = coverThumbCache.get(cacheKey);
-    setCoverThumbCache(cacheKey, hit);
-    return hit;
+    if (hit) {
+      setCoverThumbCache(cacheKey, hit);
+      return hit;
+    }
   }
   if (coverThumbInflight.has(cacheKey)) {
     return coverThumbInflight.get(cacheKey);
@@ -420,48 +540,34 @@ export async function readPluginArtworkThumbnail(pluginId, artworkUrl, maxSize =
 
   const job = (async () => {
     try {
-      let diskJpgPath = null;
-      let thumbUrl = null;
       const thumbDir = await getThumbDir();
+      const hash = crypto
+        .createHash('sha1')
+        .update(`plugin-art|${pluginId}|${artworkUrl}|${targetSize}`)
+        .digest('hex');
       if (thumbDir) {
-        const hash = crypto
-          .createHash('sha1')
-          .update(`plugin-art|${pluginId}|${artworkUrl}|${targetSize}`)
-          .digest('hex');
-        diskJpgPath = path.join(thumbDir, `${hash}.jpg`);
-        thumbUrl = `dream-thumb://cover/${hash}.jpg`;
-        try {
-          await fs.access(diskJpgPath);
-          touchDiskThumbIfOld(diskJpgPath);
-          setCoverThumbCache(cacheKey, thumbUrl);
-          return thumbUrl;
-        } catch {}
+        const existing = await findExistingDiskThumb(thumbDir, hash);
+        if (existing) {
+          setCoverThumbCache(cacheKey, existing);
+          return existing;
+        }
       }
 
       const fetched = await fetchPluginArtworkBuffer(pluginId, artworkUrl);
       if (!fetched?.buffer) return null;
 
-      const img = nativeImage.createFromBuffer(fetched.buffer);
-      if (img.isEmpty()) return null;
+      const encoded = encodeThumbBuffer(fetched.buffer, targetSize, jpegQuality);
+      if (!encoded) return null;
 
-      const { width, height } = img.getSize();
-      let resized = img;
-      if (width > targetSize || height > targetSize) {
-        resized =
-          width >= height
-            ? img.resize({ width: targetSize, quality: 'good' })
-            : img.resize({ height: targetSize, quality: 'good' });
-      }
-      const jpegBuf = resized.toJPEG(jpegQuality);
-      if (!jpegBuf || jpegBuf.length === 0) return null;
-
-      if (diskJpgPath && thumbUrl) {
-        await fs.writeFile(diskJpgPath, jpegBuf);
+      if (thumbDir) {
+        const diskPath = path.join(thumbDir, `${hash}.${encoded.ext}`);
+        const thumbUrl = `dream-thumb://cover/${hash}.${encoded.ext}`;
+        await fs.writeFile(diskPath, encoded.buffer);
         scheduleDiskThumbPrune();
         setCoverThumbCache(cacheKey, thumbUrl);
         return thumbUrl;
       }
-      return { buffer: jpegBuf, format: 'image/jpeg' };
+      return { buffer: encoded.buffer, format: encoded.mime };
     } catch {
       return null;
     } finally {

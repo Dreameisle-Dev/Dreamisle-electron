@@ -289,14 +289,25 @@ function getCachedCoverUrl(songPath) {
 }
 
 function setCachedCoverUrl(songPath, url) {
-  // 仅缓存稳定 dream-thumb:// URL 与 null；兜底 blob: 不放长期缓存避免生命周期混乱
+  // 仅缓存稳定 dream-thumb:// URL 与本地曲目的 null；在线插件曲目失败不写入负缓存以便重试
   if (typeof url === 'string' && url.startsWith('blob:')) return;
+  if (!url && typeof songPath === 'string' && songPath.startsWith('dream-track://')) return;
   coverUrlCache.delete(songPath);
   coverUrlCache.set(songPath, url || null);
   if (coverUrlCache.size > MAX_COVER_URL_CACHE) {
     const oldestKey = coverUrlCache.keys().next().value;
     coverUrlCache.delete(oldestKey);
   }
+}
+
+function buildCoverSongMeta(song) {
+  if (!song || !song.title) return null;
+  return {
+    title: song.title,
+    artist: song.artist || '',
+    album: song.album || null,
+    duration: Number.isFinite(song.duration) ? song.duration : null,
+  };
 }
 
 function getWarmDecodedCover(url) {
@@ -409,7 +420,7 @@ function scheduleCoverPrefetch(token) {
       let url = getCachedCoverUrl(neighbor.path);
       if (url === undefined) {
         try {
-          url = await window.dreamApi.getCover(neighbor.path);
+          url = await window.dreamApi.getCover(neighbor.path, buildCoverSongMeta(neighbor));
         } catch (e) {
           continue;
         }
@@ -483,7 +494,7 @@ export async function updateCoverAndColor(song, preloadedUrl = undefined) {
     if (token !== coverRequestToken) return;
     let coverUrl = null;
     try {
-      coverUrl = await window.dreamApi.getCover(song.path);
+      coverUrl = await window.dreamApi.getCover(song.path, buildCoverSongMeta(song));
     } catch (e) {
       coverUrl = null;
     }
@@ -922,6 +933,17 @@ export function bindPlaybackEvents() {
   });
   audio.addEventListener('seeked', () => {
     emitPluginPlaybackState();
+  });
+
+  // 插件启用/配置变更后清理无封面负缓存；若当前曲目尚未显示封面则立即尝试重拉
+  window.addEventListener('dreamisle:plugins-changed', () => {
+    for (const [k, v] of coverUrlCache) {
+      if (!v) coverUrlCache.delete(k);
+    }
+    const current = state.songs[state.currentIndex];
+    if (current && !state.currentCoverBlobUrl) {
+      updateCoverAndColor(current);
+    }
   });
 
   // 在线插件音频流错误提示（如需要登录 / VIP 限制 / 地区版权 / 频控）

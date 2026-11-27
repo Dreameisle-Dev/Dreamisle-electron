@@ -27,12 +27,14 @@ contextBridge.exposeInMainWorld('dreamApi', {
   savePlayQueue: (queue) => ipcRenderer.send('queue:set', queue),
   syncFolder: () => ipcRenderer.invoke('app:syncFolder'),
 
-  getCover: async (path) => {
-    return resolveCoverResponse(await ipcRenderer.invoke('app:getCover', path));
+  getCover: async (path, songMeta = null) => {
+    return resolveCoverResponse(await ipcRenderer.invoke('app:getCover', path, songMeta));
   },
 
-  getCoverThumb: async (path, maxSize = 320) => {
-    return resolveCoverResponse(await ipcRenderer.invoke('app:getCoverThumb', path, maxSize));
+  getCoverThumb: async (path, maxSize = 320, songMeta = null) => {
+    return resolveCoverResponse(
+      await ipcRenderer.invoke('app:getCoverThumb', path, maxSize, songMeta)
+    );
   },
 
   getLyrics: (path, songMeta = null) => ipcRenderer.invoke('app:getLyrics', path, songMeta),
