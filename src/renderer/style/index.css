@@ -5088,6 +5088,53 @@ body.albums-open .lyric-translation.overflowing {
   white-space: nowrap;
 }
 
+.albums-source-tabs {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: 4px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.albums-source-tabs[hidden] {
+  display: none;
+}
+
+.albums-source-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.albums-source-pill {
+  height: 28px;
+  padding: 0 12px;
+  border-radius: 999px;
+  border: 1px solid var(--hair);
+  background: var(--card-bg);
+  color: var(--ink2);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease;
+}
+
+.albums-source-pill:hover {
+  background: var(--row-hover);
+  color: var(--ink1);
+}
+
+.albums-source-pill.active {
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+  border-color: color-mix(in srgb, var(--accent) 36%, transparent);
+  color: var(--accent);
+  font-weight: 600;
+}
+
 .albums-header-right {
   display: flex;
   align-items: center;
@@ -5546,6 +5593,22 @@ body.albums-open .lyric-translation.overflowing {
   background: var(--row-on);
   color: var(--accent);
   font-weight: 600;
+}
+
+.albums-card .cf-back-status {
+  padding: 18px 8px;
+  text-align: center;
+  font-size: 12px;
+  color: var(--ink3);
+}
+
+.albums-card .cf-back-status.is-retry {
+  color: var(--accent);
+  cursor: pointer;
+}
+
+.albums-card .cf-back-status.is-retry:hover {
+  text-decoration: underline;
 }
 
 .albums-card .cf-track-num {

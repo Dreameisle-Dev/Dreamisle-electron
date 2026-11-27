@@ -14,6 +14,7 @@ import {
   getPluginHome,
   getPluginLogs,
   getPluginPlaylistTracks,
+  getPluginUserAlbums,
   getPluginUserPlaylists,
   installPluginFolder,
   installPluginZip,
@@ -114,6 +115,9 @@ export function registerPluginIpc() {
   handleMainIpc('plugins:getHome', (_e, pluginId) => wrapResult(() => getPluginHome(pluginId)));
   handleMainIpc('plugins:getUserPlaylists', (_e, pluginId) =>
     wrapResult(() => getPluginUserPlaylists(pluginId))
+  );
+  handleMainIpc('plugins:getUserAlbums', (_e, pluginId) =>
+    wrapResult(() => getPluginUserAlbums(pluginId))
   );
   handleMainIpc('plugins:getAlbumTracks', (_e, pluginId, albumId) =>
     wrapResult(() => getPluginAlbumTracks(pluginId, albumId))

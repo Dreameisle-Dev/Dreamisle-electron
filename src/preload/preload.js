@@ -113,6 +113,7 @@ contextBridge.exposeInMainWorld('dreamApi', {
     search: (pluginId, opts) => ipcRenderer.invoke('plugins:search', pluginId, opts),
     getHome: (pluginId) => ipcRenderer.invoke('plugins:getHome', pluginId),
     getUserPlaylists: (pluginId) => ipcRenderer.invoke('plugins:getUserPlaylists', pluginId),
+    getUserAlbums: (pluginId) => ipcRenderer.invoke('plugins:getUserAlbums', pluginId),
     getAlbumTracks: (pluginId, albumId) =>
       ipcRenderer.invoke('plugins:getAlbumTracks', pluginId, albumId),
     getPlaylistTracks: (pluginId, playlistId, page, pageSize) =>

@@ -180,11 +180,18 @@ function refreshLiveCard() {
   applyVinylCover(state.currentCoverBlobUrl);
 }
 
-// 曲库歌曲元数据索引:排行行需要标题/艺术家(统计中可能含有已移出曲库的残留路径,兜底用文件名)
+// 曲库 + 当前队列 + 歌单元数据索引:排行行需要标题/艺术家(包含在线插件曲目，避免仅显示 trackId)
 function buildMetaMap() {
   const map = new Map();
-  const source = state.librarySongs.length > 0 ? state.librarySongs : state.songs;
-  for (const s of source) map.set(s.path, { title: s.title, artist: s.artist });
+  for (const s of state.librarySongs) map.set(s.path, { title: s.title, artist: s.artist });
+  for (const pl of state.playlists || []) {
+    for (const s of pl.songs || []) {
+      if (s?.path && !map.has(s.path)) map.set(s.path, { title: s.title, artist: s.artist });
+    }
+  }
+  for (const s of state.songs || []) {
+    if (s?.path && !map.has(s.path)) map.set(s.path, { title: s.title, artist: s.artist });
+  }
   return map;
 }
 

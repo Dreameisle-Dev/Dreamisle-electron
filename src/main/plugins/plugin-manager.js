@@ -890,6 +890,11 @@ export async function getPluginUserPlaylists(pluginId) {
   return proc.invoke('source.getUserPlaylists', {}, { timeoutMs: 9000 });
 }
 
+export async function getPluginUserAlbums(pluginId) {
+  const { proc } = await requireRunningPlugin(pluginId, 'music-source');
+  return proc.invoke('source.getUserAlbums', {}, { timeoutMs: 9000 });
+}
+
 export async function getPluginAlbumTracks(pluginId, albumId) {
   const { proc } = await requireRunningPlugin(pluginId, 'music-source');
   const res = await proc.invoke('source.getAlbumTracks', { albumId }, { timeoutMs: 9000 });

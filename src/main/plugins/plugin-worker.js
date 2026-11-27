@@ -246,6 +246,12 @@ async function dispatchRpc(method, params, signal) {
       const res = await plugin.source.getUserPlaylists({ signal });
       return (Array.isArray(res) ? res : []).map(validatePlaylist).filter(Boolean);
     }
+    case 'source.getUserAlbums': {
+      if (!plugin.source?.getUserAlbums) return [];
+      const res = await plugin.source.getUserAlbums({ signal });
+      const raw = Array.isArray(res) ? res : Array.isArray(res?.items) ? res.items : [];
+      return raw.map(validateAlbum).filter(Boolean);
+    }
     case 'source.resolveStream': {
       const fn = ensureMethod(plugin.source, 'resolveStream', 'source');
       const raw = await fn(params?.track, { quality: params?.quality || 'lossless', signal });

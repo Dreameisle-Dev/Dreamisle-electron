@@ -196,6 +196,7 @@ export const statsEmptyEl = document.getElementById('statsEmpty');
 // 专辑 Cover Flow 浮层元素
 export const albumsOverlay = document.getElementById('albumsOverlay');
 export const albumsCountEl = document.getElementById('albumsCount');
+export const albumsSourceTabs = document.getElementById('albumsSourceTabs');
 export const albumsCounterEl = document.getElementById('albumsCounter');
 export const albumsSearchInput = document.getElementById('albumsSearchInput');
 export const btnAlbumsSearchClear = document.getElementById('btnAlbumsSearchClear');
