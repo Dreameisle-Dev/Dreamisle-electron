@@ -40,8 +40,19 @@ function stopQrPolling() {
   activeQrSession = null;
 }
 
+function closeAllPluginSelects(except = null) {
+  document.querySelectorAll('.plugin-select.open').forEach((el) => {
+    if (el !== except) {
+      el.classList.remove('open');
+      const btn = el.querySelector('.plugin-select-btn');
+      if (btn) btn.setAttribute('aria-expanded', 'false');
+    }
+  });
+}
+
 export function cleanupPluginSettingsOnClose() {
   stopQrPolling();
+  closeAllPluginSelects();
   for (const timer of uninstallConfirmTimers.values()) clearTimeout(timer);
   uninstallConfirmTimers.clear();
 }
@@ -238,18 +249,80 @@ async function renderConfigSubpanel(plugin, container) {
       row.classList.add('is-inline');
       row.appendChild(sw);
     } else if (field.type === 'select') {
-      const select = document.createElement('select');
-      select.className = 'plugin-field-input';
-      select.dataset.fieldKey = field.key;
-      select.dataset.fieldType = 'select';
-      for (const opt of field.options || []) {
-        const o = document.createElement('option');
-        o.value = opt.value;
-        o.textContent = opt.label;
-        if (String(curVal ?? '') === String(opt.value)) o.selected = true;
-        select.appendChild(o);
+      const options = Array.isArray(field.options) ? field.options : [];
+      const initialOpt =
+        options.find((opt) => String(opt.value) === String(curVal ?? '')) || options[0] || null;
+      const initialVal = initialOpt ? String(initialOpt.value) : '';
+      const initialLabel = initialOpt ? initialOpt.label : '';
+
+      const wrap = document.createElement('div');
+      wrap.className = 'plugin-select';
+      wrap.dataset.fieldKey = field.key;
+      wrap.dataset.fieldType = 'select';
+      wrap.dataset.value = initialVal;
+
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'plugin-select-btn';
+      btn.setAttribute('aria-haspopup', 'listbox');
+      btn.setAttribute('aria-expanded', 'false');
+      btn.innerHTML = `<span class="plugin-select-value">${escapeHtml(initialLabel)}</span>
+        <svg class="plugin-select-arrow" width="10" height="6" viewBox="0 0 10 6" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M1 1l4 4 4-4"></path>
+        </svg>`;
+
+      const list = document.createElement('ul');
+      list.className = 'plugin-select-list';
+      list.setAttribute('role', 'listbox');
+
+      for (const opt of options) {
+        const li = document.createElement('li');
+        li.className = `plugin-select-option${String(opt.value) === initialVal ? ' selected' : ''}`;
+        li.setAttribute('role', 'option');
+        li.setAttribute('aria-selected', String(String(opt.value) === initialVal));
+        li.dataset.value = String(opt.value);
+        li.textContent = opt.label;
+        li.addEventListener('click', (ev) => {
+          ev.stopPropagation();
+          wrap.dataset.value = String(opt.value);
+          const valSpan = btn.querySelector('.plugin-select-value');
+          if (valSpan) valSpan.textContent = opt.label;
+          list.querySelectorAll('.plugin-select-option').forEach((item) => {
+            const sel = item === li;
+            item.classList.toggle('selected', sel);
+            item.setAttribute('aria-selected', String(sel));
+          });
+          wrap.classList.remove('open');
+          btn.setAttribute('aria-expanded', 'false');
+        });
+        list.appendChild(li);
       }
-      row.appendChild(select);
+
+      btn.addEventListener('click', (ev) => {
+        ev.stopPropagation();
+        const willOpen = !wrap.classList.contains('open');
+        closeAllPluginSelects(willOpen ? wrap : null);
+        wrap.classList.toggle('open', willOpen);
+        btn.setAttribute('aria-expanded', String(willOpen));
+        if (willOpen) {
+          requestAnimationFrame(() => {
+            const scroller = getEl('settingsScroll');
+            if (!scroller) return;
+            const overflow =
+              list.getBoundingClientRect().bottom - scroller.getBoundingClientRect().bottom;
+            if (overflow > 0) {
+              scroller.scrollTo({
+                top: scroller.scrollTop + overflow + 14,
+                behavior: 'smooth',
+              });
+            }
+          });
+        }
+      });
+
+      wrap.appendChild(btn);
+      wrap.appendChild(list);
+      row.appendChild(wrap);
     } else if (field.type === 'textarea') {
       const ta = document.createElement('textarea');
       ta.className = 'plugin-field-input';
@@ -327,6 +400,8 @@ async function renderConfigSubpanel(plugin, container) {
       const isSecret = el.dataset.fieldSecret === '1';
       if (type === 'boolean') {
         payload[key] = el.getAttribute('aria-checked') === 'true';
+      } else if (type === 'select') {
+        payload[key] = el.dataset.value ?? el.value ?? '';
       } else if (type === 'number') {
         if (el.value !== '') payload[key] = Number(el.value);
       } else if (isSecret) {
@@ -572,6 +647,12 @@ export async function refreshPluginSettingsUi() {
 export function bindPluginSettingsEvents() {
   if (bound || !window.dreamApi.plugins) return;
   bound = true;
+
+  document.addEventListener('click', (e) => {
+    if (!e.target.closest('.plugin-select')) {
+      closeAllPluginSelects();
+    }
+  });
 
   const btnInstallFolder = getEl('btnPluginInstallFolder');
   if (btnInstallFolder) {

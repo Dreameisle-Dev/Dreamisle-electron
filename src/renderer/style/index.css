@@ -6132,8 +6132,117 @@ body.albums-open .lyric-translation.overflowing {
   outline: none;
 }
 
+.plugin-field-input::placeholder {
+  color: var(--ink3);
+}
+
 .plugin-field-input:focus {
   border-color: var(--accent);
+}
+
+select.plugin-field-input option {
+  background: light-dark(#ffffff, #1c1426);
+  color: var(--ink1);
+}
+
+/* 自定义插件下拉选择器：适配浅/深双主题毛玻璃，避免 Windows 原生 <select> 白底白字 */
+.plugin-select {
+  position: relative;
+  width: 100%;
+}
+
+.plugin-select-btn {
+  width: 100%;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 7px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--hair);
+  background: var(--card-bg);
+  color: var(--ink1);
+  font: inherit;
+  font-size: 12px;
+  text-align: left;
+  cursor: pointer;
+  outline: none;
+  transition:
+    border-color 0.14s ease,
+    background-color 0.14s ease;
+}
+
+.plugin-select-btn:hover {
+  background: var(--row-hover);
+}
+
+.plugin-select.open .plugin-select-btn,
+.plugin-select-btn:focus-visible {
+  border-color: var(--accent);
+}
+
+.plugin-select-value {
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.plugin-select-arrow {
+  flex: none;
+  color: var(--ink3);
+  transition: transform 0.16s ease;
+}
+
+.plugin-select.open .plugin-select-arrow {
+  transform: rotate(180deg);
+  color: var(--ink1);
+}
+
+.plugin-select-list {
+  display: none;
+  position: absolute;
+  top: calc(100% + 5px);
+  left: 0;
+  right: 0;
+  z-index: 40;
+  list-style: none;
+  margin: 0;
+  padding: 4px;
+  max-height: 220px;
+  overflow-y: auto;
+  border-radius: 10px;
+  border: 1px solid var(--modal-border);
+  background: var(--menu-bg);
+  box-shadow: 0 12px 32px -6px var(--shade-3);
+  scrollbar-width: thin;
+}
+
+.plugin-select.open .plugin-select-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.plugin-select-option {
+  padding: 6px 9px;
+  border-radius: 7px;
+  font-size: 12px;
+  color: var(--ink1);
+  cursor: pointer;
+  transition: background-color 0.12s ease;
+}
+
+.plugin-select-option:hover {
+  background: var(--row-hover);
+}
+
+.plugin-select-option.selected {
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+  color: var(--accent);
+  font-weight: 600;
 }
 
 .plugin-sub-footer {
