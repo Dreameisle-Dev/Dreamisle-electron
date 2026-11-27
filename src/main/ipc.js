@@ -26,7 +26,13 @@ import {
   setPlayQueue,
   applyLanguage,
 } from './store.js';
-import { handleMainIpc, onMainIpc, isAllowedAudioPathSync } from './security.js';
+import {
+  handleMainIpc,
+  onMainIpc,
+  isAllowedAudioPathSync,
+  isAllowedSongIdSync,
+} from './security.js';
+import { pushLocaleToPlugins } from './plugins/plugin-manager.js';
 import {
   parseAudioFile,
   scanAllFolders,
@@ -161,7 +167,7 @@ function normalizePlaybackState(raw) {
     Number.isInteger(raw.currentIndex) && raw.currentIndex >= -1 ? raw.currentIndex : -1;
   const currentSongPath =
     typeof raw.currentSongPath === 'string' &&
-    isAllowedAudioPathSync(raw.currentSongPath, getMusicFolders())
+    isAllowedSongIdSync(raw.currentSongPath, getMusicFolders())
       ? raw.currentSongPath
       : null;
   const currentTime =
@@ -310,13 +316,20 @@ export function registerIpcHandlers() {
     setPlayQueue(queue);
   });
 
-  handleMainIpc('app:getLyrics', async (event, audioPath) => {
+  handleMainIpc('app:getLyrics', async (event, audioPath, songMeta = null) => {
     if (startupPrefetch && startupPrefetch.songPath === audioPath) {
       const pending = startupPrefetch.lyricsPromise;
       startupPrefetch = null;
       return pending;
     }
-    return readLyrics(audioPath, getMusicFolders());
+    let meta = songMeta;
+    if (!meta && typeof audioPath === 'string') {
+      const cached = store.get('cachedPlaylist');
+      if (Array.isArray(cached)) {
+        meta = cached.find((s) => s && s.path === audioPath) || null;
+      }
+    }
+    return readLyrics(audioPath, getMusicFolders(), meta);
   });
 
   handleMainIpc('settings:get', async () => {
@@ -391,6 +404,7 @@ export function registerIpcHandlers() {
     rebuildTrayMenu();
     setLyricsLang(lang);
     refreshTaskbarLyricsConfig();
+    pushLocaleToPlugins(lang);
     return true;
   });
 
@@ -458,7 +472,7 @@ export function registerIpcHandlers() {
     if (
       typeof songPath !== 'string' ||
       (kind !== 'full' && kind !== 'loop') ||
-      !isAllowedAudioPathSync(songPath, getMusicFolders())
+      !isAllowedSongIdSync(songPath, getMusicFolders())
     ) {
       return null;
     }

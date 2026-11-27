@@ -35,7 +35,7 @@ contextBridge.exposeInMainWorld('dreamApi', {
     return resolveCoverResponse(await ipcRenderer.invoke('app:getCoverThumb', path, maxSize));
   },
 
-  getLyrics: (path) => ipcRenderer.invoke('app:getLyrics', path),
+  getLyrics: (path, songMeta = null) => ipcRenderer.invoke('app:getLyrics', path, songMeta),
   updateDesktopLyrics: (payload) => ipcRenderer.invoke('app:updateDesktopLyrics', payload),
   // 任务栏歌词数据流（fire-and-forget，避免高频 invoke 的 Promise 开销）
   setTaskbarLyricsDocument: (doc) => ipcRenderer.send('app:setTaskbarLyricsDocument', doc),
@@ -89,4 +89,47 @@ contextBridge.exposeInMainWorld('dreamApi', {
   getVersion: () => ipcRenderer.invoke('app:getVersion'),
   getStats: () => ipcRenderer.invoke('stats:get'),
   recordPlay: (path, kind) => ipcRenderer.invoke('stats:recordPlay', path, kind),
+  plugins: {
+    list: () => ipcRenderer.invoke('plugins:list'),
+    refresh: () => ipcRenderer.invoke('plugins:refresh'),
+    getPreferences: () => ipcRenderer.invoke('plugins:getPreferences'),
+    setPreferredQuality: (quality) => ipcRenderer.invoke('plugins:setPreferredQuality', quality),
+    setOnlineLyricsFallback: (enabled) =>
+      ipcRenderer.invoke('plugins:setOnlineLyricsFallback', enabled),
+    openDir: () => ipcRenderer.invoke('plugins:openDir'),
+    installFolder: () => ipcRenderer.invoke('plugins:installFolder'),
+    installZip: () => ipcRenderer.invoke('plugins:installZip'),
+    installFromPath: (targetPath) => ipcRenderer.invoke('plugins:installFromPath', targetPath),
+    setEnabled: (pluginId, enabled) => ipcRenderer.invoke('plugins:setEnabled', pluginId, enabled),
+    restart: (pluginId) => ipcRenderer.invoke('plugins:restart', pluginId),
+    uninstall: (pluginId) => ipcRenderer.invoke('plugins:uninstall', pluginId),
+    getLogs: (pluginId) => ipcRenderer.invoke('plugins:getLogs', pluginId),
+    getConfig: (pluginId) => ipcRenderer.invoke('plugins:getConfig', pluginId),
+    setConfig: (pluginId, values) => ipcRenderer.invoke('plugins:setConfig', pluginId, values),
+    authGetAccount: (pluginId) => ipcRenderer.invoke('plugins:authGetAccount', pluginId),
+    authLogout: (pluginId) => ipcRenderer.invoke('plugins:authLogout', pluginId),
+    authQrStart: (pluginId) => ipcRenderer.invoke('plugins:authQrStart', pluginId),
+    authQrPoll: (pluginId, key) => ipcRenderer.invoke('plugins:authQrPoll', pluginId, key),
+    authFormSubmit: (pluginId, values) =>
+      ipcRenderer.invoke('plugins:authFormSubmit', pluginId, values),
+    search: (pluginId, opts) => ipcRenderer.invoke('plugins:search', pluginId, opts),
+    getHome: (pluginId) => ipcRenderer.invoke('plugins:getHome', pluginId),
+    getUserPlaylists: (pluginId) => ipcRenderer.invoke('plugins:getUserPlaylists', pluginId),
+    getAlbumTracks: (pluginId, albumId) =>
+      ipcRenderer.invoke('plugins:getAlbumTracks', pluginId, albumId),
+    getPlaylistTracks: (pluginId, playlistId, page, pageSize) =>
+      ipcRenderer.invoke('plugins:getPlaylistTracks', pluginId, playlistId, page, pageSize),
+    getArtworkThumb: async (pluginId, artworkUrl, maxSize = 320) => {
+      return resolveCoverResponse(
+        await ipcRenderer.invoke('plugins:getArtworkThumb', pluginId, artworkUrl, maxSize)
+      );
+    },
+    registerTracks: (songs) => ipcRenderer.send('plugins:registerTracks', songs),
+    emitTrackChange: (track) => ipcRenderer.send('plugins:lifecycleTrackChange', track),
+    emitPlaybackState: (payload) => ipcRenderer.send('plugins:lifecyclePlaybackState', payload),
+    emitTrackComplete: (payload) => ipcRenderer.send('plugins:lifecycleTrackComplete', payload),
+    onChanged: (callback) => ipcRenderer.on('plugins:changed', (_event, list) => callback(list)),
+    onStreamError: (callback) =>
+      ipcRenderer.on('plugins:stream-error', (_event, payload) => callback(payload)),
+  },
 });

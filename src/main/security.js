@@ -3,6 +3,13 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { getMainWindow } from './window.js';
+import {
+  isTrackUri,
+  parseTrackUri,
+  formatMediaUrl,
+} from '../../packages/dreamisle-plugin-sdk/src/index.js';
+
+export { isTrackUri as isPluginTrackUri, parseTrackUri as parsePluginTrackUri };
 
 export const AUDIO_EXTENSIONS = [
   '.mp3',
@@ -137,6 +144,20 @@ export function isAllowedAudioPathSync(targetPath, musicFolders) {
   return musicFolders.some(
     (folder) => isSafeLocalPath(folder) && isWithinBaseDir(folder, targetPath)
   );
+}
+
+/**
+ * Check whether a song identifier is either an allowed local audio file or a valid `dream-track://` URI.
+ */
+export function isAllowedSongIdSync(songId, musicFolders) {
+  if (isTrackUri(songId)) return parseTrackUri(songId) !== null;
+  return isAllowedAudioPathSync(songId, musicFolders);
+}
+
+export function sanitizeSongUrl(songId) {
+  const parsed = parseTrackUri(songId);
+  if (parsed) return formatMediaUrl(parsed.pluginId, parsed.trackId);
+  return sanitizeAudioUrl(songId);
 }
 
 /**

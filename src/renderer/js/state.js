@@ -61,6 +61,9 @@ export const state = {
   fontsLoadFailed: false,
   equalizer: { ...DEFAULT_EQ, gains: [...DEFAULT_EQ.gains] }, // 启动时由主进程配置覆盖
 
+  // 插件状态缓存（由主进程 plugins:changed 同步）
+  plugins: [],
+
   // 同步提示 toast
   syncToastTimer: null,
 };

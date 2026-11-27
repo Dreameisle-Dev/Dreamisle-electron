@@ -25,11 +25,11 @@ export function recordPlay(stats, path, kind, now) {
   return { plays, firstPlayDate: stats?.firstPlayDate ?? now };
 }
 
-// 清理已不在音乐库中的歌曲记录
+// 清理已不在音乐库中的本地歌曲记录（在线插件曲目 dream-track:// 予以保留）
 export function pruneStats(stats, validPaths) {
   const plays = {};
   for (const [path, entry] of Object.entries(stats.plays)) {
-    if (validPaths.has(path)) plays[path] = entry;
+    if (path.startsWith('dream-track://') || validPaths.has(path)) plays[path] = entry;
   }
   return { plays, firstPlayDate: stats.firstPlayDate };
 }

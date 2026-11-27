@@ -54,6 +54,8 @@ import {
   closeAlbums,
   isAlbumsOpen,
   handleAlbumsKeydown,
+  closeOnlineExplore,
+  isOnlineExploreOpen,
 } from './lazy-overlays.js';
 import { initMouseFollow, updateProgressStyle, applyThemeMode } from './theme.js';
 import { applyPerformanceMode } from './performance.js';
@@ -102,6 +104,10 @@ function setupIpcListeners() {
   });
   window.dreamApi.onTrayNext(() => playNext(false));
   window.dreamApi.onTrayPrev(() => playPrev());
+  window.dreamApi.plugins?.onChanged((list) => {
+    state.plugins = Array.isArray(list) ? list : [];
+    window.dispatchEvent(new CustomEvent('dreamisle:plugins-changed'));
+  });
 }
 
 window.addEventListener('DOMContentLoaded', async () => {
@@ -229,6 +235,9 @@ window.addEventListener('DOMContentLoaded', async () => {
       } else if (isAlbumsOpen()) {
         e.preventDefault();
         closeAlbums();
+      } else if (isOnlineExploreOpen()) {
+        e.preventDefault();
+        closeOnlineExplore();
       }
       return;
     }
@@ -356,6 +365,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     if (mode === 'mini') {
       state.isMiniMode = true;
       closeAlbums();
+      closeOnlineExplore();
       document.body.classList.add('mini-mode');
     } else {
       state.isMiniMode = false;
@@ -397,15 +407,15 @@ window.addEventListener('DOMContentLoaded', async () => {
 
   const savedSongs = Array.isArray(bootstrap.savedSongs) ? bootstrap.savedSongs : [];
   state.playlists = Array.isArray(bootstrap.playlists) ? bootstrap.playlists : [];
+  state.librarySongs = [...savedSongs]; // 曲库缓存
+  const restoredQueueSnapshot = resolveQueueSnapshot(bootstrap.playQueue);
 
-  if (savedSongs.length > 0) {
-    state.librarySongs = [...savedSongs]; // 曲库缓存
+  if (savedSongs.length > 0 || restoredQueueSnapshot.songs.length > 0) {
     searchInput.value = '';
 
-    // 还原上次所在的队列类型（全库/文件夹/歌单/自定义队列）及排序/字母索引
-    const snapshot = resolveQueueSnapshot(bootstrap.playQueue);
-    if (snapshot.songs.length > 0) {
-      restoreSavedQueue(snapshot);
+    // 还原上次所在的队列类型（全库/文件夹/歌单/自定义队列，支持包含在线插件曲目）及排序/字母索引
+    if (restoredQueueSnapshot.songs.length > 0) {
+      restoreSavedQueue(restoredQueueSnapshot);
     } else {
       state.originalSongs = [...savedSongs]; // 备份原始数据
       state.songs = [...savedSongs];
@@ -464,6 +474,17 @@ window.addEventListener('DOMContentLoaded', async () => {
   }
 
   updateProgressStyle(0);
+
+  // 非阻塞同步已安装插件快照（不阻塞冷启动首屏渲染）
+  window.dreamApi.plugins
+    ?.list()
+    .then((list) => {
+      if (Array.isArray(list)) {
+        state.plugins = list;
+        window.dispatchEvent(new CustomEvent('dreamisle:plugins-changed'));
+      }
+    })
+    .catch(() => {});
 
   // 延迟 1.5s 再做磁盘目录增量同步，避免刚开屏时递归扫目录与封面解码、音频缓冲、任务栏歌词抢占磁盘 I/O
   setTimeout(() => {

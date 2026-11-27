@@ -185,12 +185,24 @@ const VALID_SORT_MODES = new Set(['title', 'artist', 'random', 'custom', 'album'
 
 function normalizeQueueEntry(song) {
   if (!song || typeof song !== 'object' || typeof song.path !== 'string' || !song.path) return null;
-  return {
+  const entry = {
     path: song.path,
     title: typeof song.title === 'string' ? song.title : '',
     artist: typeof song.artist === 'string' ? song.artist : '',
     url: typeof song.url === 'string' ? song.url : '',
   };
+  if (song.path.startsWith('dream-track://')) {
+    entry.source = 'plugin';
+    if (typeof song.pluginId === 'string') entry.pluginId = song.pluginId;
+    if (typeof song.trackId === 'string') entry.trackId = song.trackId;
+    if (typeof song.album === 'string') entry.album = song.album;
+    if (Number.isFinite(song.duration)) entry.duration = song.duration;
+    if (typeof song.artworkUrl === 'string') entry.artworkUrl = song.artworkUrl;
+    if (song.pluginMeta && typeof song.pluginMeta === 'object' && !Array.isArray(song.pluginMeta)) {
+      entry.pluginMeta = song.pluginMeta;
+    }
+  }
+  return entry;
 }
 
 function normalizeActiveQueue(raw) {
@@ -300,4 +312,78 @@ export function migrateLegacyMusicFolder() {
     store.set('musicFolders', [legacy]);
     store.delete('musicFolder');
   }
+}
+
+// ── 插件生态偏好与配置（启停状态、非敏感配置、在线音质偏好、本地无歌词在线兜底） ──
+const VALID_PLUGIN_QUALITIES = new Set(['standard', 'high', 'lossless', 'hires']);
+
+export function getPluginEnabledIds() {
+  const raw = store.get('plugins.enabled');
+  return Array.isArray(raw) ? raw.filter((id) => typeof id === 'string' && id.length > 0) : [];
+}
+
+export function setPluginEnabledId(pluginId, enabled) {
+  if (typeof pluginId !== 'string' || !pluginId) return getPluginEnabledIds();
+  const set = new Set(getPluginEnabledIds());
+  if (enabled) set.add(pluginId);
+  else set.delete(pluginId);
+  const next = [...set];
+  store.set('plugins.enabled', next);
+  return next;
+}
+
+export function getPluginStoredConfig(pluginId) {
+  if (typeof pluginId !== 'string' || !pluginId) return {};
+  const all = store.get('plugins.configs');
+  if (!all || typeof all !== 'object' || Array.isArray(all)) return {};
+  const cfg = all[pluginId];
+  return cfg && typeof cfg === 'object' && !Array.isArray(cfg) ? { ...cfg } : {};
+}
+
+export function setPluginStoredConfig(pluginId, configObj) {
+  if (typeof pluginId !== 'string' || !pluginId) return {};
+  const rawAll = store.get('plugins.configs');
+  const all = rawAll && typeof rawAll === 'object' && !Array.isArray(rawAll) ? { ...rawAll } : {};
+  all[pluginId] =
+    configObj && typeof configObj === 'object' && !Array.isArray(configObj) ? { ...configObj } : {};
+  store.set('plugins.configs', all);
+  return all[pluginId];
+}
+
+export function clearPluginStoredState(pluginId) {
+  if (typeof pluginId !== 'string' || !pluginId) return;
+  setPluginEnabledId(pluginId, false);
+  const rawAll = store.get('plugins.configs');
+  if (
+    rawAll &&
+    typeof rawAll === 'object' &&
+    !Array.isArray(rawAll) &&
+    Object.hasOwn(rawAll, pluginId)
+  ) {
+    const next = { ...rawAll };
+    delete next[pluginId];
+    store.set('plugins.configs', next);
+  }
+}
+
+export function getPluginPreferredQuality() {
+  const raw = store.get('plugins.preferredQuality');
+  return typeof raw === 'string' && VALID_PLUGIN_QUALITIES.has(raw) ? raw : 'lossless';
+}
+
+export function setPluginPreferredQuality(quality) {
+  const next =
+    typeof quality === 'string' && VALID_PLUGIN_QUALITIES.has(quality) ? quality : 'lossless';
+  store.set('plugins.preferredQuality', next);
+  return next;
+}
+
+export function getOnlineLyricsFallback() {
+  return store.get('plugins.onlineLyricsFallback') !== false;
+}
+
+export function setOnlineLyricsFallback(enabled) {
+  const next = !!enabled;
+  store.set('plugins.onlineLyricsFallback', next);
+  return next;
 }

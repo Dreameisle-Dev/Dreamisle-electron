@@ -10,3 +10,7 @@
 	path = packages/electron-taskbar-widget
 	url = https://github.com/Dreameisle-Dev/electron-taskbar-widget.git
 	branch = main
+[submodule "packages/dreamisle-plugin-sdk"]
+	path = packages/dreamisle-plugin-sdk
+	url = https://github.com/Dreameisle-Dev/dreamisle-plugin-sdk.git
+	branch = main

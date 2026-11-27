@@ -72,10 +72,15 @@ import { showSyncToast } from './helpers.js';
 import { applyPlaylistFromMain } from './playlist.js';
 import { syncLibrary } from './library-sync.js';
 import { renderPlaylistsList } from './playlists.js';
-import { closeAlbums } from './lazy-overlays.js';
+import { closeAlbums, closeOnlineExplore } from './lazy-overlays.js';
 import { applyThemeMode } from './theme.js';
 import { applyPerformanceMode } from './performance.js';
 import { renderEqPresets, syncEqUi } from './equalizer.js';
+import {
+  bindPluginSettingsEvents,
+  cleanupPluginSettingsOnClose,
+  refreshPluginSettingsUi,
+} from './plugins-settings.js';
 
 // 主题分段控件的选中态。'system'/'light'/'dark'，非法值按 system 处理。
 function syncThemeSeg(mode) {
@@ -88,12 +93,13 @@ function syncThemeSeg(mode) {
 export { syncThemeSeg };
 
 const SETTINGS_PANEL_KEY = 'dreamisle.settings.panel';
-const SETTINGS_PANELS = new Set(['general', 'library', 'lyrics', 'equalizer']);
+const SETTINGS_PANELS = new Set(['general', 'library', 'lyrics', 'equalizer', 'plugins']);
 const SETTINGS_SECTIONS = [
   { id: 'general', elId: 'settingsSecGeneral', stage: 'vinyl' },
   { id: 'library', elId: 'settingsSecLibrary', stage: 'vinyl' },
   { id: 'lyrics', elId: 'settingsSecLyrics', stage: 'lyrics' },
   { id: 'equalizer', elId: 'settingsSecEqualizer', stage: 'eq' },
+  { id: 'plugins', elId: 'settingsSecPlugins', stage: 'vinyl' },
 ];
 let desktopLyricsLines = 1;
 let previewSyncTimer = null;
@@ -382,6 +388,7 @@ export async function openSettings() {
   if (playlistDrawer) playlistDrawer.classList.remove('open');
   if (playlistsDrawer) playlistsDrawer.classList.remove('open');
   closeAlbums();
+  closeOnlineExplore();
   document.body.classList.add('settings-open');
   settingsOverlay.classList.add('open');
   restoreSettingsPanel();
@@ -397,6 +404,7 @@ export function closeSettings() {
   document.body.classList.remove('settings-open');
   settingsOverlay.classList.remove('open');
   stopPreviewSync();
+  cleanupPluginSettingsOnClose();
   if (langSelectWrap) langSelectWrap.classList.remove('open');
   closeFontDropdown(fontSelectWrap, fontOptions);
   closeFontDropdown(taskbarFontSelectWrap, taskbarFontOptions);
@@ -455,6 +463,7 @@ export async function refreshSettingsUi() {
   renderEqPresets();
   syncEqUi();
   syncNowPlayingPreviews();
+  await refreshPluginSettingsUi();
 }
 
 export function renderFolderList(folders) {
@@ -906,7 +915,7 @@ export function bindSettingsEvents() {
       if (Date.now() < scrollSpyLockUntil) return;
       const atBottom =
         settingsScroll.scrollTop + settingsScroll.clientHeight >= settingsScroll.scrollHeight - 12;
-      let activeId = atBottom ? 'equalizer' : 'general';
+      let activeId = atBottom ? 'plugins' : 'general';
       if (!atBottom) {
         const threshold = settingsScroll.scrollTop + 44;
         for (const sec of SETTINGS_SECTIONS) {
@@ -1037,6 +1046,15 @@ export function bindSettingsEvents() {
       closeSettings();
     }
   });
+  window.addEventListener('dreamisle:online-opened', () => {
+    if (
+      settingsOverlay.classList.contains('open') ||
+      document.body.classList.contains('settings-open')
+    ) {
+      closeSettings();
+    }
+  });
   if (btnAddFolder) btnAddFolder.onclick = handleAddFolder;
   if (btnRescanLibrary) btnRescanLibrary.onclick = handleRescanLibrary;
+  bindPluginSettingsEvents();
 }

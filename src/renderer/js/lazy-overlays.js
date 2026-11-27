@@ -112,3 +112,45 @@ export function closeStats() {
 export function isStatsOpen() {
   return statsMod ? statsMod.isStatsOpen() : false;
 }
+
+let onlineMod = null;
+let onlinePromise = null;
+
+function loadOnlineModule() {
+  if (onlineMod) return Promise.resolve(onlineMod);
+  if (!onlinePromise) {
+    onlinePromise = import('./online-explore.js')
+      .then((mod) => {
+        mod.bindOnlineExploreEvents();
+        onlineMod = mod;
+        return mod;
+      })
+      .catch((error) => {
+        onlinePromise = null;
+        throw error;
+      });
+  }
+  return onlinePromise;
+}
+
+export function openOnlineExplore() {
+  if (onlineMod) return onlineMod.openOnlineExplore();
+  return loadOnlineModule()
+    .then((mod) => mod.openOnlineExplore())
+    .catch(() => {});
+}
+
+export function toggleOnlineExplore() {
+  if (onlineMod) return onlineMod.toggleOnlineExplore();
+  return loadOnlineModule()
+    .then((mod) => mod.toggleOnlineExplore())
+    .catch(() => {});
+}
+
+export function closeOnlineExplore() {
+  if (onlineMod) onlineMod.closeOnlineExplore();
+}
+
+export function isOnlineExploreOpen() {
+  return onlineMod ? onlineMod.isOnlineExploreOpen() : false;
+}

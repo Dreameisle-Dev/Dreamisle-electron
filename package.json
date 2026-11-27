@@ -46,7 +46,16 @@
       "!packages/electron-taskbar-widget/CONTRIBUTING.md",
       "!packages/electron-taskbar-widget/.editorconfig",
       "!packages/electron-taskbar-widget/.prettierrc",
-      "!packages/electron-taskbar-widget/.gitignore"
+      "!packages/electron-taskbar-widget/.gitignore",
+      "!packages/dreamisle-plugin-sdk/.github{,/**/*}",
+      "!packages/dreamisle-plugin-sdk/examples{,/**/*}",
+      "!packages/dreamisle-plugin-sdk/test{,/**/*}",
+      "!packages/dreamisle-plugin-sdk/types{,/**/*}",
+      "!packages/dreamisle-plugin-sdk/README*.md",
+      "!packages/dreamisle-plugin-sdk/CONTRIBUTING.md",
+      "!packages/dreamisle-plugin-sdk/.editorconfig",
+      "!packages/dreamisle-plugin-sdk/.prettierrc",
+      "!packages/dreamisle-plugin-sdk/.gitignore"
     ],
     "win": {
       "icon": "src/assets/app_icon.ico",

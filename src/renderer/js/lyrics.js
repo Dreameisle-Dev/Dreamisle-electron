@@ -212,13 +212,27 @@ export async function loadAndRenderLyrics(song, preloadedLrcData = undefined) {
 
 async function fetchAndRenderLyrics(song, token, preloadedLrcData = undefined) {
   let lrcData =
-    preloadedLrcData !== undefined ? preloadedLrcData : await window.dreamApi.getLyrics(song.path);
+    preloadedLrcData !== undefined
+      ? preloadedLrcData
+      : await window.dreamApi.getLyrics(song.path, {
+          title: song.title,
+          artist: song.artist,
+          album: song.album || null,
+          duration: song.duration ?? null,
+        });
   if (token !== lyricsRequestToken) return;
 
   let parsed = { metadata: {}, lines: [] };
   if (lrcData) {
     if (typeof lrcData === 'object' && lrcData !== null) {
-      if (lrcData instanceof Uint8Array || ArrayBuffer.isView(lrcData)) {
+      if (lrcData.pluginLyrics) {
+        if (Array.isArray(lrcData.lines) && lrcData.lines.length > 0) {
+          parsed = { metadata: {}, lines: lrcData.lines };
+        } else {
+          const combined = [lrcData.lrc, lrcData.tlyric].filter(Boolean).join('\n');
+          if (combined.trim()) parsed = parseLyricsText(repairMojibakeText(combined));
+        }
+      } else if (lrcData instanceof Uint8Array || ArrayBuffer.isView(lrcData)) {
         try {
           parsed = parseLyricsText(decodeLyricsBuffer(lrcData));
         } catch (e) {}

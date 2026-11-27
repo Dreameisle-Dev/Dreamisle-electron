@@ -1,6 +1,12 @@
 import { store, getMusicFolders } from './store.js';
 import { t } from '../shared/i18n.js';
-import { handleMainIpc, isAllowedAudioPathSync, sanitizeAudioUrl } from './security.js';
+import {
+  handleMainIpc,
+  isAllowedSongIdSync,
+  isPluginTrackUri,
+  parsePluginTrackUri,
+  sanitizeSongUrl,
+} from './security.js';
 
 const KEY = 'playlists';
 const MAX_PLAYLISTS = 500;
@@ -71,18 +77,36 @@ function deletePlaylist(id) {
 
 function sanitizePlaylistSong(song) {
   if (!song || typeof song !== 'object' || Array.isArray(song)) return null;
-  if (!isAllowedAudioPathSync(song.path, getMusicFolders())) return null;
+  if (!isAllowedSongIdSync(song.path, getMusicFolders())) return null;
   const entry = {
     path: song.path,
     title: typeof song.title === 'string' ? song.title.slice(0, 500) : '',
     artist: typeof song.artist === 'string' ? song.artist.slice(0, 500) : '',
-    url: sanitizeAudioUrl(song.path),
+    url: sanitizeSongUrl(song.path),
   };
   if (typeof song.album === 'string') entry.album = song.album.slice(0, 500);
+  if (Number.isFinite(song.duration) && song.duration >= 0)
+    entry.duration = Math.round(song.duration);
+  if (Number.isInteger(song.trackNo) && song.trackNo > 0) entry.trackNo = song.trackNo;
+  if (Number.isInteger(song.discNo) && song.discNo > 0) entry.discNo = song.discNo;
+  if (Number.isInteger(song.year) && song.year > 1900 && song.year < 2200) entry.year = song.year;
   if (Number.isFinite(song.bitrate)) entry.bitrate = song.bitrate;
   if (Number.isFinite(song.sampleRate)) entry.sampleRate = song.sampleRate;
   if (Number.isFinite(song.bitsPerSample)) entry.bitsPerSample = song.bitsPerSample;
   if (typeof song.codec === 'string') entry.codec = song.codec.slice(0, 64);
+
+  const parsedPlugin = parsePluginTrackUri(song.path);
+  if (parsedPlugin) {
+    entry.source = 'plugin';
+    entry.pluginId = parsedPlugin.pluginId;
+    entry.trackId = parsedPlugin.trackId;
+    if (typeof song.artworkUrl === 'string' && /^https?:\/\//i.test(song.artworkUrl)) {
+      entry.artworkUrl = song.artworkUrl.slice(0, 2048);
+    }
+    if (song.pluginMeta && typeof song.pluginMeta === 'object' && !Array.isArray(song.pluginMeta)) {
+      entry.pluginMeta = song.pluginMeta;
+    }
+  }
   return entry;
 }
 
@@ -137,7 +161,8 @@ function prunePlaylists(validPaths) {
   let pruned = 0;
   for (const pl of playlists) {
     const before = pl.songs.length;
-    pl.songs = pl.songs.filter((s) => valid.has(s.path));
+    // 在线插件曲目（dream-track://）不随本地文件夹同步被误清理
+    pl.songs = pl.songs.filter((s) => isPluginTrackUri(s.path) || valid.has(s.path));
     pruned += before - pl.songs.length;
   }
   if (pruned > 0) savePlaylists(playlists);

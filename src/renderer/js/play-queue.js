@@ -6,15 +6,27 @@ import { compareByInitial } from '../../shared/initial-letter.js';
 
 const MAX_QUEUE_LENGTH = 1000;
 
-// 只保存展示/播放所需的最小字段；恢复时会按 path 回到曲库取最新元数据
+// 只保存展示/播放所需的最小字段；本地曲恢复时按 path 回曲库取最新元数据，插件曲目保留必要快照
 function toQueueEntry(song) {
   if (!song || typeof song.path !== 'string' || song.path.length === 0) return null;
-  return {
+  const entry = {
     path: song.path,
     title: typeof song.title === 'string' ? song.title : '',
     artist: typeof song.artist === 'string' ? song.artist : '',
     url: typeof song.url === 'string' ? song.url : '',
   };
+  if (song.path.startsWith('dream-track://')) {
+    entry.source = 'plugin';
+    if (typeof song.pluginId === 'string') entry.pluginId = song.pluginId;
+    if (typeof song.trackId === 'string') entry.trackId = song.trackId;
+    if (typeof song.album === 'string') entry.album = song.album;
+    if (Number.isFinite(song.duration)) entry.duration = song.duration;
+    if (typeof song.artworkUrl === 'string') entry.artworkUrl = song.artworkUrl;
+    if (song.pluginMeta && typeof song.pluginMeta === 'object' && !Array.isArray(song.pluginMeta)) {
+      entry.pluginMeta = song.pluginMeta;
+    }
+  }
+  return entry;
 }
 
 function isSortedByField(songs, field) {
@@ -52,12 +64,28 @@ export function resolveQueueSnapshot(saved) {
     : saved && Array.isArray(saved.songs)
       ? saved.songs
       : [];
-  if (rawSongs.length === 0 || state.librarySongs.length === 0) {
+  const hasPluginSongs = rawSongs.some(
+    (item) => item && typeof item.path === 'string' && item.path.startsWith('dream-track://')
+  );
+  if (rawSongs.length === 0 || (state.librarySongs.length === 0 && !hasPluginSongs)) {
     return { songs: [], activeQueue: null, sortMode: null };
   }
 
   const byPath = new Map(state.librarySongs.map((song) => [song.path, song]));
-  const songs = rawSongs.map((item) => byPath.get(item && item.path)).filter(Boolean);
+  const pluginRestored = [];
+  const songs = rawSongs
+    .map((item) => {
+      if (!item || typeof item.path !== 'string') return null;
+      if (item.path.startsWith('dream-track://')) {
+        pluginRestored.push(item);
+        return item;
+      }
+      return byPath.get(item.path) || null;
+    })
+    .filter(Boolean);
+  if (pluginRestored.length > 0) {
+    window.dreamApi.plugins?.registerTracks(pluginRestored);
+  }
   let activeQueue = !Array.isArray(saved) && saved ? saved.activeQueue || null : null;
   let sortMode = !Array.isArray(saved) && saved ? saved.sortMode || null : null;
 

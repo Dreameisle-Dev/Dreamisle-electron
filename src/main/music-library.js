@@ -3,8 +3,14 @@ import crypto from 'crypto';
 import { pathToFileURL } from 'url';
 import { app, nativeImage, protocol } from 'electron';
 import fs from 'fs/promises';
-import { AUDIO_EXTENSIONS, resolveAllowedLibraryFile } from './security.js';
+import { AUDIO_EXTENSIONS, isPluginTrackUri, resolveAllowedLibraryFile } from './security.js';
 import { decodeLyricsBuffer, repairMojibakeText } from '../shared/lyrics-decode.js';
+import {
+  fetchPluginArtworkBuffer,
+  fetchPluginCoverBuffer,
+  fetchPluginLyrics,
+  matchOnlineLyricsForLocalTrack,
+} from './plugins/plugin-manager.js';
 
 // 按需懒加载 music-metadata（冷导入 ~43ms）：常规冷启动命中曲库缓存与封面缩略图缓存时无需解析音频标签
 let parseFilePromise = null;
@@ -229,13 +235,81 @@ function setCoverThumbCache(cacheKey, value) {
   }
 }
 
-// 统一封面缩略图/主封面读取：返回稳定协议 URL（dream-thumb://cover/<sha1>.jpg），零 Buffer 驻留、零 Blob 泄漏
+// 统一封面缩略图/主封面读取：支持本地音频与 dream-track:// 在线插件曲目，
+// 返回稳定协议 URL（dream-thumb://cover/<sha1>.jpg），零 Buffer 驻留、零 Blob 泄漏
 export async function readCoverThumbnail(filePath, allowedFolders, maxSize = 320) {
+  const targetSize = Math.max(128, Math.min(1024, Math.round(Number(maxSize) || 320)));
+  const jpegQuality = targetSize >= 512 ? 88 : 82;
+
+  if (isPluginTrackUri(filePath)) {
+    const cacheKey = `${filePath}@${targetSize}`;
+    if (coverThumbCache.has(cacheKey)) {
+      const hit = coverThumbCache.get(cacheKey);
+      setCoverThumbCache(cacheKey, hit);
+      return hit;
+    }
+    if (coverThumbInflight.has(cacheKey)) {
+      return coverThumbInflight.get(cacheKey);
+    }
+
+    const job = (async () => {
+      try {
+        let diskJpgPath = null;
+        let thumbUrl = null;
+        const thumbDir = await getThumbDir();
+        if (thumbDir) {
+          const hash = crypto
+            .createHash('sha1')
+            .update(`plugin-cover|${filePath}|${targetSize}`)
+            .digest('hex');
+          diskJpgPath = path.join(thumbDir, `${hash}.jpg`);
+          thumbUrl = `dream-thumb://cover/${hash}.jpg`;
+          try {
+            await fs.access(diskJpgPath);
+            touchDiskThumbIfOld(diskJpgPath);
+            setCoverThumbCache(cacheKey, thumbUrl);
+            return thumbUrl;
+          } catch {}
+        }
+
+        const fetched = await fetchPluginCoverBuffer(filePath);
+        if (!fetched?.buffer) return null;
+
+        const img = nativeImage.createFromBuffer(fetched.buffer);
+        if (img.isEmpty()) return null;
+
+        const { width, height } = img.getSize();
+        let resized = img;
+        if (width > targetSize || height > targetSize) {
+          resized =
+            width >= height
+              ? img.resize({ width: targetSize, quality: 'good' })
+              : img.resize({ height: targetSize, quality: 'good' });
+        }
+        const jpegBuf = resized.toJPEG(jpegQuality);
+        if (!jpegBuf || jpegBuf.length === 0) return null;
+
+        if (diskJpgPath && thumbUrl) {
+          await fs.writeFile(diskJpgPath, jpegBuf);
+          scheduleDiskThumbPrune();
+          setCoverThumbCache(cacheKey, thumbUrl);
+          return thumbUrl;
+        }
+        return { buffer: jpegBuf, format: 'image/jpeg' };
+      } catch {
+        return null;
+      } finally {
+        coverThumbInflight.delete(cacheKey);
+      }
+    })();
+
+    coverThumbInflight.set(cacheKey, job);
+    return job;
+  }
+
   const safePath = await resolveAllowedLibraryFile(filePath, allowedFolders);
   if (!safePath) return null;
 
-  const targetSize = Math.max(128, Math.min(1024, Math.round(Number(maxSize) || 320)));
-  const jpegQuality = targetSize >= 512 ? 88 : 82;
   const cacheKey = `${safePath}@${targetSize}`;
 
   if (coverThumbCache.has(cacheKey)) {
@@ -329,6 +403,76 @@ export async function readCoverThumbnail(filePath, allowedFolders, maxSize = 320
   return job;
 }
 
+export async function readPluginArtworkThumbnail(pluginId, artworkUrl, maxSize = 320) {
+  if (typeof pluginId !== 'string' || typeof artworkUrl !== 'string' || !artworkUrl) return null;
+  const targetSize = Math.min(1024, Math.max(64, Number(maxSize) || 320));
+  const jpegQuality = targetSize >= 480 ? 88 : 82;
+  const cacheKey = `art:${pluginId}:${artworkUrl}@${targetSize}`;
+
+  if (coverThumbCache.has(cacheKey)) {
+    const hit = coverThumbCache.get(cacheKey);
+    setCoverThumbCache(cacheKey, hit);
+    return hit;
+  }
+  if (coverThumbInflight.has(cacheKey)) {
+    return coverThumbInflight.get(cacheKey);
+  }
+
+  const job = (async () => {
+    try {
+      let diskJpgPath = null;
+      let thumbUrl = null;
+      const thumbDir = await getThumbDir();
+      if (thumbDir) {
+        const hash = crypto
+          .createHash('sha1')
+          .update(`plugin-art|${pluginId}|${artworkUrl}|${targetSize}`)
+          .digest('hex');
+        diskJpgPath = path.join(thumbDir, `${hash}.jpg`);
+        thumbUrl = `dream-thumb://cover/${hash}.jpg`;
+        try {
+          await fs.access(diskJpgPath);
+          touchDiskThumbIfOld(diskJpgPath);
+          setCoverThumbCache(cacheKey, thumbUrl);
+          return thumbUrl;
+        } catch {}
+      }
+
+      const fetched = await fetchPluginArtworkBuffer(pluginId, artworkUrl);
+      if (!fetched?.buffer) return null;
+
+      const img = nativeImage.createFromBuffer(fetched.buffer);
+      if (img.isEmpty()) return null;
+
+      const { width, height } = img.getSize();
+      let resized = img;
+      if (width > targetSize || height > targetSize) {
+        resized =
+          width >= height
+            ? img.resize({ width: targetSize, quality: 'good' })
+            : img.resize({ height: targetSize, quality: 'good' });
+      }
+      const jpegBuf = resized.toJPEG(jpegQuality);
+      if (!jpegBuf || jpegBuf.length === 0) return null;
+
+      if (diskJpgPath && thumbUrl) {
+        await fs.writeFile(diskJpgPath, jpegBuf);
+        scheduleDiskThumbPrune();
+        setCoverThumbCache(cacheKey, thumbUrl);
+        return thumbUrl;
+      }
+      return { buffer: jpegBuf, format: 'image/jpeg' };
+    } catch {
+      return null;
+    } finally {
+      coverThumbInflight.delete(cacheKey);
+    }
+  })();
+
+  coverThumbInflight.set(cacheKey, job);
+  return job;
+}
+
 function normalizeEmbeddedLyrics(raw) {
   if (!raw) return null;
   if (typeof raw === 'string') return repairMojibakeText(raw);
@@ -353,8 +497,13 @@ function normalizeEmbeddedLyrics(raw) {
   return raw;
 }
 
-// 优先读取同目录同名 .lrc 文件（自动识别 UTF-8/UTF-16/GBK/GB18030/Big5/Shift_JIS/EUC-KR/Win1252），其次读取内嵌歌词
-export async function readLyrics(audioPath, allowedFolders) {
+// 优先读取同目录同名 .lrc 文件（自动识别 UTF-8/UTF-16/GBK/GB18030/Big5/Shift_JIS/EUC-KR/Win1252），其次读取内嵌歌词；
+// 插件曲目（dream-track://）路由到对应插件获取；本地无歌词时可选回退至已启用的在线歌词插件并缓存。
+export async function readLyrics(audioPath, allowedFolders, songMeta = null) {
+  if (isPluginTrackUri(audioPath)) {
+    return fetchPluginLyrics(audioPath);
+  }
+
   const safeAudioPath = await resolveAllowedLibraryFile(audioPath, allowedFolders);
   if (!safeAudioPath) return null;
 
@@ -380,6 +529,10 @@ export async function readLyrics(audioPath, allowedFolders) {
       return normalizeEmbeddedLyrics(metadata.common.lyrics[0]);
     }
   } catch (err) {}
+
+  if (songMeta && songMeta.title) {
+    return matchOnlineLyricsForLocalTrack(songMeta);
+  }
   return null;
 }
 

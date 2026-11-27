@@ -30,7 +30,7 @@ import { buildFolderTree } from '../../shared/folder.js';
 import { groupSongsByAlbum } from '../../shared/albums.js';
 import { addSongToQueueEnd, moveSongToNext, removeSongFromQueue, setQueue } from './playlist.js';
 import { playSong } from './playback.js';
-import { openAlbums, closeAlbums } from './lazy-overlays.js';
+import { openAlbums, closeAlbums, openOnlineExplore, closeOnlineExplore } from './lazy-overlays.js';
 
 // 文件夹树里被折叠的节点与分组折叠态（会话级，不持久化）
 const collapsedFolders = new Set();
@@ -72,6 +72,7 @@ export async function prunePlaylistsFromLibrary() {
 // 歌单抽屉内联图标（统一 1.8 线宽，随文字色继承）
 const ICON_LIBRARY = `<svg class="playlists-card-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18V5l12-2v13"></path><circle cx="6" cy="18" r="3"></circle><circle cx="18" cy="16" r="3"></circle></svg>`;
 const ICON_ALBUMS = `<svg class="playlists-card-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="4" width="12" height="16" rx="2"></rect><path d="M16 7.5a4.5 4.5 0 1 1 0 9"></path><circle cx="16" cy="12" r="1.2" fill="currentColor" stroke="none"></circle></svg>`;
+const ICON_ONLINE = `<svg class="playlists-card-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M3.6 9h16.8"></path><path d="M3.6 15h16.8"></path><path d="M12 3a13.5 13.5 0 0 1 0 18"></path><path d="M12 3a13.5 13.5 0 0 0 0 18"></path></svg>`;
 const ICON_CHEVRON = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"></path></svg>`;
 const ICON_FOLDER = `<svg class="folder-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path></svg>`;
 const ICON_EMPTY_PLAYLIST = `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18V5l12-2v13"></path><circle cx="6" cy="18" r="3"></circle><circle cx="18" cy="16" r="3"></circle></svg>`;
@@ -95,6 +96,7 @@ export function renderPlaylistsList({ force = false } = {}) {
   allSongs.onclick = () => {
     setQueue(state.librarySongs, { type: 'library' });
     closeAlbums();
+    closeOnlineExplore();
     renderPlaylistsList();
   };
   fragment.appendChild(allSongs);
@@ -112,6 +114,29 @@ export function renderPlaylistsList({ force = false } = {}) {
     openAlbums();
   };
   fragment.appendChild(albumsEntry);
+
+  // 在线音源入口：仅当启用至少一个 music-source 插件时显示，保持离线体验零冗余
+  const onlineSources = (state.plugins || []).filter(
+    (p) =>
+      p.enabled &&
+      !p.invalid &&
+      p.status !== 'crashed' &&
+      Array.isArray(p.manifest?.capabilities) &&
+      p.manifest.capabilities.includes('music-source')
+  );
+  if (onlineSources.length > 0) {
+    const onlineEntry = document.createElement('li');
+    onlineEntry.className = 'playlists-card online-entry-card';
+    onlineEntry.id = 'btnDrawerOnline';
+    onlineEntry.innerHTML = `
+      ${ICON_ONLINE}
+      <span class="playlists-card-name">${escapeHtml(t('online.title'))}</span>
+      <span class="playlists-card-count">${escapeHtml(t('online.sourcesCount', { n: onlineSources.length }))}</span>`;
+    onlineEntry.onclick = () => {
+      openOnlineExplore();
+    };
+    fragment.appendChild(onlineEntry);
+  }
 
   const appendDivider = () => {
     const divider = document.createElement('li');
@@ -179,6 +204,7 @@ export function renderPlaylistsList({ force = false } = {}) {
         setQueue(node.songs, { type: 'folder', path: node.path });
         if (!keepPlaying) playSong(0);
         closeAlbums();
+        closeOnlineExplore();
         renderPlaylistsList();
       };
 
@@ -239,6 +265,7 @@ export function renderPlaylistsList({ force = false } = {}) {
       setQueue(pl.songs, { type: 'playlist', id: pl.id });
       if (pl.songs.length > 0) playSong(0); // 切换歌单:直接播放第一首
       closeAlbums();
+      closeOnlineExplore();
       renderPlaylistsList();
     };
     li.addEventListener('dragover', (e) => {
@@ -422,7 +449,7 @@ function placeContextMenu() {
   contextMenu.style.top = `${Math.max(MENU_EDGE, Math.min(contextAnchor.y, maxY))}px`;
 }
 
-function openContextMenu(x, y, song, queueIndex = -1) {
+export function openContextMenu(x, y, song, queueIndex = -1) {
   contextSong = song;
   contextQueueIndex = queueIndex;
   contextAnchor = { x, y };
@@ -480,12 +507,25 @@ function openAddToPlaylistSubmenu() {
 
 // 添加歌曲到歌单:调用主进程,成功后同步缓存并 toast
 async function addSongToPlaylist(pl, song) {
-  const res = await window.dreamApi.playlists.addSong(pl.id, {
+  const payload = {
     path: song.path,
     title: song.title,
     artist: song.artist,
     url: song.url,
-  });
+  };
+  if (
+    song.source === 'plugin' ||
+    (typeof song.path === 'string' && song.path.startsWith('dream-track://'))
+  ) {
+    payload.album = song.album ?? null;
+    payload.duration = song.duration ?? null;
+    payload.source = 'plugin';
+    payload.pluginId = song.pluginId;
+    payload.trackId = song.trackId;
+    payload.artworkUrl = song.artworkUrl ?? null;
+    if (song.pluginMeta) payload.pluginMeta = song.pluginMeta;
+  }
+  const res = await window.dreamApi.playlists.addSong(pl.id, payload);
   if (!res.ok) return;
   const idx = state.playlists.findIndex((p) => p.id === pl.id);
   if (idx >= 0 && res.ok) state.playlists[idx] = res.playlist;
@@ -861,6 +901,9 @@ export function bindPlaylistsEvents() {
   });
   window.addEventListener('dreamisle:song-changed', () => {
     if (state.playlistsView === 'detail') renderDetailSongs();
+  });
+  window.addEventListener('dreamisle:plugins-changed', () => {
+    if (playlistsDrawer.classList.contains('open')) renderPlaylistsList();
   });
 
   // 从右侧列表拖拽歌曲时,靠近左缘自动展开歌单抽屉作为投放目标;拖拽结束恢复原状

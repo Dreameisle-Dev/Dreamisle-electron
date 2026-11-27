@@ -17,6 +17,9 @@ import { createTray, rebuildTrayMenu } from './tray.js';
 import { registerIpcHandlers, startStartupPrefetch } from './ipc.js';
 import { registerPlaylistsIpc } from './playlists.js';
 import { registerCoverThumbProtocol } from './music-library.js';
+import { registerPluginMediaProtocol } from './plugins/media-proxy.js';
+import { registerPluginIpc } from './plugins/plugin-ipc.js';
+import { initPlugins, disposePlugins } from './plugins/plugin-manager.js';
 import {
   registerLyricsHotkey,
   disposeLyrics,
@@ -77,14 +80,26 @@ app.isQuitting = false;
 if (process.platform === 'darwin') app.setName('Dreamisle');
 app.setAppUserModelId('org.dreamisle-dev.dreamisle');
 
-// 必须在 app ready 前声明自定义缩略图协议为安全标准协议，供主封面与 Cover Flow 直接复用 Chromium 图像缓存
-// 开启 supportFetchAPI / corsEnabled 以便 theme.js 从 canvas 取色（getImageData）不触发跨域污染
+// 必须在 app ready 前声明自定义协议为安全标准协议：
+// - dream-thumb：主封面与 Cover Flow 缩略图缓存（开启 CORS 供 theme.js canvas 取色）
+// - dream-media：插件在线音频流代理（支持 stream / Range 拖动与 CORS 供 Web Audio FFT/EQ）
 protocol.registerSchemesAsPrivileged([
   {
     scheme: 'dream-thumb',
     privileges: {
       standard: true,
       secure: true,
+      bypassCSP: false,
+      supportFetchAPI: true,
+      corsEnabled: true,
+    },
+  },
+  {
+    scheme: 'dream-media',
+    privileges: {
+      standard: true,
+      secure: true,
+      stream: true,
       bypassCSP: false,
       supportFetchAPI: true,
       corsEnabled: true,
@@ -175,6 +190,8 @@ if (gotSingleInstanceLock) {
       setLyricsLines(getDesktopLyricsLines()); // 同步单/双行设置
       registerLyricsHotkey();
       if (process.platform === 'win32') registerTaskbarLyricsHotkey();
+      // 插件独立子进程在窗口首帧显示后延迟拉起；无启用插件时零子进程开销
+      initPlugins().catch(() => {});
       logStartupPhase('post-show-tray-and-hotkeys');
     });
 
@@ -203,8 +220,10 @@ if (gotSingleInstanceLock) {
       app.dock.setIcon(path.join(__dirname, '../assets/icon_512x512.png'));
     }
     registerCoverThumbProtocol();
+    registerPluginMediaProtocol();
     registerIpcHandlers();
     registerPlaylistsIpc();
+    registerPluginIpc();
     bindTaskbarLyricsIpc();
     createWindow({ onFirstShow: runPostShowInit });
     logStartupPhase('createWindow-dispatched');
@@ -231,6 +250,7 @@ if (gotSingleInstanceLock) {
     disposeLyrics();
     disposeTaskbarLyrics();
     disposeMenubarLyrics();
+    disposePlugins().catch(() => {});
     flushStoreSync();
   });
 }

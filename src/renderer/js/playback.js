@@ -24,7 +24,7 @@ import {
   iconOne,
   iconShuffle,
 } from './dom.js';
-import { formatTime } from './helpers.js';
+import { formatTime, showSyncToast } from './helpers.js';
 import { updateVirtualList } from './playlist.js';
 import { loadAndRenderLyrics, syncLyrics, getLyricPreviewAt } from './lyrics.js';
 import { updateThemeColor, updateProgressStyle } from './theme.js';
@@ -155,13 +155,49 @@ window.addEventListener('dreamisle:language-changed', () => {
   else artistEl.innerText = t('app.waitingForMusic');
 });
 
+function toLifecycleTrack(song) {
+  if (!song || typeof song.path !== 'string') return null;
+  const isPlugin = song.source === 'plugin' || song.path.startsWith('dream-track://');
+  return {
+    uri: song.path,
+    source: isPlugin ? 'plugin' : 'local',
+    pluginId: isPlugin ? song.pluginId : undefined,
+    title: song.title || '',
+    artist: song.artist || '',
+    album: song.album || null,
+    duration: Number.isFinite(song.duration) ? song.duration : null,
+  };
+}
+
+function emitPluginPlaybackState() {
+  window.dreamApi.plugins?.emitPlaybackState({
+    playing: !audio.paused,
+    currentTimeSec: Number.isFinite(audio.currentTime) ? audio.currentTime : 0,
+    durationSec: Number.isFinite(audio.duration) ? audio.duration : 0,
+  });
+}
+
+// 为 dream-media:// 在线代理流开启 CORS anonymous，使 Web Audio FFT 频谱与均衡器免遭跨源静音；
+// 本地 file:// 曲目移除 crossorigin 属性，避免 file:// 协议无 CORS 响应头导致加载失败。
+function setAudioSource(url) {
+  if (typeof url === 'string' && url.startsWith('dream-media://')) {
+    audio.crossOrigin = 'anonymous';
+  } else {
+    audio.removeAttribute('crossorigin');
+  }
+  audio.src = url;
+}
+
 export function initSongInfo(index, { preloadedCoverUrl, preloadedLyrics } = {}) {
   if (index < 0 || index >= state.songs.length) return;
   if (cancelActiveScrub) cancelActiveScrub(false);
   state.currentIndex = index;
   if (state.playMode === 2) shuffleSession.syncCurrent(state.songs, index);
   const song = state.songs[index];
-  audio.src = song.url;
+  if (song.source === 'plugin' || song.path.startsWith('dream-track://')) {
+    window.dreamApi.plugins?.registerTracks([song]);
+  }
+  setAudioSource(song.url);
 
   setTrackInfo(song);
   setMediaMetadata(song); // 封面等 updateCoverAndColor 拿到后再补
@@ -172,6 +208,7 @@ export function initSongInfo(index, { preloadedCoverUrl, preloadedLyrics } = {})
   loadAndRenderLyrics(song, preloadedLyrics);
   window.dispatchEvent(new Event('dreamisle:song-changed'));
   pushTaskbarPlayback(true);
+  window.dreamApi.plugins?.emitTrackChange(toLifecycleTrack(song));
 }
 
 export function playSong(index, { fromShuffle = false } = {}) {
@@ -182,8 +219,11 @@ export function playSong(index, { fromShuffle = false } = {}) {
     shuffleSession.syncCurrent(state.songs, index);
   }
   const song = state.songs[index];
+  if (song.source === 'plugin' || song.path.startsWith('dream-track://')) {
+    window.dreamApi.plugins?.registerTracks([song]);
+  }
 
-  audio.src = song.url;
+  setAudioSource(song.url);
   audio.play().catch(() => {});
 
   setTrackInfo(song);
@@ -200,6 +240,7 @@ export function playSong(index, { fromShuffle = false } = {}) {
 
   saveStateOnChange();
   pushTaskbarPlayback(true);
+  window.dreamApi.plugins?.emitTrackChange(toLifecycleTrack(song));
 }
 
 export function playNext(auto = false) {
@@ -869,10 +910,32 @@ export function bindPlaybackEvents() {
   document.getElementById('btnNext').addEventListener('click', () => playNext(false));
   document.getElementById('btnPrev').addEventListener('click', () => playPrev());
 
-  // 系统媒体控制：按钮回调 + 播放状态同步
+  // 系统媒体控制：按钮回调 + 播放状态同步 + 插件播放生命周期事件派发
   registerMediaSessionHandlers();
-  audio.addEventListener('play', () => setPlaybackState(true));
-  audio.addEventListener('pause', () => setPlaybackState(false));
+  audio.addEventListener('play', () => {
+    setPlaybackState(true);
+    emitPluginPlaybackState();
+  });
+  audio.addEventListener('pause', () => {
+    setPlaybackState(false);
+    emitPluginPlaybackState();
+  });
+  audio.addEventListener('seeked', () => {
+    emitPluginPlaybackState();
+  });
+
+  // 在线插件音频流错误提示（如需要登录 / VIP 限制 / 地区版权 / 频控）
+  window.dreamApi.plugins?.onStreamError(({ songUri, error }) => {
+    const current = state.songs[state.currentIndex];
+    if (!current || current.path !== songUri) return;
+    const code = error?.code || 'INTERNAL_ERROR';
+    const key = `plugins.err.${code}`;
+    const translated = t(key);
+    const text =
+      translated !== key ? translated : error?.message || t('plugins.err.INTERNAL_ERROR');
+    showSyncToast(text);
+    updatePlayButton(false);
+  });
 
   audio.addEventListener('seeking', () => {
     lastSeekAt = Date.now();
@@ -891,6 +954,14 @@ export function bindPlaybackEvents() {
     if (finished && Date.now() - lastSeekAt > 1000) {
       window.dreamApi.recordPlay(finished.path, 'full').catch(() => {});
       if (state.playMode === 1) window.dreamApi.recordPlay(finished.path, 'loop').catch(() => {});
+      const lifecycleTrack = toLifecycleTrack(finished);
+      if (lifecycleTrack) {
+        window.dreamApi.plugins?.emitTrackComplete({
+          track: lifecycleTrack,
+          kind: state.playMode === 1 ? 'loop' : 'full',
+          completedAt: Date.now(),
+        });
+      }
     }
     playNext(true);
   });
