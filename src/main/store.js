@@ -314,8 +314,7 @@ export function migrateLegacyMusicFolder() {
   }
 }
 
-// ── 插件生态偏好与配置（启停状态、非敏感配置、在线音质偏好、本地无歌词在线兜底） ──
-const VALID_PLUGIN_QUALITIES = new Set(['standard', 'high', 'lossless', 'hires']);
+// ── 插件生态状态与配置（启停状态、各插件自身声明的非敏感配置） ──
 
 export function getPluginEnabledIds() {
   const raw = store.get('plugins.enabled');
@@ -364,26 +363,4 @@ export function clearPluginStoredState(pluginId) {
     delete next[pluginId];
     store.set('plugins.configs', next);
   }
-}
-
-export function getPluginPreferredQuality() {
-  const raw = store.get('plugins.preferredQuality');
-  return typeof raw === 'string' && VALID_PLUGIN_QUALITIES.has(raw) ? raw : 'lossless';
-}
-
-export function setPluginPreferredQuality(quality) {
-  const next =
-    typeof quality === 'string' && VALID_PLUGIN_QUALITIES.has(quality) ? quality : 'lossless';
-  store.set('plugins.preferredQuality', next);
-  return next;
-}
-
-export function getOnlineLyricsFallback() {
-  return store.get('plugins.onlineLyricsFallback') !== false;
-}
-
-export function setOnlineLyricsFallback(enabled) {
-  const next = !!enabled;
-  store.set('plugins.onlineLyricsFallback', next);
-  return next;
 }

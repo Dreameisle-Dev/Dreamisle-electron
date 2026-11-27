@@ -3,11 +3,9 @@ import { t } from '../../shared/i18n.js';
 import { state } from './state.js';
 import { escapeHtml, showSyncToast } from './helpers.js';
 
-const QUALITY_VALUES = ['standard', 'high', 'lossless', 'hires'];
 const QR_POLL_INTERVAL_MS = 2000;
 
 let bound = false;
-let prefs = { preferredQuality: 'lossless', onlineLyricsFallback: true, pluginsDir: '' };
 // 记录每个插件当前展开的子面板：'config' | 'auth' | 'logs' | null
 const expandedPanelByPlugin = new Map();
 // 卸载两段式确认计时器
@@ -46,20 +44,6 @@ export function cleanupPluginSettingsOnClose() {
   stopQrPolling();
   for (const timer of uninstallConfirmTimers.values()) clearTimeout(timer);
   uninstallConfirmTimers.clear();
-}
-
-function syncPreferencesUi() {
-  const qualitySeg = getEl('pluginQualitySeg');
-  if (qualitySeg) {
-    const cur = QUALITY_VALUES.includes(prefs.preferredQuality)
-      ? prefs.preferredQuality
-      : 'lossless';
-    qualitySeg.querySelectorAll('button').forEach((btn) => {
-      btn.classList.toggle('active', btn.dataset.quality === cur);
-    });
-  }
-  const fallbackSwitch = getEl('onlineLyricsFallbackSwitch');
-  setSwitch(fallbackSwitch, prefs.onlineLyricsFallback !== false);
 }
 
 function buildPermissionsText(manifest) {
@@ -579,43 +563,15 @@ async function renderLogsSubpanel(plugin, container) {
 export async function refreshPluginSettingsUi() {
   if (!window.dreamApi.plugins) return;
   try {
-    const [nextPrefs, plugins] = await Promise.all([
-      window.dreamApi.plugins.getPreferences(),
-      window.dreamApi.plugins.list(),
-    ]);
-    if (nextPrefs) prefs = nextPrefs;
+    const plugins = await window.dreamApi.plugins.list();
     if (Array.isArray(plugins)) state.plugins = plugins;
   } catch {}
-  syncPreferencesUi();
   renderPluginList(state.plugins);
 }
 
 export function bindPluginSettingsEvents() {
   if (bound || !window.dreamApi.plugins) return;
   bound = true;
-
-  const qualitySeg = getEl('pluginQualitySeg');
-  if (qualitySeg) {
-    qualitySeg.querySelectorAll('button').forEach((btn) => {
-      btn.addEventListener('click', async () => {
-        const quality = btn.dataset.quality;
-        if (!QUALITY_VALUES.includes(quality)) return;
-        prefs.preferredQuality = quality;
-        syncPreferencesUi();
-        await window.dreamApi.plugins.setPreferredQuality(quality).catch(() => {});
-      });
-    });
-  }
-
-  const fallbackSwitch = getEl('onlineLyricsFallbackSwitch');
-  if (fallbackSwitch) {
-    fallbackSwitch.addEventListener('click', async () => {
-      const next = fallbackSwitch.getAttribute('aria-checked') !== 'true';
-      prefs.onlineLyricsFallback = next;
-      setSwitch(fallbackSwitch, next);
-      await window.dreamApi.plugins.setOnlineLyricsFallback(next).catch(() => {});
-    });
-  }
 
   const btnInstallFolder = getEl('btnPluginInstallFolder');
   if (btnInstallFolder) {

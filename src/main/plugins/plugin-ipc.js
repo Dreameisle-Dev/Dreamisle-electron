@@ -14,7 +14,6 @@ import {
   getPluginHome,
   getPluginLogs,
   getPluginPlaylistTracks,
-  getPluginPreferences,
   getPluginUserPlaylists,
   installPluginFolder,
   installPluginZip,
@@ -31,8 +30,6 @@ import {
   searchPluginSource,
   setPluginEnabled,
   uninstallPlugin,
-  updateOnlineLyricsFallback,
-  updatePreferredQuality,
 } from './plugin-manager.js';
 
 async function wrapResult(fn) {
@@ -46,11 +43,6 @@ async function wrapResult(fn) {
 export function registerPluginIpc() {
   handleMainIpc('plugins:list', () => listPluginSummaries());
   handleMainIpc('plugins:refresh', () => refreshInstalledPlugins({ startEnabled: true }));
-  handleMainIpc('plugins:getPreferences', () => getPluginPreferences());
-  handleMainIpc('plugins:setPreferredQuality', (_e, quality) => updatePreferredQuality(quality));
-  handleMainIpc('plugins:setOnlineLyricsFallback', (_e, enabled) =>
-    updateOnlineLyricsFallback(enabled)
-  );
 
   handleMainIpc('plugins:openDir', async () => {
     const dir = getPluginsRootDir();

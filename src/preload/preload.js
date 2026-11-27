@@ -92,10 +92,6 @@ contextBridge.exposeInMainWorld('dreamApi', {
   plugins: {
     list: () => ipcRenderer.invoke('plugins:list'),
     refresh: () => ipcRenderer.invoke('plugins:refresh'),
-    getPreferences: () => ipcRenderer.invoke('plugins:getPreferences'),
-    setPreferredQuality: (quality) => ipcRenderer.invoke('plugins:setPreferredQuality', quality),
-    setOnlineLyricsFallback: (enabled) =>
-      ipcRenderer.invoke('plugins:setOnlineLyricsFallback', enabled),
     openDir: () => ipcRenderer.invoke('plugins:openDir'),
     installFolder: () => ipcRenderer.invoke('plugins:installFolder'),
     installZip: () => ipcRenderer.invoke('plugins:installZip'),

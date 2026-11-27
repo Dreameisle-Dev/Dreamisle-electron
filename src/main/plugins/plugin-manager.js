@@ -16,13 +16,9 @@ import { getMainWindow } from '../window.js';
 import {
   clearPluginStoredState,
   getLanguage,
-  getOnlineLyricsFallback,
   getPluginEnabledIds,
-  getPluginPreferredQuality,
   getPluginStoredConfig,
-  setOnlineLyricsFallback,
   setPluginEnabledId,
-  setPluginPreferredQuality,
   setPluginStoredConfig,
 } from '../store.js';
 import { assertUrlAllowed } from './permissions.js';
@@ -217,6 +213,12 @@ export async function savePluginConfigFromUi(pluginId, incoming) {
 
   setPluginStoredConfig(pluginId, plain);
 
+  // 配置变更可能影响音质/接口地址/代理参数，清理该插件的流缓存
+  const prefix = `${pluginId}:`;
+  for (const key of streamCache.keys()) {
+    if (key.startsWith(prefix)) streamCache.delete(key);
+  }
+
   const proc = pluginProcesses.get(pluginId);
   if (proc && proc.status === 'running') {
     const full = await resolveFullConfigForWorker(entry.manifest);
@@ -402,24 +404,6 @@ export function pushLocaleToPlugins(locale) {
   }
 }
 
-export function getPluginPreferences() {
-  return {
-    preferredQuality: getPluginPreferredQuality(),
-    onlineLyricsFallback: getOnlineLyricsFallback(),
-    pluginsDir: getPluginsRootDir(),
-  };
-}
-
-export function updatePreferredQuality(quality) {
-  const next = setPluginPreferredQuality(quality);
-  streamCache.clear();
-  return next;
-}
-
-export function updateOnlineLyricsFallback(enabled) {
-  return setOnlineLyricsFallback(enabled);
-}
-
 // ── 音源与元数据调度 ──
 
 async function requireRunningPlugin(pluginId, capability = null) {
@@ -445,8 +429,8 @@ export async function resolvePluginStream(
   trackId,
   { quality, forceRefresh = false } = {}
 ) {
-  const targetQuality = quality || getPluginPreferredQuality();
-  const cacheKey = `${pluginId}:${trackId}:${targetQuality}`;
+  const targetQuality = quality || 'lossless';
+  const cacheKey = `${pluginId}:${trackId}:${quality || 'default'}`;
   const now = Date.now();
 
   if (!forceRefresh && streamCache.has(cacheKey)) {
@@ -483,8 +467,7 @@ export async function resolvePluginStream(
 }
 
 export function invalidatePluginStream(pluginId, trackId, quality) {
-  const targetQuality = quality || getPluginPreferredQuality();
-  streamCache.delete(`${pluginId}:${trackId}:${targetQuality}`);
+  streamCache.delete(`${pluginId}:${trackId}:${quality || 'default'}`);
 }
 
 export async function fetchPluginCoverBuffer(songUri) {
@@ -600,9 +583,21 @@ export async function fetchPluginLyrics(songUri) {
   }
 }
 
-// 本地无歌词曲目在线兜底：按启用顺序询问所有声明 lyrics-provider 的运行中插件，并落盘缓存以供离线复用
+// 本地无歌词曲目在线兜底：仅当存在已启用且运行中的 lyrics-provider 插件时才触发，
+// 具体是否参与本地匹配由各插件自身配置控制，命中结果落盘缓存以供离线复用。
 export async function matchOnlineLyricsForLocalTrack(songMeta) {
-  if (!getOnlineLyricsFallback() || !songMeta?.title) return null;
+  if (!songMeta?.title) return null;
+
+  const providers = [];
+  for (const pluginId of getPluginEnabledIds()) {
+    const entry = installedPlugins.get(pluginId);
+    if (!entry || entry.invalid || !entry.manifest.capabilities.includes('lyrics-provider')) {
+      continue;
+    }
+    const proc = getRunningProcess(pluginId);
+    if (proc) providers.push(proc);
+  }
+  if (providers.length === 0) return null;
 
   const cacheKeyHash = crypto
     .createHash('sha1')
@@ -622,13 +617,7 @@ export async function matchOnlineLyricsForLocalTrack(songMeta) {
     } catch {}
   }
 
-  const enabledIds = getPluginEnabledIds();
-  for (const pluginId of enabledIds) {
-    const entry = installedPlugins.get(pluginId);
-    if (!entry || entry.invalid || !entry.manifest.capabilities.includes('lyrics-provider'))
-      continue;
-    const proc = getRunningProcess(pluginId);
-    if (!proc) continue;
+  for (const proc of providers) {
     try {
       const payload = await proc.invoke(
         'lyrics.matchLyrics',
