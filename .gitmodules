@@ -6,3 +6,7 @@
 	path = packages/universal-lyric-parser
 	url = https://github.com/Dreameisle-Dev/universal-lyric-parser.git
 	branch = main
+[submodule "packages/electron-taskbar-widget"]
+	path = packages/electron-taskbar-widget
+	url = https://github.com/Dreameisle-Dev/electron-taskbar-widget.git
+	branch = main

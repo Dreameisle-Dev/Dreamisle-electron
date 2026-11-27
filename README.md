@@ -19,7 +19,7 @@
 - **文件夹视图**：按设置的曲库根目录生成文件夹树，父文件夹包含其子文件夹的歌曲；点击文件夹可将整棵子树的歌曲作为播放队列，不创建歌单。
 - **歌词**：优先读取同目录同名 `.lrc`，其次读取内嵌歌词；由独立开源模块 [universal-lyric-parser](https://github.com/Dreameisle-Dev/universal-lyric-parser) 提供双语自动拆分、同时间戳双语合并、增强型逐字时间戳与 `[offset:]` 校正，支持翻译开关、点击跳转和长行水平滚动。作词、作曲、制作、赞助、版权、平台翻译声明以及歌名/歌手头部由独立开源规则库 [lyrics-without-credits](https://github.com/Dreameisle-Dev/lyrics-without-credits) 自动隐藏，欢迎前往贡献漏剔除或误剔除的歌词文本。
 - **桌面歌词**：置顶悬浮窗；可调背景/文字不透明度、颜色和字体；支持单行/双行显示（第二行优先显示翻译，没有翻译时显示下一句）；支持鼠标穿透，关闭穿透后可拖动窗口；`Ctrl+Alt+L` / `Cmd+Option+L` 或设置页开关。
-- **任务栏歌词（Windows 10/11）**：在任务栏空档显示封面和两行歌词；字体、字重、颜色独立设置；`Ctrl+Alt+T`、托盘菜单或设置页开关。
+- **任务栏歌词（Windows 10/11）**：基于独立开源模块 [electron-taskbar-widget](https://github.com/Dreameisle-Dev/electron-taskbar-widget) 在任务栏空档显示封面和两行歌词；字体、字重、颜色独立设置；`Ctrl+Alt+T`、托盘菜单或设置页开关。
 - **菜单栏歌词（macOS）**：在状态栏图标旁显示当前歌词行；无时间轴歌词时显示歌名/歌手；超长行截断；`Cmd+Option+T`、托盘菜单或设置页开关。
 - **搜索与排序**：按歌名/歌手排序或随机，实时过滤；歌名/歌手排序下提供 A-Z# 索引（中文按拼音）。
 - **播放统计**：长按左 `Shift` 0.5 秒打开；统计音质分级（Hi-Res / SQ / HQ）、完整播放/循环次数、总播放次数、日均播放和歌曲排行。
@@ -126,8 +126,9 @@ Dreamisle-electron/
 ├── build/                     # electron-builder 资源（NSIS 自定义、macOS entitlements）
 ├── img/                       # 文档截图
 ├── packages/
-│   ├── lyrics-without-credits/ # 独立开源的歌词制作信息/头部剔除规则库与引擎（Git Submodule）
-│   └── universal-lyric-parser/ # 独立开源的双语 + 增强型逐字 LRC 歌词解析器（Git Submodule）
+│   ├── electron-taskbar-widget/ # 独立开源的 Windows 10/11 Electron 任务栏嵌入引擎（Git Submodule）
+│   ├── lyrics-without-credits/  # 独立开源的歌词制作信息/头部剔除规则库与引擎（Git Submodule）
+│   └── universal-lyric-parser/  # 独立开源的双语 + 增强型逐字 LRC 歌词解析器（Git Submodule）
 └── src/
     ├── main/                  # 主进程：窗口、托盘、曲库、歌单、播放队列持久化、IPC
     ├── preload/               # 预加载桥接（主窗口 / 桌面歌词 / 任务栏歌词）

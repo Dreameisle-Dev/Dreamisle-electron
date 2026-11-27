@@ -38,7 +38,15 @@
       "!packages/universal-lyric-parser/CONTRIBUTING.md",
       "!packages/universal-lyric-parser/.editorconfig",
       "!packages/universal-lyric-parser/.prettierrc",
-      "!packages/universal-lyric-parser/.gitignore"
+      "!packages/universal-lyric-parser/.gitignore",
+      "!packages/electron-taskbar-widget/.github{,/**/*}",
+      "!packages/electron-taskbar-widget/test{,/**/*}",
+      "!packages/electron-taskbar-widget/types{,/**/*}",
+      "!packages/electron-taskbar-widget/README*.md",
+      "!packages/electron-taskbar-widget/CONTRIBUTING.md",
+      "!packages/electron-taskbar-widget/.editorconfig",
+      "!packages/electron-taskbar-widget/.prettierrc",
+      "!packages/electron-taskbar-widget/.gitignore"
     ],
     "win": {
       "icon": "src/assets/app_icon.ico",

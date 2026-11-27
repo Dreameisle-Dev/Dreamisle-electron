@@ -19,7 +19,7 @@ Dreamisle is a local music player built with Electron. It plays local audio file
 - **Folder view**: Builds a folder tree from the configured library roots; a parent folder includes the songs of its subfolders. Clicking a folder uses its entire subtree as the play queue without creating a playlist.
 - **Lyrics**: Prefers an adjacent same-name `.lrc`, then embedded lyrics; bilingual splitting, same-timestamp merging, enhanced word-level timestamps, and `[offset:]` adjustment are powered by the standalone open-source module [universal-lyric-parser](https://github.com/Dreameisle-Dev/universal-lyric-parser), with a translation toggle, click-to-seek, and horizontal scrolling for long lines. Credit lines (lyricist, composer, producer, sponsors, copyright and platform translation notices) and song title/artist headers are stripped automatically by the standalone open-source library [lyrics-without-credits](https://github.com/Dreameisle-Dev/lyrics-without-credits) — contributions for missed or false-positive lines are welcome there.
 - **Desktop lyrics**: Always-on-top overlay; adjustable background/text opacity, color, and font; single-line or double-line display (the second line prefers the translation and falls back to the next lyric); optional click-through, which can be disabled to drag the window; toggle with `Ctrl+Alt+L` / `Cmd+Option+L` or from Settings.
-- **Taskbar lyrics (Windows 10/11)**: Shows cover art and two lyric lines in free taskbar space; font, weight, and color are configurable; toggle with `Ctrl+Alt+T`, the tray menu, or Settings.
+- **Taskbar lyrics (Windows 10/11)**: Powered by the standalone open-source module [electron-taskbar-widget](https://github.com/Dreameisle-Dev/electron-taskbar-widget), showing cover art and two lyric lines in free taskbar space; font, weight, and color are configurable; toggle with `Ctrl+Alt+T`, the tray menu, or Settings.
 - **Menu bar lyrics (macOS)**: Shows the current lyric line next to the status item; falls back to title/artist when there are no timed lyrics; long lines are truncated; toggle with `Cmd+Option+T`, the tray menu, or Settings.
 - **Search and sorting**: Sort by title/artist or shuffle; real-time filtering; an A-Z# index (Chinese sorted by pinyin) in title/artist modes.
 - **Playback statistics**: Hold Left `Shift` for 0.5s; shows quality tiers (Hi-Res / SQ / HQ), full-play/loop counts, total plays, daily average, and a song ranking.
@@ -126,8 +126,9 @@ Dreamisle-electron/
 ├── build/                     # electron-builder resources (NSIS customization, macOS entitlements)
 ├── img/                       # Documentation screenshots
 ├── packages/
-│   ├── lyrics-without-credits/ # Standalone open-source lyrics credits/header filter (Git Submodule)
-│   └── universal-lyric-parser/ # Standalone open-source bilingual & word-level LRC parser (Git Submodule)
+│   ├── electron-taskbar-widget/ # Standalone open-source Windows 10/11 Electron taskbar embed engine (Git Submodule)
+│   ├── lyrics-without-credits/  # Standalone open-source lyrics credits/header filter (Git Submodule)
+│   └── universal-lyric-parser/  # Standalone open-source bilingual & word-level LRC parser (Git Submodule)
 └── src/
     ├── main/                  # Main process: windows, tray, library, playlists, queue persistence, IPC
     ├── preload/               # Preload bridges (main window / desktop lyrics / taskbar lyrics)
