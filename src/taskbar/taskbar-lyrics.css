@@ -217,3 +217,54 @@ body.fixed-length.fixed-start:not(.vertical) #strip {
 body.fixed-length.vertical #strip {
   justify-content: flex-end;
 }
+
+/* ── Win10 标准任务栏（40 CSS px）与小任务栏（30 CSS px）紧凑适配 ── */
+@media (max-height: 42px) {
+  body:not(.vertical) #strip {
+    gap: 8px;
+  }
+
+  body:not(.vertical) #cover {
+    height: calc(100% - 8px);
+    border-radius: 5px;
+  }
+
+  body:not(.vertical) #textcol {
+    gap: 1px;
+  }
+
+  body:not(.vertical) #line {
+    font-size: 13.5px;
+    line-height: 1.15;
+  }
+
+  body:not(.vertical) #translation {
+    font-size: 11px;
+    line-height: 1.15;
+  }
+}
+
+@media (max-height: 34px) {
+  body:not(.vertical) #strip {
+    gap: 6px;
+  }
+
+  body:not(.vertical) #cover {
+    height: calc(100% - 6px);
+    border-radius: 4px;
+  }
+
+  body:not(.vertical) #textcol {
+    gap: 0;
+  }
+
+  body:not(.vertical) #line {
+    font-size: 12px;
+    line-height: 1.1;
+  }
+
+  body:not(.vertical) #translation {
+    font-size: 10px;
+    line-height: 1.1;
+  }
+}

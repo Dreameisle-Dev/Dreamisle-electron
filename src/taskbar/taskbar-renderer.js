@@ -7,6 +7,7 @@ import { renderWordSpans, updateWordSpansProgress } from '../shared/lyric-word-d
 
 const strip = document.getElementById('strip');
 const coverEl = document.getElementById('cover');
+const textcolEl = document.getElementById('textcol');
 const lineEl = document.getElementById('line');
 const translationEl = document.getElementById('translation');
 
@@ -193,7 +194,8 @@ function applyMarquee() {
     lineEl.style.removeProperty('--marquee-duration');
     return;
   }
-  const overflow = lineEl.scrollWidth - (window.innerWidth - 24 - coverZoneWidth());
+  const availableWidth = textcolEl?.clientWidth || window.innerWidth - 24 - coverZoneWidth();
+  const overflow = lineEl.scrollWidth - availableWidth;
   if (overflow > 0) {
     const durationSec = Math.max(5, overflow / 45);
     lineEl.classList.add('marquee');
