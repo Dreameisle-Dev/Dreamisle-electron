@@ -839,7 +839,31 @@ body.performance-mode .viz-tooltip {
   fill: none;
 }
 
-/* 传输条右侧专辑入口：与左侧歌曲信息对称，对齐右边距 26px */
+/* 传输条右侧：全屏与专辑入口（与左侧歌曲信息对称，对齐右边距 26px） */
+.bar-fullscreen-btn {
+  position: absolute;
+  right: 76px;
+  top: 55px;
+}
+
+.bar-fullscreen-btn.active {
+  background: var(--row-on);
+  color: var(--accent);
+  opacity: 1;
+}
+
+.icon-fs-exit {
+  display: none;
+}
+
+body.is-fullscreen .icon-fs-enter {
+  display: none;
+}
+
+body.is-fullscreen .icon-fs-exit {
+  display: block;
+}
+
 .bar-albums-btn {
   position: absolute;
   right: 26px;
@@ -1330,6 +1354,7 @@ body.mini-mode .bar-thumb,
 body.mini-mode #btnMode,
 body.mini-mode #btnPlaylist,
 body.mini-mode #btnAlbums,
+body.mini-mode #btnBarFullscreen,
 body.mini-mode .albums-overlay,
 body.mini-mode .custom-titlebar,
 body.mini-mode .playlist-drawer,
@@ -1583,9 +1608,21 @@ body:not(.platform-darwin) .macos-only {
   display: none !important;
 }
 
-/* 小窗口模式适配：在小窗下直接隐藏标题栏 */
-body.mini-mode .custom-titlebar {
+/* 小窗口与全屏模式适配：沉浸全屏下收起自绘标题栏，释放整块视口；浮层顶距顺带收紧 */
+body.mini-mode .custom-titlebar,
+body.is-fullscreen .custom-titlebar {
   display: none !important;
+}
+
+body.is-fullscreen .albums-header,
+body.is-fullscreen .online-header {
+  padding-top: 22px;
+}
+
+body.is-fullscreen .playlist-header,
+body.is-fullscreen .playlists-header,
+body.is-fullscreen .playlists-detail-header {
+  padding-top: 22px;
 }
 
 .mini-lyrics {

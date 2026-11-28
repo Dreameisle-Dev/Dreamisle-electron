@@ -35,6 +35,45 @@
         <span class="titlebar-text">Dreamisle</span>
       </div>
       <div class="titlebar-controls" id="windowControls">
+        <button
+          class="titlebar-btn"
+          id="btnFullscreen"
+          title="进入全屏 (F11)"
+          data-i18n-title="titlebar.fullscreen"
+        >
+          <svg
+            class="icon-fs-enter"
+            width="11"
+            height="11"
+            viewBox="0 0 12 12"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.25"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <polyline points="1 4.2 1 1 4.2 1"></polyline>
+            <polyline points="7.8 1 11 1 11 4.2"></polyline>
+            <polyline points="11 7.8 11 11 7.8 11"></polyline>
+            <polyline points="4.2 11 1 11 1 7.8"></polyline>
+          </svg>
+          <svg
+            class="icon-fs-exit"
+            width="11"
+            height="11"
+            viewBox="0 0 12 12"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.25"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <polyline points="4.2 1 4.2 4.2 1 4.2"></polyline>
+            <polyline points="11 4.2 7.8 4.2 7.8 1"></polyline>
+            <polyline points="7.8 11 7.8 7.8 11 7.8"></polyline>
+            <polyline points="1 7.8 4.2 7.8 4.2 11"></polyline>
+          </svg>
+        </button>
         <button class="titlebar-btn" id="btnMin" title="最小化" data-i18n-title="titlebar.minimize">
           <svg width="10" height="10" viewBox="0 0 10 1">
             <rect width="10" height="1" fill="currentColor" />
@@ -649,7 +688,50 @@
           </button>
         </div>
 
-        <!-- 传输条右侧：按专辑 Cover Flow 入口（与左侧歌曲信息对称，不偏移居中播放键） -->
+        <!-- 传输条右侧：全屏与按专辑 Cover Flow 入口（与左侧歌曲信息对称，不偏移居中播放键） -->
+        <button
+          type="button"
+          class="ctrl-sm bar-fullscreen-btn"
+          id="btnBarFullscreen"
+          title="进入全屏 (F11)"
+          data-i18n-title="titlebar.fullscreen"
+        >
+          <svg
+            class="icon-fs-enter"
+            width="19"
+            height="19"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.9"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <polyline points="15 3 21 3 21 9"></polyline>
+            <polyline points="9 21 3 21 3 15"></polyline>
+            <line x1="21" y1="3" x2="14" y2="10"></line>
+            <line x1="3" y1="21" x2="10" y2="14"></line>
+          </svg>
+          <svg
+            class="icon-fs-exit"
+            width="19"
+            height="19"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.9"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <polyline points="4 14 10 14 10 20"></polyline>
+            <polyline points="20 10 14 10 14 4"></polyline>
+            <line x1="14" y1="10" x2="21" y2="3"></line>
+            <line x1="3" y1="21" x2="10" y2="14"></line>
+          </svg>
+        </button>
+
         <button
           type="button"
           class="ctrl-sm bar-albums-btn"
@@ -998,6 +1080,10 @@
             </div>
             <div class="help-row">
               <span class="help-desc" data-i18n="help.miniMode">切换小窗模式</span><kbd>F5</kbd>
+            </div>
+            <div class="help-row">
+              <span class="help-desc" data-i18n="help.fullscreen">切换全屏</span
+              ><span class="help-keys" id="helpFullscreenKeys"><kbd>F11</kbd></span>
             </div>
             <div class="help-row">
               <span class="help-desc" data-i18n="help.desktopLyrics">桌面歌词</span

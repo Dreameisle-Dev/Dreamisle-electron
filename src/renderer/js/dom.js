@@ -41,6 +41,8 @@ export const btnPlay = document.getElementById('btnPlay');
 export const btnMode = document.getElementById('btnMode');
 export const btnPlaylist = document.getElementById('btnPlaylist');
 export const btnAlbums = document.getElementById('btnAlbums');
+export const btnFullscreen = document.getElementById('btnFullscreen');
+export const btnBarFullscreen = document.getElementById('btnBarFullscreen');
 
 export const iconLoop = document.getElementById('iconLoop');
 export const iconOne = document.getElementById('iconOne');

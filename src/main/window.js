@@ -75,9 +75,9 @@ function persistBounds(bounds, maximized) {
   }
 }
 
-// 小窗模式的尺寸不是用户对主窗口的期望，不能覆盖普通模式的记忆。
+// 小窗与全屏模式的尺寸不是用户对普通窗口的期望，不能覆盖普通模式的记忆。
 function saveBoundsNow() {
-  if (!mainWindow || mainWindow.isDestroyed() || isMiniMode) return;
+  if (!mainWindow || mainWindow.isDestroyed() || isMiniMode || mainWindow.isFullScreen()) return;
   persistBounds(mainWindow.getNormalBounds(), mainWindow.isMaximized());
 }
 
@@ -177,6 +177,16 @@ export function createWindow({ onFirstShow } = {}) {
   mainWindow.on('hide', () => {
     mainWindow.webContents.send('window-visibility-changed', false);
   });
+  mainWindow.on('enter-full-screen', () => {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('window-fullscreen-changed', true);
+    }
+  });
+  mainWindow.on('leave-full-screen', () => {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('window-fullscreen-changed', false);
+    }
+  });
   mainWindow.on('closed', () => {
     clearTimeout(revealFallbackTimer);
     revealFallbackTimer = null;
@@ -186,9 +196,19 @@ export function createWindow({ onFirstShow } = {}) {
   });
 }
 
-// 小窗模式切换：置顶 + 固定尺寸 + 通知前端
+// 小窗模式切换：置顶 + 固定尺寸 + 通知前端（全屏态下先退出全屏再进入小窗）
 export function toggleMiniMode() {
-  if (!mainWindow) return false;
+  if (!mainWindow || mainWindow.isDestroyed()) return false;
+  if (!isMiniMode && mainWindow.isFullScreen()) {
+    if (process.platform === 'darwin') {
+      mainWindow.once('leave-full-screen', () => {
+        if (mainWindow && !mainWindow.isDestroyed() && !isMiniMode) toggleMiniMode();
+      });
+      mainWindow.setFullScreen(false);
+      return false;
+    }
+    mainWindow.setFullScreen(false);
+  }
   isMiniMode = !isMiniMode;
 
   if (isMiniMode) {
@@ -249,19 +269,44 @@ export function toggleMiniMode() {
 }
 
 export function minimizeWindow() {
-  if (mainWindow) mainWindow.minimize();
+  if (mainWindow && !mainWindow.isDestroyed()) mainWindow.minimize();
 }
 
 export function maximizeWindow() {
-  if (mainWindow) {
-    if (mainWindow.isMaximized()) {
-      mainWindow.unmaximize();
-    } else {
-      mainWindow.maximize();
-    }
+  if (!mainWindow || mainWindow.isDestroyed()) return;
+  if (mainWindow.isFullScreen()) {
+    mainWindow.setFullScreen(false);
+    return;
+  }
+  if (mainWindow.isMaximized()) {
+    mainWindow.unmaximize();
+  } else {
+    mainWindow.maximize();
   }
 }
 
+export function isFullscreen() {
+  return Boolean(mainWindow && !mainWindow.isDestroyed() && mainWindow.isFullScreen());
+}
+
+export function setFullscreen(enabled) {
+  if (!mainWindow || mainWindow.isDestroyed()) return false;
+  const next = Boolean(enabled);
+  if (next) {
+    // 小窗模式下开启全屏：先退出小窗恢复普通尺寸与可调整属性，避免全屏窗口被锁定在 300×340
+    if (isMiniMode) toggleMiniMode();
+    flushWindowBounds();
+  }
+  if (mainWindow.isFullScreen() !== next) {
+    mainWindow.setFullScreen(next);
+  }
+  return next;
+}
+
+export function toggleFullscreen() {
+  return setFullscreen(!isFullscreen());
+}
+
 export function closeWindow() {
-  if (mainWindow) mainWindow.close();
+  if (mainWindow && !mainWindow.isDestroyed()) mainWindow.close();
 }

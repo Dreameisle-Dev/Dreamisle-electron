@@ -54,6 +54,7 @@ export const state = {
 
   // 窗口模式追踪
   isMiniMode: false,
+  isFullscreen: false,
 
   // 设置
   currentLyricsStyle: { ...DEFAULT_LYRICS_STYLE },

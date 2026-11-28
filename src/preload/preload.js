@@ -74,6 +74,12 @@ contextBridge.exposeInMainWorld('dreamApi', {
   onWindowModeChanged: (callback) =>
     ipcRenderer.on('window-mode-changed', (event, mode) => callback(mode)),
 
+  toggleFullscreen: () => ipcRenderer.invoke('window:toggleFullscreen'),
+  setFullscreen: (enabled) => ipcRenderer.invoke('window:setFullscreen', !!enabled),
+  isFullscreen: () => ipcRenderer.invoke('window:isFullscreen'),
+  onFullscreenChanged: (callback) =>
+    ipcRenderer.on('window-fullscreen-changed', (_event, isFs) => callback(Boolean(isFs))),
+
   minimizeWindow: () => ipcRenderer.invoke('window:minimize'),
   maximizeWindow: () => ipcRenderer.invoke('window:maximize'),
   closeWindow: () => ipcRenderer.invoke('window:close'),

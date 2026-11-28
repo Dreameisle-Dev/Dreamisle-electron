@@ -17,6 +17,8 @@ import {
   btnPlay,
   btnMode,
   btnAlbums,
+  btnFullscreen,
+  btnBarFullscreen,
   contextMenu,
 } from './dom.js';
 import {
@@ -132,6 +134,29 @@ window.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
+  const syncFullscreenUi = () => {
+    const isFs = state.isFullscreen;
+    document.body.classList.toggle('is-fullscreen', isFs);
+    const label = t(isFs ? 'titlebar.exitFullscreen' : 'titlebar.fullscreen');
+    if (btnFullscreen) {
+      btnFullscreen.title = label;
+      btnFullscreen.setAttribute('aria-pressed', String(isFs));
+    }
+    if (btnBarFullscreen) {
+      btnBarFullscreen.title = label;
+      btnBarFullscreen.classList.toggle('active', isFs);
+      btnBarFullscreen.setAttribute('aria-pressed', String(isFs));
+    }
+  };
+
+  const handleFullscreenToggle = (e) => {
+    if (e) e.stopPropagation();
+    window.dreamApi.toggleFullscreen();
+  };
+  if (btnFullscreen) btnFullscreen.addEventListener('click', handleFullscreenToggle);
+  if (btnBarFullscreen) btnBarFullscreen.addEventListener('click', handleFullscreenToggle);
+  window.addEventListener('dreamisle:language-changed', syncFullscreenUi);
+
   initMouseFollow();
   initAutoHide();
 
@@ -143,6 +168,8 @@ window.addEventListener('DOMContentLoaded', async () => {
   if (platform === 'darwin') {
     const settingsKey = document.querySelector('#helpSettingsKeys kbd');
     if (settingsKey) settingsKey.textContent = '⌘';
+    const fsKeys = document.getElementById('helpFullscreenKeys');
+    if (fsKeys) fsKeys.innerHTML = '<kbd>⌃</kbd><kbd>⌘</kbd><kbd>F</kbd>';
     for (const selector of ['#helpDesktopLyricsKeys kbd', '#settingsDesktopLyricsKeys kbd']) {
       const lyricsKeys = document.querySelectorAll(selector);
       if (lyricsKeys[0]) lyricsKeys[0].textContent = '⌘';
@@ -204,6 +231,13 @@ window.addEventListener('DOMContentLoaded', async () => {
       return;
     }
 
+    // F11（及 macOS 的 Ctrl+Cmd+F）：独立于输入框外，切换应用全屏
+    if (e.key === 'F11' || (platform === 'darwin' && e.ctrlKey && e.metaKey && e.code === 'KeyF')) {
+      e.preventDefault();
+      if (!e.repeat) window.dreamApi.toggleFullscreen();
+      return;
+    }
+
     // Cmd+, / Ctrl+,：打开/关闭设置（无论焦点位置）
     if ((platform === 'darwin' ? e.metaKey : e.ctrlKey) && e.code === 'Comma') {
       e.preventDefault();
@@ -238,6 +272,9 @@ window.addEventListener('DOMContentLoaded', async () => {
       } else if (isOnlineExploreOpen()) {
         e.preventDefault();
         closeOnlineExplore();
+      } else if (state.isFullscreen) {
+        e.preventDefault();
+        window.dreamApi.setFullscreen(false);
       }
       return;
     }
@@ -380,6 +417,24 @@ window.addEventListener('DOMContentLoaded', async () => {
     // 否则切回来时条会停在按小窗宽度算出的位置上（整排缩在开头）。
     relayoutVisualizer();
   });
+
+  // 监听主进程全屏状态变更（按钮、F11、macOS 原生绿灯或菜单触发均统一收敛于此）
+  window.dreamApi.onFullscreenChanged((isFs) => {
+    state.isFullscreen = Boolean(isFs);
+    syncFullscreenUi();
+    requestAnimationFrame(() => {
+      relayoutVisualizer();
+    });
+  });
+
+  // 初始对齐全屏状态（防止极端情况下初始即处于全屏）
+  window.dreamApi
+    .isFullscreen()
+    .then((isFs) => {
+      state.isFullscreen = Boolean(isFs);
+      syncFullscreenUi();
+    })
+    .catch(() => {});
 
   setupIpcListeners();
 

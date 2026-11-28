@@ -44,7 +44,15 @@ import {
   applySyncToPlaylist,
   hasLegacyMetadata,
 } from './music-library.js';
-import { toggleMiniMode, minimizeWindow, maximizeWindow, closeWindow } from './window.js';
+import {
+  toggleMiniMode,
+  minimizeWindow,
+  maximizeWindow,
+  closeWindow,
+  isFullscreen,
+  setFullscreen,
+  toggleFullscreen,
+} from './window.js';
 import { rebuildTrayMenu } from './tray.js';
 import {
   updateTrayPlayback,
@@ -475,6 +483,15 @@ export function registerIpcHandlers() {
   });
   handleMainIpc('window:maximize', () => {
     maximizeWindow();
+  });
+  handleMainIpc('window:toggleFullscreen', () => {
+    return toggleFullscreen();
+  });
+  handleMainIpc('window:setFullscreen', (_event, enabled) => {
+    return setFullscreen(enabled);
+  });
+  handleMainIpc('window:isFullscreen', () => {
+    return isFullscreen();
   });
   handleMainIpc('window:close', () => {
     closeWindow();
